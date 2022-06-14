@@ -1,0 +1,15 @@
+
+LIBRARY SYMBHDLR
+
+DESCRIPTION "debxxf symbol helper dll"
+
+EXETYPE WINDOWS
+PROTMODE
+
+CODE PRELOAD MOVEABLE
+DATA NONE
+
+EXPORTS
+ WEP                        @1  RESIDENTNAME
+ GETSYMBOLNAME              @2
+ GETSYMBOLADDR              @3

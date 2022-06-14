@@ -1,0 +1,1970 @@
+[.]
+.B [parameter,...]      displays/sets status of COM port
+.CD [directory]         display/change current directory
+.CDS                    display list of current directories (CDS)
+.CLRDOS [value]         clear free dos memory blocks
+.DA32 hModule,procname  display value of an export from a 32bit module
+.DIR [filespec]         display content of current directory
+.DL [hHeap]             display local heap (16 bit versions only)
+.DM [hModule,...]       display loaded 16bit modules
+.DM32 [processid,...]   display loaded 32bit modules
+.DN hModule,[...]       display exports of a module
+.DO [selector]          display owner of a memory block
+.DOS                    display DOS state
+.DS address             display name of an address exported by a 16-bit module
+.ENV                    display current environment
+.FEXIT                  make a "fatal exit" 
+.FREE hModule           free a 16-bit NE or 32-bit PE dll
+.FS hModule             unload symbols loaded with .LS
+.I41 0|1                hide/show debugger for int 41h
+.KBD                    display keyboard related variables
+.Kill segment           will kill a PSP
+.LOAD32 dllname         load a 32bit PE dll
+.LS [hModule]           load table of nonresident names from a 16bit dll
+.MCB                    display DOS memory control blocks (MCB)
+.MCBFree segment        free a DOS memory control block (MCB)
+.PIC                    display status of PIC device
+.PSP                    display DOS PSPs
+.Quit                   quit debugger if loaded resident
+.REBOOT                 reboot system
+.SEG hModule,[...]      display segments/sections of a module
+.SFT                    display system file table (SFT)
+.SYM [0|1]              switch symbol handler on/off
+.VCD                    display owner of COM ports reported by VCD device
+.VIDeo                  display video related variables
+.VPICD                  display VPICD status
+.XMS                    display XMS status
+
+the following commands are available for the DOS version only:
+
+.LDR [0|1]              disable/enable NE/PE loader
+.RES                    make debugger resident
+.SHell [parameter]      launch DOS shell application
+.VCPI [0|1]             get VCPI support or switch VCPI on/off
+
+the following commands are available for the windows version only:
+
+.DG [hGlobal],[hModule|hTask] display global heap
+.DP32 [pid],[addr],[lines] display virtual memory status of a 32bit process
+.DQ                     display 16bit tasks
+.DQ32                   display 32bit tasks
+.GDI                    activate/deactivate windows GDI
+.TH 0|1                 switch toolhelp support on/off
+[.B]
+Syntax:   .B [baudrate],[parity],[databits],[stopbits]
+Comment:  set baud rate of a COM port. The COM port itself can 
+          be modified by editing internal variable COM.
+          Please note that as default the debugger accepts numbers
+          in hexadecimal. So to set a baud rate of 19200, dont forget
+          to add a trailing 't' to this number.
+            ".B 19200t"
+          For <parity> the following is accepted:
+           N: no Parity
+           E: even
+           O: odd
+[.CLRDOS]
+Syntax:   .CLRDOS [value=0]
+Comment:  this will set all free dos memory blocks to a defined value.
+          May be useful to check if any invalid vectors are left by the
+          debuggee. Or to set a defined state before executing a new
+          debuggee.
+[.DA32]
+Syntax:   .DA32 hModule:DWORD, exportname:STRING
+Comment:  Displays address of an export.
+          For a list of module handles use .DM32 command.
+          Parameter <exportname> should be enclosed in quotes.
+[.DG]
+Syntax:   .DG [hGlobal],[hModule|hTask]
+Comment:  Displays global heap (16-bit). Parameter <hGlobal> will restrict
+          display to this one handle, parameter <hModule|hTask> restricts
+          output to handles with corresponding owner.
+
+ XXXX XXXXXXXX XXXXXXXX XXXX XXXX XXXX XXXX XXXX XXXX
+ !    !        !        !    !    !    !    !    !
+ !    !        !        !    !    !    !    !    +--- owner (hModule|hTask)
+ !    !        !        !    !    !    !    +-------- pageLocks
+ !    !        !        !    !    !    +------------- locks
+ !    !        !        !    !    +------------------ flags (0100=PDB owner)
+ !    !        !        !    +----------------------- data
+ !    !        !        +---------------------------- type
+ !    !        !                                       0=unknown,1=DGROUP
+ !    !        !                                       2=data,3=code
+ !    !        !                                       4=task,5=resource
+ !    !        !                                       6=module,7=free
+ !    !        !                                       8=internal,9=sentinel
+ !    !        !                                       10=burgermaster
+ !    !        +------------------------------------- size
+ !    +---------------------------------------------- linear address
+ +--------------------------------------------------- handle
+[.DM]
+Syntax:   .DM [hModule],[maxLines=-1],[DebuggerContext:BOOL=0]
+Comment:  Display list of loaded 16-bit modules. Output has format:
+          XXXX XXXX XXXX XXXX XXXXXXXX XXXXXX...
+          !    !    !    !    !        !
+          !    !    !    !    !        +-------- external name
+          !    !    !    !    +----------------- module name
+          !    !    +    +---------------------- number of segments
+          !    !    +--------------------------- module flags
+          !    +-------------------------------- usage count
+          +------------------------------------- handle
+          Bits of module flags have meaning:
+          FEDCBA9876543210
+          0000000000000000
+          ||| | ||||||||||
+          ||| | ||||||||++ 0003 00=NONE, Modul has no DGROUP
+          ||| | ||||||||        01=SHARED, all instances have 1 common DGROUP
+          ||| | ||||||||        02=NONSHARED, each instance has its own DGROUP
+          ||| | ||||||||        03=NONSHARED, same as 02
+          ||| | |||||||+-- 0004 global initialization
+          ||| | ||||||+--- 0008 protected mode only
+          ||| | ||++++---- 00F0 uses 8086, 80286, 80386, 80x87 instructions
+          ||| | ++-------- 0300 00=fullscreen app
+          ||| |                 01=windows aware
+          ||| |                 02=uses windows API for display
+          ||| |                 03=same as 02
+          ||| +----------- 0800 self loading
+          ||+------------- 2000 error in image
+          |+-------------- 4000 For DLLs: Libentry has been executed
+          +--------------- 8000 DLL/0000=EXE
+
+[.DM32]
+Syntax:   .DM32 [processid],[ClientView:BOOL=0]
+Comment:  displays loaded 32-bit modules of a process.
+          <processid> is valid in the windows version only.
+[.DN]
+Syntax:   .DN hModule,[wExport|dwAddress],[ClientView:BOOL=0]
+Comment:  Displays list of exports of a module. hModule may be a handle
+          of a 16bit NE or a 32bit PE module. <wExport|dwAddress> will
+          restrict output to exports with this address (linear for 
+          32bit/far16 for 16bit) or this ordinal number.
+          If there is no exact match found, the "nearest" export will be
+          displayed.
+[.DO]
+Syntax:   .DO [selector=CS]
+Comment:  Display owner (hModule) of <selector>.
+[.DOS]
+Syntax:   .DOS
+Comment:  Display DOS current state.
+[.DP32]
+Syntax:   .DP32 [pid],[addr],[lines]
+Comment:  displays virtual memory status of a 32-bit task.
+[.DQ]
+Syntax:   .DQ
+Comment:  displays 16-bit tasks. In fact, 32bit tasks may be displayed
+          as well (for these value of SS:SP is 0000:0000) 
+[.DQ32]
+Syntax:   .DQ32
+Comment:  displays 32-bit processes.
+[.DS]
+Syntax:   .DS address:LPTR
+Comment:  displays name of an exported address of a 16bit module.
+[.ENV]
+Syntax:   .ENV
+Comment:  displays current environment settings.
+[.FEXIT]
+Syntax:   .FEXIT
+Comment:  execute a fatal exit.  
+[.FREE]
+Syntax:   .FREE hModule
+Comment:  unloads a 16-bit or 32-bit dll.
+[.FS]
+Syntax:   .FS hModule
+Comment:  release symbols loaded with .LS.
+[.GDI]
+Syntax:   .GDI
+Comment:  Windows version only. Will activate/deactivate GDI in Windows.
+          Will only work if debugger doesn't use the screen as
+          output device (use View command in this case).  
+[.I41]
+Syntax:   .I41 0|1
+Comment:  shows (1) or hides (0) debugger for int 41h.
+          Please note that some functions may not work if debugger is hidden.
+[.Kill]
+Syntax:   .Kill psp:WORD
+Comment:  will kill a dos PSP with function AH=00. psp has to be a real-mode
+          segment! Don't use this command if you don't know what you're doing!
+[.LDR]
+Syntax:   .LDR [0|1][,mask][,flags]
+Comment:  disables (0) or reenables (1) NE/PE loader.
+          Useful in cases where the HX DPMI-loader might get in the way. 
+          That's rarely needed, since the debugger sets DPMILDR=8, meaning that
+          the instance of the loader that loaded the debugger won't load another
+          application, resulting in the debuggee to run as a separate DPMI client. 
+          For 'mask' and 'flags' see environment variable DPMILDR.
+[.LS]
+Syntax:   .LS [hModule]
+Comment:  Load table of nonresident names of a 16-bit module and make
+          the names available as symbols for the debugger.
+          Currently there is a limit of 8 tables to be loaded at the same
+          time. Use .LS without parameter to display currently loaded
+          tables.
+[.MCB]
+Syntax:   .MCB
+Comment:  Display list of DOS Memory Control Blocks (MCB).
+[.MCBFree]
+Syntax:   .MCBFree mcb:WORD
+Comment:  will release a DOS MCB. mcb has to be a real-mode segment.
+          Don't use this command if you don't know what you're doing!
+[.PSP]
+Syntax:   :PSP
+Comment:  Displays PSPs. For this the MCB chain will be scanned for
+          valid PSPs. After this the windows version of the debugger will
+          scan the task list and display the corresponding protected
+          mode PSPs.
+[.REBOOT]
+Syntax:   .REBOOT
+Comment:  reboots system.
+          For native DOS: done with PS/2 "fast" Reset (Port 92).
+          For Windows: calls Reboot-Device-API, function 100h.
+[.RES]
+Syntax:   .RES
+Comment:  will install debugger as TSR program. Will be activated again
+          by breakpoints, hard coded Int 1/3 or pressing SysReq.
+          Deinstall debugger again with .Quit command.
+[.SEG]
+Syntax:   .SEG hModule,[wSegNr],[ClientView:BOOL=0]
+Comment:  Display segments/sections of module <hModule>.
+          For 16-bit NE binaries format of display is:
+          XXXX XXXX XXXX XXXX XXXX XXXX
+          !    !    !    !    !    !
+          !    !    !    !    !    +--- size (memory)
+          !    !    !    !    +-------- flags
+          !    !    !    +------------- size (file)
+          !    !    +------------------ offset in file
+          !    +----------------------- selector
+          +---------------------------- segment #
+          flags are:
+           0001: 0=code,1=data
+           0004: 1=memory allocated
+           0010: 0=fixed,1=moveable
+           0020: 0=nonshared,1=shared
+           0040: 0=loadoncall,1=preload
+           0080: 1=readonly/executeonly
+           0100: 1=relocations exists
+           0200: 1=conforming segment
+           0400: 0=IOPL,1=NOIOPL
+           1000: 0=nondiscardable,1=discardable
+           2000: 0=16-Bit,1=32-Bit
+
+          For 32-bit PE binaries format of display is:
+          XXXXXXXXX XXXXXXXX XXXXXXXX XXXXXXXX
+          !         !        !        !
+          !         !        !        !   
+          !         !        !        !   
+          !         !        !        +------------- flags
+          !         !        +---------------------- virtual size
+          !         +------------------------------- linear address
+          +----------------------------------------- name
+          flags are:
+           0000000X: ???
+           00000010: ???
+           00000020: 1=contains code
+           00000040: 1=contains initialized data
+           00000080: 1=contains uninitialized data
+           0000XX00: linker flags
+           000X0000: obsolete (1=sysheap, 2=purgeable, 4=locked, 8=preload)
+           00X00000: default alignment flags (1, 2, 4, 8, 16, 32, 64)
+           01000000: 1=contains extended relocations
+           02000000: 1=discardable
+           04000000: 1=not cachable
+           08000000: 1=not pageable
+           10000000: 1=shareable
+           20000000: 1=executable
+           40000000: 1=readable
+           80000000: 1=writeable
+[.SFT]
+Syntax:   .SFT
+Comment:  Native DOS only: display System File Table, which is an array
+          of files currently opened. With .PSP command one may see which
+          Task/PSP has opened those files.
+[.SHell]
+Syntax:   .SHell
+Comment:  launch DOS-Shell. Will work only if environment variable COMSPEC
+          is set correctly and there is enough free DOS memory available.
+          Doesn't work for the Windows version of the debugger. Please note
+          that only the current drive and directory is saved/restored. So 
+          if a debuggee is active it may fail to find its files on certain
+          circumstances.
+[.SYM]
+Syntax:   .SYM [0|1]
+Comment:  Argument <1> will cause the disassembler to try to display known
+          symbols. Symbols may be known by loading name tables of modules 
+          with .LS. Argument <0> will deactivate this feature.
+[.VCPI]
+Syntax:   .VCPI [0|1]
+Comment:  this command may be useful for debuggees which may run as
+          VCPI or DPMI clients and prefering the first case.
+          This is a problem, since the debugger cannot debug VCPI
+          clients, but by entering ".VCPI 0" it may fool the debuggee
+          pretending that the VCPI API is not available.
+          Entering ".VCPI 1" will restore the original state.
+          If VCPI is not available, this command has no effects.
+[.VIDeo]
+Syntax:   .VIDeo
+Comment:  displays video-related variables.
+[.VPICD]
+Syntax:   .VPICD
+Comment:  Display status of VPICD device.
+          XX X XXXXXXXX XXXXXXXX
+          !  ! !        +------- flags System VM
+          !  ! +---------------- flags current VM
+          !  +------------------ "v" -> IRQ is "virtualized"
+          +--------------------- IRQ (00-0F)
+ Flags:
+     1: virtual IRQ not yet terminated by IRET
+     2: virtual IRQ currently executed
+     4: physical IRQ is locked
+     8: physical IRQ currently executed
+    10: virtual IRQ is locked
+    20: virtual IRQ is requested
+    40: physical IRQ is requested
+    80: virtual IRQ requested by specific VxD
+   100: IRQ is global
+   200: IRQ is owned by specific VM
+[??]
+Syntax:   ?? expression|string
+Comment:   Display <expression> or <string>. To display a string enter
+          it in quotes. If <expression> doesnt begin with a symbol which
+          can be interpreted as command, the "??" can be omitted.
+[ADDRess]
+ Type. The debugger knowns the following ADDR types:
+
+  - FPTR: Format SSSS:OOOOOOOO (SSSS=protected mode selector)
+  - LPTR: Format SSSS:OOOO     (SSSS=protected mode selector)
+  - RMFPTR: Format SSSS:OOOO   (SSSS=real mode segment)
+
+  If debuggee is in protected mode, SSSS in expressions is interpreted
+  as protected mode selector. With operator '&' one may cast it to a
+  real mode segment. If debuggee is in real mode, SSSS in expressions is
+  interpreted as real mode segment. With operator '#' it may be casted
+  to a protected mode selector. 
+
+  Often the selector/segment part may be omitted at all. In such cases
+  it depends which  value will be used as default. If address refers
+  to EIP (like in Unassemble), CS will be default, if EBP is used as
+  a pointer, SS will be default. Else DS will be default.
+
+  Hints
+
+  Invalid Addresses are such with an invalid selector or an offset
+  outside the segment limits. These will not be accepted as parameters.
+  Addresses which may cause a page fault but are valid otherwise are
+  accepted as valid addresses. The debugger relies in this case on
+  page fault exceptions reported from the DPMI host.
+[ALLOCDOS]
+Syntax:   ALLOCDOS size:WORD
+Comment:  allocates a DOS memory block (DPMI function code 0100h).
+          <size> is number of paragraphs to allocate.
+[ALLOCMemory]
+Syntax:   ALLOCMemory size:DWORD
+Comment:  allocates a memory block (DPMI function code 0501h).
+          <size> is in bytes. 
+[ALLOCMX]
+Syntax:   ALLOCMX address:DWORD, size:DWORD, [flags:DWORD=1]
+Comment:  allocates a memory block (DPMI function code 0504h).
+          <size> is in bytes. If bit 0 of flags is set, it
+          will allocate committed memory, else uncommitted memory.
+[ALLOCSelector]
+Syntax:   ALLOCSelector [count:WORD=1], [base:DWORD=0], [limit:DWORD=0]
+Comment:  allocates <count> LDT selectors/descriptors (DPMI function code
+          0000). The value of the first selector will be displayed.
+          Use FREESelector to free these selectors.
+[ALLOCSS]
+Syntax:   ALLOCSS selector:WORD
+Comment:  allocates special LDT selector (DPMI function code 000D).
+          Use FREESelector to free these selectors.
+[BPoint]
+Syntax:   BPoint [address],[count=0],[cmd],[symbol|expression],[min],[max]
+          Special formats:
+          - BPX break on eXecute,
+          - BPW break on Write,
+          - BPR break on Readwrite
+          will set debug register watchpoints.
+Comment:
+          If no argument is given, a list of breakpoints currently defined
+          will be displayed. Format see below.
+
+          If <address> is specified, a breakpoint will be set.
+
+          If <address> is omitted, a watchpoint will be set.
+          Fourth parameter (symbol|expression) is required for this type.
+          A watchpoint will force execution to single-step mode. After
+          each instruction the condition is tested.
+
+          If <count> has been entered execution will stop after 
+          breakpoint has been hit <count> times. Default is 0,
+          meaning execution will stop at next hit.
+
+          Parameter <cmd> will be interpreted as command when the
+          breakpoint has been hit. Default for this is string ("u ,1").
+
+          A conditional breakpoint will be set if the fourth parameter
+          is set. It must be a symbol or an expression. An expression
+          will be evaluated at run time and threrefore has to be entered
+          in quotes here. Execution stops if value of expression is TRUE.
+          Entering a symbol as fourth parameter is more restrictive
+          but executes a lot faster. The symbol is checked against the
+          parameters <min> and <max>. If value of symbol is between these
+          values, execution stops.
+
+          Format of list of breakpoints:
+
+          +------------------------ # of breakpoint (00-07)
+          |  +--------------------- Mode of SSSS ('&' -> SSSS is segment)
+          |  |+-------------------- selector/segment of breakpoint
+          |  ||    +--------------- offset of breakpoint
+          |  ||    |        +------ (internal) flags
+          |  ||    |        |        01: breakpoint is active
+          |  ||    |        |        04: breakpoint will be cleared autom.
+          |  ||    |        |  +--- count-Parameter
+          |  ||    |        |  |
+          ## mSSSS:OOOOOOOO ff count <cmd> <(tt xxxxxx <min=n> <max=n>)>
+                                             |  |       |       |
+          for cond. breakpoints only:        |  |       |       |
+           type of expression/symbol   ------+  |       |       |
+            09:STRING (always if expression)    |       |       |
+            04:DWORD                            |       |       |
+            02:WORD                             |       |       |
+            01:BYTE                             |       |       |
+           Text ("expression"/symbol)  ---------+       |       |
+           min-parameter               -----------------+       |
+           max-parameter               -------------------------+
+
+Type:     <address>: ADDR, Default CS:EIP
+          <count>: DWORD, Default 0
+          <cmd>: STRING
+          <symbol>: REGISTER
+          <ausdruck>: STRING
+          <min>: DWORD
+          <max>: DWORD
+[BClear]
+Syntax:   BC [bp=0]
+Comment:  delete a breakpoint/watchpoint.
+[BDisable]
+Syntax:   BD [bp=0]
+Comment:  disable a breakpoint/watchpoint.
+[BEnable]
+Syntax:   BE [bp=0]
+Comment:  enable a breakpoint/watchpoint.
+[BYTE]
+Type with size of 1 byte for values 00-ff.
+[CANcel]
+Syntax:   CANcel [hTask]
+Comment:  terminates current debuggee.
+          parameter <hTask>: For windows version of debugger only. If <hTask>
+          is a valid 16-bit task handle, then this task will be terminated.
+          To view the list of tasks use .DQ command.
+
+          if the debuggee to cancel is a DPMI client currently running in real mode
+          or in a interrupt service routine, this may cause a system crash (depends
+          on the DPMI server). 
+[CLS]
+Syntax:   CLS
+Comment:  clears screen
+[CMDLINE]
+Syntax: deb16/32f/32fp </2|/Cx|/D /Ecommand /Q /S /F> <filename>
+  /2  = use second video adapter for debugger displays
+  /Cx = use COM port for displays and input (x=1..4)
+  /D  = use int 41h (debug terminal) for input and output
+  /Ecommand = execute 'command' after debugger has been loaded
+  /Q  = quiet mode, don't display hello message
+  /S  = "strict" mode - don't try to do nasty things, for example running
+        code in ring0. This switch is set automatically for NT/2K/XP or
+        if an attempt to write to IDT/LDT directly causes a page exception.
+  /F  = ignore FPU
+  filename = name of debuggee (full path if not in current directory)
+[CMDS]
+? [item]                      display help for <item>
+? .                           show 'dot' commands overview
+? ?                           display help index
+?? expression,...             display expression
+ALLOCDOS size                 DPMI 0100h: alloc dos memory, size in paragraphs
+ALLOCMem size                 DPMI 0501h: alloc memory, size in bytes
+ALLOCMX  address,size,flags   DPMI 0504h: alloc memory (uncommitted/committed) 
+ALLOCSel [count, ...]         DPMI 0000h: alloc LDT selectors 
+ALLOCSS selector              DPMI 000Dh: alloc special LDT selector
+BClear [bp]                   delete a break-/watchpoint
+BDisable [bp]                 disable a break-/watchpoint
+BEnable [bp]                  enable a break-/watchpoint
+BPoint [address],[mode],[symbol],[min],[max] set/show breakpoints
+BPX [address, ...]            set a debug register execution watchpoint
+BPWrite [address, ...]        set a debug register write watchpoint
+BPReadwrite [address, ...]    set a debug register read/write watchpoint
+CANcel [hTask]                terminate debuggee (<hTask> for Windows only)
+CLS                           clear screen
+CPStat value                  DPMI 0E0x: get/set coprocessor status
+CPU                           display protected register
+DA [address]                  display memory in ascii text format
+DB [address, ...]             display memory in byte format
+DD [address, ...]             display memory in dword format
+DG [selector],[lines]         display GDT
+DI [int#],[lines]             display IDT
+DISCARD address,size          DPMI 0703: discard page contents
+DL [selector],[lines]         display current LDT
+DT                            display task state segment
+Dump [address],[lines],[bytes] display memory
+DW [address]                  display memory in word format
+DPMI                          display DPMI information summary
+DYN                           display variables defined dynamically 
+Edit symbol,value             edit memory/register
+ELSE                          close IF block, open ELSE block
+ENDIF                         close IF or ELSE block
+EPM [exc#]                    DPMI 0202: get DPMI exception vector(s)
+FCall address                 call procedure with a FAR Frame
+FCRM address                  DPMI 0301: call real mode proc with RETF frame
+FREEDOS selector              DPMI 0101: free DOS memory
+FREESel selector,[count]      DPMI 0001: free <count=1> LDT selectors
+FREEMem handle                DPMI 0502: free memory block
+Fill address,size,value,type  fill memory area
+GDT [selector],[lines]        display GDT
+Go [breakpoint, ...]          continue program execution
+GPA handle, offs, pages       DPMI 0506h: get page attributes
+Help [string]                 display help
+IDT [int],[lines]             display IDT
+IF  expression                open IF block
+Input port                    read a byte from <port>
+INTcall int,[EAX,EBX,ECX,EDX] execute software interrupt
+INTErpret string              interpret <string> by parser
+INTRM int,[EAX,EBX,ECX,EDX]   DPMI 0300h: simulate real mode interrupt
+IOP port,[permission]         display/set IO Permission for port
+IORestrict [port]             display ports with IO restriction
+IPM [int]                     DPMI 0204: get protected mode interrupt vector
+IPMS int,address              DPMI 0205: set protected mode interrupt vector
+IRB [int]                     trace real mode interrupt routine
+IRM [int]                     DPMI 0200: get real mode interrupt vector(s)
+IRMS int,address              DPMI 0201: set real mode interrupt vector
+Jump [1]                      trace into an INT instruction
+K                             display stack frames
+LDT [selector],[lines]        display LDT
+Load pgmname,[parm],[option]  load a program 
+LOCk address,size             DPMI 0600h: lock memory region
+LOCKD drive                   lock drive
+LOCKRM address,size           DPMI 0603: relock real mode region
+MACro                         display defined macros
+MARKPage address,size         DPMI 0702h: mark pages as paging candidates
+MEMinfo                       DPMI 0500h: display free memory information
+Move address1,address2,size   move memory block
+MSR [index, ...]              display model specific register (Pentium+)
+Output port,byte              write <byte> to <port>
+PDir [address],[lines]        display page directory
+Perform [eip]                 execute a call
+PFlags address, ...           display/change page flags of a linear address
+PMAP phy. address,[size]      DPMI 0800h: map physical region
+PTable address,[lines, ...]   display page table
+PRintf formatstring, ...      call printf routine
+PUNMAP address                DPMI 0801h: unmap a previously mapped region
+Quit                          quit debugger
+REAd name,[address],[size],[ofs] read a file
+REALLOCDOS handle, size       DPMI 0102h: resize DOS memory block
+REALLOCM handle, size         DPMI 0503h: resize memory block
+Register                      display standard registers
+RM                            display MMX registers
+RN                            display floating-point registers
+RT                            display temporary register set
+RS drive,sector,sectors,[address] read sectors from device (int 25h)
+RX                            display XMM registers
+S2D segment                   DPMI 0002h: segment to descriptor
+Search address,size,value     search a string in memory area
+SHow [variable]               display internal variables
+SKip                          don't handle next exception
+SPA handle, offs, pages, attr DPMI 0507h: set page attributes
+Trace [steps],[mode]          execute <steps> instructions in single step mode
+TRAPs                         display trap status ( TIDT(),TEXC(),TPMI(),..)
+TSS [address]                 display task state segment
+TYpe [filename|address]       call fullscreen editor with file/memory block
+Unassemble [address],[lines]  disassembly memory block
+UNCOMM selector               display uncommited pages of a segment
+UNLock address,size           DPMI 0601h: unlock linear region
+UNLOCKD drive                 unlock a drive
+UNLOCKRM address,size         DPMI 0602: mark real mode region as pageable
+View                          display user screen
+Write name,address,size,offs  write a file
+WS drive,sector,sectors,address write sectors to a drive (int 26h)
+[CONST]
+CONST is a type attribute for any constant number (0 - FFFFFFFF).
+valid CONST arguments are: 1,A0000,FFFFFFFF,10t
+invalid CONST arguments are: G,0x0000,Hello
+[CPStat]
+Syntax:   CPStat [value]
+Comment:  displays or sets value of coprocessor status with dpmi functions
+          0E0xh. This affects CR0 flags MP and EM. Low 4 bits mean:
+           0: client (virtual) MP bit 
+           1: client (virtual) EM bit
+           2: host MP bit
+           3: host EM bit
+          High 4 bits identify coprocessor:
+           2: 80287
+           3: 80387
+           4: 80487
+[CPU]
+Syntax:   CPU
+function  display information about CPU and protected registers
+          (CRx, DRx and TRx). This is done by a switch to ring 0,
+          which is only possible with direct access to LDT or IDT.
+          So this possibly doesn't work for Windows NT/2K .
+          CR4 exists for 80486+ with support for CPUID only.
+          TR registers doesn't exist for pentium+ any longer. 
+[CPUID]
+Flags of CPUID.01.EDX:
+       1 FPU:  FPU is integrated
+       2 VME:  supports CR4 VME/PVI, EFL VIF/VIP
+       4 DE:   supports i/o breakpoints + CR4 DE
+       8 PSE:  4MB page size supported + CR4 PSE
+      10 TSC:  support for RDTSC + CR4 TSD
+      20 MSR:  support for RDMSR/WRMSR
+      40 PAE:  physical address extension + CR4 PAE
+      80 MCE:  machine check exceptions + CR4 MCE
+     100 CX8:  CMPXCHG8B supported
+     200 APIC: on chip APIC exists and enabled
+    1000 MTRR: memory type range registers (MTRR) supported
+    2000 PGE:  support for CR4 PGE
+    4000 MCA:  MCA_GAP MSR supported
+    8000 CMOV: CMOV + FCMOV/FCOMI supported
+   10000 PAT:  PAT available
+  800000 MMX:  MMX supported
+ 1000000 FXSR: FXSAVE/FXRSTOR supported
+ 2000000 SSE:  SSE supported
+ 4000000 SSE2: SSE2 supported
+Flags of CPUID.01.ECX:
+       1 SSE3: SSE3 supported
+[CR0]
+Control Register 0:
+ + 31   + 24    + 16     + 8     + 0
+ |      |       |        |       |
+ 0000000000000000 0000000000000000
+ |||          | |           ||||||
+ |||          | |           |||||+ 00000001 PE 1=Protected mode Enabled
+ |||          | |           ||||+- 00000002 MP Math Present
+ |||          | |           |||+-- 00000004 EM EMulate bit
+ |||          | |           ||+--- 00000008 TS 1=Task Switched
+ |||          | |           |+---- 00000010 ET Extension Type
+ |||          | |           +----- 00000020 NE 80486; Numeric Exception
+ |||          | +----------------- 00010000 WP 80486; Write Protect
+ |||          +------------------- 00040000 AM 80486; Align Mask
+ ||+------------------------------ 20000000 NW 80486; Not Write-through
+ |+------------------------------- 40000000 CD 80486; Cache Disable
+ +-------------------------------- 80000000 PG 1=PaGing enabled
+MP: 1=WAIT Opcode generates exception 7 (DNA) if TS=1
+EM: 1=Floating point Opcodes generates exception 7 (DNA)
+TS: 1=Task Switch (Task Gate) has occured
+ET: 1=32-Bit 80387 coprocessor protocol, always 1 for 80486+
+NE: 1=launch exception 10h on floating point errors
+    0=launch IRQ 0Dh (int 75h) (may be masked by port A1h)
+WP: 1=write to R/O pages not allowed in ring 0
+AM: 1=AC-Bit in EFLAGS is active (checked in ring 3)
+CD+NW: 00=cache enabled,11=cache disabled
+
+Hint:  Some bits in CR0 may be changed inside debugger, but not PE or PG.
+[CR3]
+control register 3:
+Bits 12-31 contain page directory physical base address.
+Bits 0-11:
+ 3/008 80486+: PWT page level writes transparent
+ 4/010 80486+: PCD page level cache disabled
+All other bits are reserved.
+[CR4]
+control register 4:
+   Mask Bit Name
+-------------------------------------------------
+       1, 0 VME Virtual-8086 Mode Extensions 
+       2, 1 PVI Protected-Mode Virtual Interrupts (HW VIF support)
+       4, 2 TSD Time Stamp Disable (restricts RDTSC access)
+       8, 3 DE  Debugging Extensions (GPF on DR4/DR5 access, IO BPs)
+      10, 4 PSE Pentium: Page Size Extension (enables 4 MB pages)
+      20, 5 PAE PPro+: Physical Address Extension (36 bit addressing)
+      40, 6 MCE Machine Check Exception 
+      80, 7 PGE PPro+: Page Global Enable (enable global page feature)
+     100, 8 PCE PPro+: Performance Monitoring Counter Enable (RDPMC access)
+     200, 9 OSFXSR P3+:1=ISSE with no exc
+     400,10 OSXMMEXPT P3+: Unmasked SIMD FP Exceptions
+     800,11 UMIP ?: User-Mode Instr. Prev. (SGDT,... disabled in user mode)
+    2000,13 VMXE ?: Virtual Machine eXtension Enable
+    4000,14 SMXE ?: Safer Mode eXtension Enable
+[DBGER_VPage]
+Internal variable.
+Comment:  selects a text page for output of debugger in direct video mode
+          if screen swapping is off.
+Typ:      BYTE, Default=1
+[DIRECTMode]
+Internal variable
+Comment:  if true, LDT is accessed directly. If false, LDT is accessed
+          thru DPMI only. If STRICTMode=TRUE, this variable has no meaning.
+[DISCARD]
+Syntax:   DISCARD address:DWORD,size:DWORD
+Comment:  discard a memory area with DPMI function 0703h.
+          It is up to the DPMI host if this function has any effect,
+          it might reset "Access" and "Dirty" bits for the pages affected.
+          This may be viewed with the debugger's PT command.
+[DOSCRITERR]
+  When Int 24h is called, low Byte of DI contains DOS error code if 
+  bit 7 of AH is 0:
+
+   00=write protection violation attempted
+   01=unknown unit for driver
+   02=drive not ready
+   03=unknown command given to driver
+   04=data error
+   05=bad device driver request structure length
+   06=seek error
+   07=unknown media type
+   08=sector not found
+   09=printer out of paper
+   0A=write fault
+   0B=read fault
+   0C=general failure
+   0D=share violation
+   0E=lock violation
+   0F=invalid disk change
+   10=FCB unavailable
+   11=sharing buffer overflow
+   12=code page mismatch
+   13=out of input
+   14=insufficient disk space
+[DPMI]
+  directly supported DPMI functions:
+  ALLOCS     : 0x0000 (alloc sel)
+  FREES      : 0x0001 (free sel)
+  S2D        : 0x0002 (segment to descriptor)
+  BASE()     : 0x0006 (get base)
+  SETBASE()  : 0x0007 (set base)
+  SETLIM()   : 0x0008 (set limit)
+  SETATTR()  : 0x0009 (set access rights)
+  ALLOCSS    : 0x000D (alloc special sel)
+  ALLOCDOS   : 0x0100 (alloc DOS mem)
+  FREEDOS    : 0x0101 (free DOS mem)
+  REALLOCDOS : 0x0102 (realloc DOS mem)
+  IRM        : 0x0200 (get rm int vec)
+  IRMS       : 0x0201 (set rm int vec)
+  EPM        : 0x0202 (get exc vec)
+  IPM        : 0x0204 (get pm int vec)
+  IPMS       : 0x0205 (set pm int vec)
+  INTRM      : 0x0300 (simulate real mode int)
+  FCRM       : 0x0301 (call real mode proc with retf frame)
+  DPMI       : 0x0400 (get version + 0x401 if DPMI 1.0 host)
+  MEM        : 0x0500 (get mem info)
+  ALLOCM     : 0x0501 (alloc mem)
+  FREEM      : 0x0502 (free mem)
+  REALLOCM   : 0x0503 (realloc mem)
+  ALLOCMX    : 0x0504 (alloc linear mem, DPMI 1.0)
+  REALLOCMX  : 0x0505 (realloc linear mem, DPMI 1.0)
+  GPA        : 0x0506 (get page attr, DPMI 1.0)
+  SPA        : 0x0507 (set page attr, DPMI 1.0)
+  LOCK       : 0x0600 (lock mem)
+  UNLOCK     : 0x0601 (unlock mem)
+  UNLOCKRM   : 0x0602 (unlock real mode region)
+  LOCKRM     : 0x0603 (relock real mode region)
+  MARKP      : 0x0702 (prefer region for paging)
+  DISCARD    : 0x0703 (discard page contents)
+  PMAP       : 0x0800 (physical address mapping)
+  PUNMAP     : 0x0801 (unmap mapped physical address, DPMI 1.0)
+  BPX/BPW/BPR: 0x0BXX (set/clear debug watchpoint)
+  CPS        : 0x0E0X (get/set coprocessor status)
+
+[DWORD]
+Type with size 4 bytes for values 0-FFFFFFFF.
+[Dump]
+Syntax:   Dump [address:ADDR],[lines:WORD=10],[bytes_per_line:WORD=10]
+Comment:  Special formats of this command:
+            DA : Dump in ascii text format
+            DB : Dump in byte format
+            DD : Dump in doubleword format
+            DG : Display GDT (same as GDT command)
+            DI : Display IDT (same as IDT command)
+            DL : Display LDT (same as LDT command)
+            DP : Display page table (same as PT command)
+            DPD: Display page directory (same as PD command)
+            DT : Display task state segment (same as TSS command)
+            DW : Dump in word format
+            
+          Default for Selector of address is value of DS
+[DUMPFlags]
+Variable
+Comment:  Flags for Dump command.
+	01: used internally 
+	02: switch to debuggee screen when reading debuggee bytes
+[ECHO]
+Internal variable
+Comment:  If false, no output will be done. Useful for macros.
+Type:     BOOL, Default=TRUE
+[EFL]
+extended flag register:
+ + 31   + 24    + 16     + 8     + 0
+ |      |       |        |       |
+ 0000000000000000 0000000000000010
+           ||||||  ||||||||| | | |
+           ||||||  ||||||||| | | + 0001 CF Carry Flag
+           ||||||  ||||||||| | +-- 0004 PF Parity Flag
+           ||||||  ||||||||| +---- 0010 AF Auxiliary carry Flag
+           ||||||  ||||||||+------ 0040 ZF Zero Flag
+           ||||||  |||||||+------- 0080 SF Sign Flag
+           ||||||  ||||||+-------- 0100 TF Trap Flag
+           ||||||  |||||+--------- 0200 IF Interrupt Flag
+           ||||||  ||||+---------- 0400 DF Direction Flag
+           ||||||  |||+----------- 0800 OF Overflow Flag
+           ||||||  |++------------ 3000 IOPL I/O Privilege Level
+           ||||||  +-------------- 4000 NT Nested Task Bit
+           |||||+----------------- 0001 RF Resume Flag
+           ||||+------------------ 0002 VM Virtual 8086 Mode
+           |||+------------------- 0004 AC Alignment Check; 80486+
+           ||+-------------------- 0008 VIF Virtual Interrupt Flag; 80486+
+           |+--------------------- 0010 VIP Virt. Interrupt Pending; 80486+
+           +---------------------- 0020 ID CPUID is supported; 80486+
+[ENDIF]
+Syntax:   ENDIF
+Comment:  closes a IF/ELSE block. Useful for scripts only.
+[ELSE]
+Syntax:   ELSE
+Comment:  closes a IF block, and opens a ELSE block. Useful for scripts only.
+[EMSave]
+Internal variable
+Comment:  If EMSave is TRUE (default), the debuggee's MP and EM bits in
+          CR0 will be saved and restored by the debugger with DPMI
+          functions 0E00h/0E01h (if the DPMI server supports these functions).
+[EPM]
+Syntax:   EPM [exc#:BYTE=0],[ClientView:BOOL=0]
+Comment:  display exception vectors reported by int 31h, ax=0202h. 
+          If <ClientView> is not entered or FALSE, the debugger will use
+          the internally saved vector for int 31h calls. If <ClientView>
+          is TRUE, the current vector for int 31h will be used, which
+          in fact will display the vectors from the debuggee's view.
+[ERRCodes]
+Error Code
+Segment Exceptions (10,11,12,13):
+  Bit 0: 1=Error while processing an exception/external interrupt
+  Bit 1: 1=Error during IDT Read
+  Bit 2: Table Indicator
+  Bit 3-15: Selector/Null
+Page Exception (14):
+  Bit 0: 0=Not Present Exception  1=Protection Exception
+  Bit 1: 0=Read Access            1=Write Access
+  Bit 2: 0=Access From Level 0-2  1=Access from Level 3
+[EXCeptions]
+ 0 - Divide Error
+ 1 - Debug  Exception
+ 3 - Singe Byte INT 3 (programmed trap)
+ 4 - Overflow (INTO)
+ 5 - Bounds Check
+ 6 - Invalid Opcode
+ 7 - Device Not Available (80387)
+ 8 - Double Fault
+ 9 - Coprocessor Segment Overrun
+10 - Invalid TSS
+11 - Segment Not Present
+12 - Stack Segment
+13 - General Protection
+14 - Page Exceptions
+16 - Coprocessor Error
+[EXPRession]
+ An expression may consist of:
+   1. numbers (in hexadecimal or, by a trailing 't', in decimal format.
+   2. symbolic constants and variables, which may be
+      - predefined variables (Register, internal Variable)
+      - symbols loaded with .LS
+      - dynamically defined variables (will be created by 
+        operator "=" if left side of expression is not defined yet.
+   3. operators (binary and unary), view defined operators with
+      "? OPerators".
+   4. functions. View defined functions with "? FUnctions".
+
+ Hints
+
+  Operands are interpreted as unsigned numbers.
+  Using operator '-' doesn't change this. Thats why expression
+  "1>-1" will return FALSE.
+   On the left side of the assignment operator '=" a symbol or an
+  address may be placed. if left operand is a pointer, use a segment
+  prefix or "[]" operator to make clear you don't want to change the
+  pointer but the value the pointer points to (example: use "ds:eax=1"
+  or "[eax]=1" to change value at address in eax).
+[Edit]
+Syntax:   Edit symbol:SYMBOL|address:ADDR, value:BYTE|WORD|DWORD|STRING
+Comment:  change value of <symbol> or content of <address>.
+          Default of selector for <address> is DS.
+          Special variants of this command are:
+            EB : edit Byte
+            EW : edit Word
+            ED : edit Dword
+          to edit memory there is an alternative by using the build-in
+          full-screen hex editor which may be started by "TYpe" command.
+[FCall]
+Syntax:   FCall address:FPTR, parameter1:DWORD|FPTR, parameter2:DWORD|FPTR, ...
+Comment:  call a procedure with FAR frame. Registers are loaded from
+          temporary register block (type "? RT" for further details).
+
+ Hints
+  - a 16-Bit procedure shouldn't be called this way, because it will clear
+    HIWORD of EIP and so may cause a protection exception on return.
+[FCRM]
+Syntax:   FCRM address:RMFPTR
+Comment:  call a real mode procedure with FAR frame. This is done by
+          DPMI function code 0301h. Registers are loaded from temporary
+          register set (type "? RT" frp details).
+[FORMStr]
+Internal variable.
+Comment:  Format of register log (breakpoint) for command "R1"
+          <string> is like printf-formatstring.
+
+          registers will be pushed for printf in this order:
+            EAX,EBX,ECX,EDX,ESI,EDI,EBP,EFL,
+            CS,EIP,SS,ESP,DS,ES,FS,GS
+
+          This cannot be changed. 
+Typ:      STRING
+[FCW]
+ Bits in control-word register of floating point unit:
+   15     8       0
+   +      +       +
+   0000000001000000
+       ||||  |||||+-- IM invalid operation mask
+       ||||  ||||+--- DM denormal mask
+       ||||  |||+---- ZM zero divide mask
+       ||||  ||+----- OM overflow mask
+       ||||  |+------ UM underflow mask
+       ||||  +------- PM precision mask
+       ||++---------- PC precision control (24,xx,53,64)
+       ++------------ RC rounding control
+
+[FSW]
+ Bits in status-word Register of floating point unit:
+   15     8       0
+   +      +       +
+   0000000000000000
+   |||||||||||||||+-- IE invalid operation exc
+   ||||||||||||||+--- DE denormal exc
+   |||||||||||||+---- ZE zero divide exc
+   ||||||||||||+----- OE overflow exc
+   |||||||||||+------ UE underflow exc
+   ||||||||||+------- PE precision exc
+   |||||||||+-------- SF precision control (24,xx,53,64)
+   ||||||||+--------- IR rounding control
+   |||||||+---------- C0 rounding control
+   ||||||+----------- C1 rounding control
+   |||||+------------ C2 rounding control
+   ||+++------------- TOP
+   |+---------------- C3
+   +----------------- B
+[FTW]
+ Bits in tag-word Register of floating point unit:
+   2 bits for each physical FPU register, with meaning:
+    00: valid
+    01: zero
+    10: special
+    11: empty
+   TOP in status-word register points to ST(0)
+[FREEDOS]
+Syntax:   FREEDOS selector:WORD
+Comment:  Free a DOS memory block (DPMI function code 0101h).
+[FREEMemory]
+Syntax:   FREEMemory handle:DWORD
+Comment:  Free a memory block (DPMI function code 0502h)
+[FREESelector]
+Syntax:   FREESelector selector:WORD,[count=1]
+Comment:  Free <count> selectors beginning with <selector> (DPMI function
+          code 0001h).
+[FUnctions]
+  following functions are defined and may be used in expressions:
+
+ returns name(type of parameter,...)    comment
+  -------------------------------------------------------------------
+   WORD  SEG(ADDR)                      segment part of an address
+   DWORD OFF(ADDR)                      offset part of an address
+   LPTR  LPTR(FPTR|RMFPTR|DWORD)        type cast to LPTR
+   RMFPTR RMFPTR(FPTR|LPTR|DWORD)       type cast to RMFPTR
+   DWORD NOT(DWORD)                     2-complement
+   DWORD BASE(DWORD Selektor)           get base of a selector
+   DWORD SETBASE(DWORD Selektor,DWORD)  set base or a selector
+   DWORD LIM(DWORD Selektor)            get limit of a selector
+   DWORD SETLIM(DWORD Selektor,DWORD)   set limit of a selector
+   WORD  ATTR(DWORD Selektor)           get access rights of a selector
+   WORD  SETATTR(DWORD Selektor,WORD)   set access rights of a selector
+   BYTE  INPB(WORD Port)                read a byte from port
+   WORD  INPW(WORD Port)                read a word from port
+   BYTE  OUTB(WORD Port,BYTE)           write a byte at port
+   WORD  OUTW(WORD Port,WORD)           write a word at port
+   WORD  HIWORD(DWORD)                  get HiWord of a DWORD
+   WORD  LOWORD(DWORD)                  get LoWord of a DWORD
+   BYTE  HIBYTE(WORD)                   get HiByte of a WORD
+   BYTE  LOBYTE(WORD)                   get LoByte of a WORD
+   BYTE  TYPE(EXPRESSION)               get type of an expression
+   BOOL  IDT(BYTE)                      get trap status of IDT-vector
+   BOOL  TIDT(BYTE,BOOL)                set trap status of IDT-vector
+   BOOL  EXC(BYTE)                      get trap status of exception
+   BOOL  TEXC(BYTE,BOOL)                set trap status of exception
+   BOOL  PMI(BYTE)                      get trap status of protected mode int
+   BOOL  TPMI(BYTE,BOOL)                set trap status of protected mode int
+   BOOL  RMI(BYTE)                      get trap status of real/v86 mode int
+   BOOL  TRMI(BYTE,BOOL)                set trap status of real/v86 mode int
+   BOOL  NOTIFY(BYTE)                   get notification protocol status
+   BOOL  SETNOTIFY(BYTE,BOOL)           set notification protocol status
+   STRING STRCAT(STRING,STRING)         concatenate 2 strings
+[Fill]
+Syntax:   Fill address:ADDR, size:DWORD, value:DWORD, [type:BYTE=1]
+Comment:  Fills a memory area beginning with <address> with <value>.
+          <type> defines type of <value> (1=BYTE, 2=WORD, 4=DWORD).
+[GDT]
+Syntax:   GDT [selector:WORD=0],[lines:WORD=10]
+Comment:  Display <lines> selectors from GDT beginning with <selector>
+[Go]
+Syntax:   Go [breakpoint:ADDR,...]
+Comment:  Start/Continue program execution using current CS:EIP.
+          <breakpoint> parameter will set a breakpoint.
+[GPA]
+Syntax:   GPA handle, offset, pages
+Comment:  get page attributes by calling DPMI function 0506h,
+          which is a DPMI V1.0 extension.
+          Attribute bits are:
+          00000000
+           |||||     000=uncommitted
+           |||||     001=committed
+           |||||     010=mapped
+           ||||+---- other values unused
+           |||+----- 1=page is read/write (08)
+           ||+------ 1=accessed/dirty bits are valid (10)
+           |+------- 1=page accessed (20)
+           +-------- 1=page dirty (40)
+[HARD]
+This is a Macro. Debugger will be set to "Hard"-Mode, which means that
+IDT entries for interrupt 1 and 3 will be modified so they jump directly
+into the debugger. This will not work in STRICT mode, and it should
+be used with care, since breakpoints in ring 0 may cause a crash. There
+are 2 situations where setting this mode is required, though:
+
+ - on win9x platforms there exists a bug which may prevent the debugger
+   to receive debug exceptions. Using this macro can cure that annoyance. 
+ - to debug win32 apps on win9x platforms in the windows version of the
+   debugger. This cannot be achieved by DPMI since the windows system VM
+   is a 16-bit DPMI client and the debugger will not get any exceptions
+   while CS is a 32bit selector.
+[Help]
+Syntax:   Help [string=CMDS]
+          Displays a help topic.
+          Enter 'Help ?' or '? ?' for help index.
+[IDT]
+Syntax:   IDT [selector:WORD=0],[lines:WORD=10>
+Comment:  Displays trap- and interrupt gates of the Interrupt Descriptor Table
+[IF]
+Syntax:   IF expression
+Comment:  Useful for scripts only. Opens an IF block, which will be executed
+          if <expression> is TRUE.
+Type:     expression: BOOL
+[INPMFN]
+internal variable
+Comment:  If input is read from DOS (see INPM) it will be read from this file.
+Type:     STRING
+[INPMode]
+internal variable
+Comment:  state of input mode. The debugger is able to read from
+          more than one device at the same time.
+          00000000
+          |  |||||
+          |  ||||+-- 01=input from COM port (direkt)
+          |  |||+--- 02=input from Debug-Terminal (int 41h)
+          |  ||+---- 04=input from DOS
+          |  |+----- 08=input from keyboard (default)
+          |  +------ 10=input from keyboard (2. video adapter)
+          +--------- 10=input from COM port (Int 14h)
+          if more that 1 device is active, priority is:
+           1. Debug-Terminal
+           2. COM port
+           3. keyboard
+           4. DOS
+
+          Input from keyboard (2. video adapter) is like standard keyboard,
+          but cursor is set for the 2. video adapter.
+
+          If input is from DOS, a file may be attached to the device.
+          This is done by setting variable INPMFN. At EOF the input
+          device will be switched to keyboard if no other device is active.
+
+          If the Windows version of the debugger is used, input from keyboard
+          is only possible if system VM is in foreground.
+
+[INTcall]
+Syntax:   INTcall int:BYTE,[EAX:DWORD, EBX:DWORD, ECX:DWORD, EDX:DWORD]
+Comment:  call a software interrupt. registers not specified as
+          parameters will be read from temporary registers (see "RT")
+[INTErpret]
+Syntax:   INTErpret string:STRING
+Comment:  call parser to interpret <string> argument. Useful for scripts.
+[INTRM]
+Syntax:   INTRM int:BYTE,[EAX:DWORD, EBX:DWORD, ECX:DWORD, EDX:DWORD]
+Comment:  call a real mode software interrupt. Registers not specified as
+          parameters will be read from temporary registers (see "RT")
+[IOP]
+Syntax:   IOP port,[permission]
+          displays value of IO-Permission bitmap in TSS for specified port
+          or sets the given value (0|1) for the port in the bitmap.
+          Requires ring 0 access.
+[IORestriction]
+Syntax:   IORestrict [port]
+Comment:  Display IO restriction bitmap of current TSS beginning with <port>. 
+[IPM]
+Syntax:   IPM [int:BYTE=0], [debugger context:BOOL=0]
+Comment:  Display protected mode interrupt vectors (DPMI-function 0204).
+          In brackets the corresponding DOS vectors (Int 21, function AH=35)
+          are displayed (should be the same in most cases).
+          
+          - <debugger context>=0: int 31h/int 21h will be used directly, so
+            what' displayed are vectors from the debuggee's view.
+          - <debugger context>=1: this will show the vectors how the 
+            debugger will see them.
+[IPMS]
+Syntax:   IPMS int:BYTE,address:LPTR|FPTR
+Comment:  Sets a protected mode interrupt vector (DPMI).
+[IRB]
+Syntax:   IRB interrupt:BYTE
+Comment:  This command will set a breakpoint (automatically cleared)at
+          the start of the real mode interrupt service routine.
+[IRM]
+Syntax:   IRM [int:BYTE=0]
+Comment:  Displays real mode interrupt vectors (DPMI-function 0200).
+[IRMS]
+Syntax:   IRMS int:BYTE, address:RMFPTR
+Comment:  sets a real mode interrupt vector (DPMI-function 0201).
+[IRQ]
+    IRQ is an internal variable. With it one may cause the debugger to
+   allow interrupts while it is active (IRQ=TRUE) or not (IRQ=FALSE).
+   In most cases there is no need to set this variable to zero, but it
+   may be necessary if the debugger prompt appears after having pressed 
+   SYSREQ but no keys can be entered. If IRQ is 0, the keyboard will be
+   polled and key mapping is done with the help of some entries in 
+   debxxf.ini, section [keys].
+[Input]
+Syntax:   Input port:WORD
+Comment:  read a byte from 'port' and display it.
+          Special formats to read a word/dword exists: 
+            IW port:WORD
+            ID port:WORD
+[Jump]
+Syntax:   Jump [1]
+Comment:  acts mostly like Trace except if current CS:EIP points to an
+          INT xx instruction. In this case the debugger will try to single
+          step into the interrupt routine. If the INT instruction would
+          cause a switch to ring 0 - or if argument <1> is given - the 
+          debugger will not follow this execution path but try to
+          stop execution in real/v86 mode. This will only work if 
+          the interrupt is not handled by the DPMI server internally.
+    
+          With int 31h instructions the debugger will analyse the register
+          status and check if any of the mode switch functions is about
+          to execute. If so, a breakpoint will be set in the real mode
+          routine to execute.
+[K]
+Syntax:   K
+Comment:  displays stack frames.
+[KEYBFlags]
+Internal variable.
+Comment:  Flags for keyboard device.
+    01:   1=handle SysReq,0=ignore SysReq
+    02:   1=pressing SysReq will execute an INT 01 immediately
+          0=pressing SysReq will try to cause a single step exception in
+          normal execution path, which may not work for some DPMI servers.
+          This flag is valid only for the dos versions of the debugger.
+    04:   1=execute an INT 03 instead of an INT 01 if SysReq has been pressed
+    08:   0=use Alt-Print as SysReq (default)
+          1=use Alt-Scroll as SysReq (default for NT platforms)
+[KEYS]
+ <Home>         : Cursor at start of line
+ <End>          : Cursor at EOL
+ <Isrt>         : switch insert mode on/off
+ <Del>          : delete char at cursor position
+ <Backspace>    : delete char on the left of cursor
+ <Cursor up>    : scroll up in keyboard buffer
+ <Cursor down>  : scroll down in keyboard buffer
+ <Cursor left>  : Cursor left
+ <Cursor right> : Cursor right
+ <ESC>          : cancel current line
+ <Ctrl-C>       : cancel current operation
+ <F1>           : ? - shows available commands
+ <F4>           : View - show user screen
+ <F5>,<Ctrl-G>  : Go - continue execution
+ <F6>,<Ctrl-R>  : Register - display register
+ <F7>,<Ctrl-E>  : Unassemble - disassembly
+ <F8>,<Ctrl-W>  : Trace - single step
+ <F9>           : BP - set breakpoint at current EIP
+ <F10>,<Ctrl-Y> : Perform - executes CALL/INT, else single step
+ <F11>          : Jump - single step into INT
+ <F12>,<Ctrl-A> : repeat last typed in command
+ <SysReq>       : interrupt debuggee. Usually Alt-Print is SysReq, but this
+                  may be changed to Alt-Scroll with variable KEYBFlags 
+                  (default for NT platforms).
+[LDT]
+Syntax:   LDT [selector:WORD=0],[lines:WORD=0x10]
+Comment:  Displayes <lines> selectors from current LDT beginning with
+          <selector>.
+[Load]
+Syntax:   Load pgmname:STRING, [cmdline:STRING], [option:BYTE=1]
+Comment:  Try to load program <pgmname>. If no full path is specified,
+          the program is searched in current directory only. The
+          <cmdline> parameter will be the program's command tail (if
+          any). <option> parameter is treated as flags which
+          will fine tune the debugger's behaviour:
+
+           0001: break at program entry (Default). Please note that
+                 there exists no "load and do no execute" command
+                 in protected mode. Instead the debugger relies on
+                 notifications thru' Int 41h.
+           0002: break at dll initialization
+           0004: break at dll termination
+           0008: break at segment load notifications
+           0010: do *not* break at real-mode entries (DOS only)
+
+Hints
+
+ - The name of the program to load must be entered with extension.
+
+ - To debug a real mode program it is essential to trap real mode
+   ints 1 and 3.
+
+ - Parameter <cmdline> must be entered in quotes.
+
+ - Some error codes returned by "load program" dos function may be
+   displayed with "? LOADERR".
+[LOADLE]
+Syntax:   LOADLE pgmname:STRING
+Macro to simplify loading LE executables. It executes the following
+debugger commands:
+ - .vcpi 0  // disable VCPI if installed (forces the debuggee to use DPMI)
+ - L pgmname // load the debuggee and stop at real-mode entry address
+ - G pmentry // run the debuggee until it switches to protected-mode
+ - BP ,,,"attr(cs) and 4000" // sets a watchpoints which stops debuggee 
+                             // if CS is 32bit
+ - G   // another Go which hopefully will stop as expected
+ - BC  // clear the watchpoint being set by last BP command
+ 
+ This may work for some DOS4/GW compatible dos extenders. For DOS4/GW
+ itself using LOADLE usually isn't required, it should suffice to set
+ variable Traceflags=a. The debuggee will then stop when a int 21h,
+ AX=FF00, DX=0078 is executed, as it is done by the DOS4/GW runtime.
+[LOADERR]
+  Errorcodes returned by loading a program/dll:
+
+   00=System out of memory or executable file corrupt
+   01=call to int 21, 4B00 invalid (DOS)
+   02=File not found
+   03=Path not found
+   04=too many files open
+   05=Dynamic link to a task/sharing error/network protection error
+   06=DLL requires separate data segments for each task
+   07=msdos memory block problems (DOS)
+   08=insufficient memory
+   09=msdos memory block problems (DOS)
+   0A=wrong windows version
+   0B=executable format invalid
+   0C=not a windows or DOS executable
+   0D=DOS 4.0 app
+   0E=unknown executable file format
+   0F=attempt to load a real mode windows app
+   10=unable to load a second instance of this app
+   11=error in large frame EMS mode
+   12=attempt to load a protected mode only app in real mode
+   13=compressed file
+   14=one of the DLLs required couldn't be loaded
+   15=32bit-Extensions required
+
+[LOGINP]
+Internal variable
+Comment:  If true, commands entered from files or macros will be
+          displayed. Useful for test purposes.
+Type:     BOOL, Default=FALSE
+[LOCk]
+Syntax:   LOCk address:DWORD, size:DWORD
+Comment:  lock a memory region so it will have physical memory
+          assigned to it in any case and never been written to a
+          swap file (DPMI function 0600h). <address> is a linear
+          address and <size> is in bytes.
+[LOCKD]
+Syntax    LOCKD drive:BYTE
+Comment:  lock a drive.
+[LOCKRM]
+Syntax:   LOCKRM linear address:DWORD, size:DWORD
+Comment:  relocks a real mode memory region (DPMI function 0603h).
+          <size> is in bytes.
+[MACro]
+Syntax:   MACro [name]
+Comment:  Without argument displays currently defined macros. 
+          With argument <name> displays this macro or an error if it is
+          not found.
+          
+          A macro is executed simply by typing its name. 
+          Some macros will require parameters, for example:
+            EXEC=INPMFN="^";inpm=inpm or 4;
+          This defines macro EXEC, which requires a parameter to
+          be used as file name. To run this macro, type:
+            EXEC xxx.rsp
+          This will open file xxx.rsp to use this file as debugger
+          input. At end, input device will be restored.
+[MARKPage]
+Syntax:   MARKPage address:DWORD, size:DWORD
+Comment:  mark memory region as paging candidate (DPMI function 0702h).
+          It depends on the DPMI server if this function has any effects.
+          A possible strategy could be to reset Accessed bit for the
+          corresponding page table entries. <size> is in bytes.
+[MEMinfo]
+Syntax:   MEMinfo
+Comment:  Display DPMI memory information
+[Move]
+Syntax:   Move address1:ADDR, address2:ADDR, size:DWORD
+Comment:  move memory region from <address1> to <address2>, <size> bytes.
+          handles overlapping areas.
+[MSR]
+Syntax:   MSR [index=0], [count=20|value low], [value high]
+Comment:  Displays/Sets model specific registers. MSRs can be accessed in
+          ring 0 only. To set a MSR, parameters <index>, <value low> and
+          <value high> all must be given.
+          
+          MSR Name  function
+          ------------------
+          00  MCA   Machine Check Exception Address
+          01  MCT   Machine Check Exception Type
+          02  TR1   Parity Reversal Test
+          03  -
+          04  TR2   Instruction Cache End Bit Test
+          05  TR3   Cache Data Test
+          06  TR4   Cache Tag Test
+          07  TR5   Cache Control Test
+          08  TR6   TLB Command Test
+          09  TR7   TLB Data Test
+          0A  -
+          0B  TR9   BTB Tag Test
+          0C  TR10  BTB Target Test
+          0D  TR11  BTB Control Test
+          0E  TR12  New Feature Control
+          0F  -
+          10  TSC   Time Stamp Counter
+          11  CESR  Count Event Selection
+          12  CTR#0 Counter #0
+          13  CTR#1 Counter #1
+         277  PAT   contains PAT0-PAT7 (selected by PWT, PCD, PAT)
+[MSW]
+Internal variable which contains the current machine status word
+(LOWORD(CR0))
+[NOTIFications]
+  In protected mode int 41h is sometimes used as a debugger interface.
+  The operating system may notify the debugger of certain events this way.
+  For Windows the following functions (in AX) may exist:
+
+  AX    function
+  -----------------------------
+  0000  write char (DL)
+  0001  read char (AL)
+  0002* write string (DS:ESI)
+  000D  task terminated
+  000E  new task
+  0012* write string (DS:SI) (ES:SI?)
+  0040* forced GO16 (CS:IP in CX:BX)
+  004F  debugger identification
+  0050* load segment (BX=seg#,CX=selector,DX=inst,SI=flags,ES:DI=modname)
+  0051  segment moving (BX)
+  0052* free segment
+  0059* 16bit task start (CX:BX=CS:IP)
+  005C  segment free
+  0060  end segment load
+  0061  end segment free
+  0062* 16bit app terminated (ES=hInst)
+  0063  sysreq pressed
+  0064* 16bit dll start (CX:BX=CS:IP)
+  0065* 16bit module deleted (ES=handle)
+  0067  log parmerror
+  0150* load 32bit segment
+  0152* free 32bit segment
+  F003* forced GO32 (CS:EIP in CX:EBX)
+  
+  Functions marked with * are currently known by the debugger.
+[OPerators]
+ Binary Operators:
+   '&&': logical AND
+   '||': logical OR
+   'AND': bitwise AND
+   'OR': bitwise OR
+   'XOR': bitwise exclusive OR
+   '==': equal
+   '!=': not equal
+   '>=': larger or equal
+   '<=': less or equal
+   '=': assignment
+   '>': larger
+   '<': less
+   '>>': shift right
+   '<<': shift left
+   '+': addition
+   '-': subtraction
+   '*': multiplication
+   '/': division
+   'MOD': modulus 
+   ':': address bind
+ Unary operators:
+  '+': positive number
+  '-': negative number (2. complement)
+  '!': logical NOT
+  '#': protected mode selector (default if debuggee executes in prot. mode)
+  '&': real mode segment (default if debuggee executes in real mode)
+  '%': Linear address
+  '['..']': content of, type is DWORD, default for selector is DS
+  '(BYTE): type cast to BYTE
+  '(WORD): type cast to WORD
+  '(DWRD): type cast to DWORD
+  '('..')': set priority
+[Output]
+Syntax:   Output port:WORD, value:BYTE
+Comment:  write <value> to <port>
+
+    Special formats exists for: 
+    OW port:WORD, word:WORD
+    OD port:WORD, dword:DWORD
+[OUTMFN]
+internal variable
+Comment:  If output is to DOS (see variable OUTM) one may set a
+          file with this variable. Output will be written into this file.
+Type:     STRING
+[OUTMode]
+internal variable
+Comment:  Sets output mode. The debugger is able to write to multiple
+          devices concurrently.
+          00000000
+          |  |||||
+          |  ||||+-- 01=Output to COM port (direct)
+          |  |||+--- 02=Output to Debug-Terminal (Int 41h)
+          |  ||+---- 04=Output to DOS
+          |  |+----- 08=Output to video memory (default)
+          |  +------ 10=Output to second video adapter (monochrome)
+          +--------- 80=Output to COM port (Int 14h)
+
+          If output is to DOS, one may select a file to write output
+          to by setting variable OUTMFN. WARNING: be careful with this
+          option, the file will be overwritten without user confirmation. 
+Typ:      BYTE
+[PAT]
+ The P(age) A(ttribute) T(able) is supported if CPUID bit 16 tells so. It is
+ always enabled and programmed by MSR 277h. 
+ PTE bits PWC, PCD and PAT form an 3-bit index into the PAT, and MSR 277h
+ consists of PAT0-PAT7, each 1 byte in size, which mean:
+
+ 00 UnCachable
+ 01 Write Combining
+ 04 Write Through
+ 05 Write Protected
+ 06 Write Back
+ 07 Uncached-
+ 
+ The initial value for MSR 277h after reset is 00-07-04-06.00-07-04-06
+[PDir]
+Syntax:   PDir [address:DWORD=0],[lines:WORD=-1]
+Comment:  display entries in page directory.
+          Each entry in page directory describes an address space of 4MB.
+          The lower 22 Bits of <address> will be ignored. For a description
+          of flags see PT command.
+          Since this function requires a ring0 access, it will not be
+          available in strict mode.
+[Perform]
+Syntax:   Perform <address:ADDR=CS:EIP>
+Comment:  If at CS:EIP is a call instruction, it will be performed
+          in real-time, else instruction  will be executed in single
+          step mode as with Trace command.
+[PFlags]
+Syntax:   PFlags address, <newvalue:DWORD>, <mask:DWORD>
+Comment:  displays value of page table entry for given address.
+          if <newvalue> and <mask> are entered, the page table entry will
+          be changed accordingly.
+[PICOFF]
+  internal variable. Used for OCW1 of master and slave PICs (port 21h/A1h).
+  It is a bit mask for IRQs 0-15. These IRQs will be turned off when the
+  debugger becomes active. Default is 1000 (disables IRQ 12 [PS/2 mouse]).
+[PICON]
+  internal variable. Used for OCW1 of master and slave PICs (ports 21h/A1h).
+  It is a bit mask for IRQs 0-15. These IRQs will be turned on when the
+  debugger becomes active. Default is 0002 (enables IRQ 1 [keyboard]).
+[PICValue]
+  internal variable. value of master and slave PICs OCW1 (ports 21h/A1h)
+  for debuggee.
+
+   for a standard PC, the bits for the PIC OCW1s are:
+   
+   Master PIC OCW1 (port 21h):
+     01: IRQ  0 - timer
+     02: IRQ  1 - keyboard
+     04: IRQ  2 - slave controller/VGA
+     08: IRQ  3 - COM2/COM4
+     10: IRQ  4 - COM1/COM3
+     20: IRQ  5 - free/soundblaster
+     40: IRQ  6 - FDC
+     80: IRQ  7 - free/LPT1
+   Slave PIC OCW1 (port A1h):
+     01: IRQ  8 - RTC
+     02: IRQ  9 - free/IRQ 2 redirect
+     04: IRQ 10 - free
+     08: IRQ 11 - free
+     10: IRQ 12 - free/PS 2 mouse
+     20: IRQ 13 - coprozessor exception
+     40: IRQ 14 - IDE controller 0 
+     80: IRQ 15 - IDE-Controller 1
+[PMAP]
+Syntax:   PMAP phy. address:DWORD,[size:DWORD=1]
+Comment:  map a physical address space region into linear address space.
+          This function, although contained in DPMI v0.9, is not implemented
+          by all DPMI hosts. Requests for addresses in first MB will most
+          likely be rejected.
+[PTable]
+Syntax:   PTable [address:DWORD],[lines:WORD=-1],[bit-mask:WORD],[bit-value:WORD]
+Comment:  displays page tables entries (PTE). The lower 12 bits of parameter
+          <address> will be ignored.
+          Flags: DAUWP
+                 |||||
+                 ||||+- 01 P(resent)/n(ot-present)
+                 |||+-- 02 W(riteable)/r(ead-only)
+                 ||+--- 04 U(ser)/s(ystem)
+                 ||     08 PW(rite) T(hrough)
+                 ||     10 PC(ache) D(isable)
+                 |+---- 20 A(ccessed)/u(naccessed)
+                 +----- 40 D(irty)/c(lean)
+                        80 P(age) A(ttribute) T(able) index (P3+)
+                       100 G(lobal) page (PPro+)
+                       E00 available
+          <bit-mask>: selects a bit-mask for selection
+          <bit-value>:selects a bit-value for selection
+[PRintf]
+Syntax:   PRintf formatstring:STRING,<parameter:DWORD|ADDR|STRING>,...
+Comment:  formated output like standard C printf() routine
+[PROMPT]
+  The debugger prompt looks like:
+  NNM
+  | |
+  | +-- CPU mode:
+  |      '#' - CPU is in protected mode (PM)
+  |      '-' - CPU is in V86 mode (V86)
+  |      '>' - CPU is in real mode (RM)
+  +---- current context:
+         =00: no debuggee is active
+         >00: one or more debuggees are loaded
+[PUNMAP]
+Syntax:   PUNMAP address:DWORD
+Comment:  unmaps a previously mapped physical memory region
+          <address> is the linear address returned by the mapping function.
+          This is a DPMI version 1.0 function.
+[Quit]
+Syntax:   Quit
+Comment:  Quit debugger (Windows version) /  Terminate debugger (DOS version).
+          If a debuggee is active, it has to be canceled first.
+          Else it will continue to be executed without any breakpoints set.
+[REAd]
+Syntax:   REAd name:STRING, [address:ADDR],[size:DWORD=-1],[offset:DWORD=0]
+Comment:  File <name> will be read into memory at <address>.
+          <size> is maximum count of bytes to be read, <offset> is offset
+          in file. If no address is specified, file will be read in a
+          temporary buffer.
+[REALLOCDOS]
+Syntax:   REALLOCDOS selector:WORD, size:WORD
+Comment:  Sets size of DOS memory block to <size>. <size> is in paragraphs.
+          DPMI function 0102.
+[REALLOCMemory]
+Syntax:   REALLOCMemory handle:DWORD, size:DWORD
+Comment:  Reallocs a previously allocated memory block (DPMIfunction 0503).
+          If successful, the new address and handle will be displayed.
+[REALLOCMX]
+Syntax:   REALLOCMemory handle:DWORD, size:DWORD, commit:BYTE
+Comment:  Reallocs a previously allocated memory block (DPMIfunction 0505).
+          If successful, the new address and handle will be displayed.
+[RM]
+Syntax:   RM
+Comment:  Display MMX register status.
+[RN]
+Syntax:   RN
+Comment:  Display floating-point register status. If an FP emulator
+          is loaded, it is required to set EMSave=0 to see the emulated
+          floating-point register values within the debugger.
+[RP]
+Syntax:   RP
+function  display protected-mode register view. 
+[RR]
+Syntax:   RR
+function  display real-mode register view.
+[RT]
+Syntax:   RT
+Comment:  display temporary register set. This set will be used for
+          functions like "INTcall","FC","INTRM" or "FCRM".
+[RS]
+Syntax:   RS drive:BYTE, sector:DWORD, count:DWORD, [address:ADDR]
+Comment:  read sectors of <drive> to memory at <address>. If <address>
+          parameter is missing, the debugger will do:
+            - allocate some memory to read sectors into
+            - lock the drive
+            - read sectors requested
+            - calls internal fullscreen editor
+            - unlocks drive
+            - frees memory
+
+           If <address> has been entered, the debugger will lock the
+          drive and try to read the sectors. If done, the data should be
+          rewritten with function WS or the drive should be unlocked
+          with command "UNLOCKD".
+[RX]
+Syntax:   RX
+Comment:  Display XMM register status.
+[Register]
+Syntax:   Register
+Comment:  displays current register set.
+          To display protected registers use 'CPU' command.
+          To modify the content of a register just enter:
+          <register>=<value>.
+[S2D]
+Syntax:   S2D segment:WORD
+Comment:  returns a selector for a real mode segment (DPMI function 0002).
+[SCREENSwap]
+Internal variable
+Comment:  If on, the debugger will swap screens by saving contents to
+          buffers. If off, the debugger will use video hardware to do
+          page flips, which is significantly faster. If debuggee will
+          use graphics, this variable has to be on!
+[Search]
+Syntax:   Search [address:ADDR=DS:0], [size:DWORD], value:BYTE|WORD|DWORD|STRING
+Comment:  searches <value> in memory region beginning with <address> and
+          with size <size>. Default for <size> is limit of segment, so be
+          careful in flat protected mode.
+          Special formats:
+           SB: search Byte
+           SW: search Word
+           SD: search Dword
+[SEGMENT]
+   If debuggee is in real mode, the segment/selector part of an
+   address will be interpreted as segment. If debuggee is in
+   protected mode this can be achieved by using '&'-prefix.
+   Example: '&c000:0' '&ax:1000'.
+[SELECTOR]
+   If debuggee is in protected mode, the segment/selector part of
+   an address will be interpreted as selector. If debuggee is in
+   real mode, this can be achieved by using '#'-prefix.
+   Example: '#c7:0' '#bx:1000'.
+[SHow]
+Syntax:   SHow [variable:SYMBOL]
+Comment:  displays internal variables.
+          If no parameter is supplied, all variables will be displayed.
+[SKip]
+Syntax:   SKip
+Comment:  used if an exception has occured. If instruction is restarted,
+          the debugger will not handle this exception as first chance so
+          the debuggee has a chance to handle it. If the exception
+          isn't handled first by the debugger, SKip will have no effect.
+[SOFT]
+This macro will switch debugger to "Soft" mode, where the debugger uses
+TOOLHELP notifications (Windows) or standard debug/single-step/breakpoint
+exceptions.
+[STRICTMode]
+Internal variable.
+Comment:  if this variable is true, the debugger will not try to do
+          things which aren't allowed for ring 3 apps. Furthermore, it
+          will assume that IF in EFlags will not show the true state
+          of the virtual interrupt flag and will use DPMI functions 090xh
+          to get/set this flag.
+[STRING]
+Type. An item has STRING format if:
+    - it is enclosed in single/double quotes or
+    - cannot be transformed into an expression.
+
+    A String enclosed in quotes will not be transformed to Caps
+    by the parser.
+[SYMBOL]
+  the following symbols are defined and may be used as parameters
+  and in expressions:
+     - variables (register and internal variables)
+     - loaded modules
+     - loaded name tables (.LS)
+[SPA]
+Syntax:   SPA handle:DWORD, offset:DWORD, pages:DWORD, attribute:DWORD
+Comment:  set page attributes by calling DPMI function 0507h,
+          which is a DPMI V1.0 extension.
+[Trace]
+Syntax:  Trace [count:DWORD=1],[mode:DWORD=1]
+Comment: Executes <count> instructions in single-step mode.
+        <mode>=0 will suppress any display. This mode cannot be canceled
+        by Ctrl-C, use Ctrl-D instead!
+[TRACEFlags]
+Internal variable
+Comment:  Flags for Trace command.
+	01: stop trace if current CS is a GDT selector
+	02: set a break if current opcode is an INT instruction
+	04: don't set TF if current opcode is an INT
+	08: assume debuggee is DOS/4GW (understand int 21h, AH=FF)
+	10: always swap screen. Must be set for apps using graphics
+	20: don't trace REP MOVS/LODS/STOS/SCAS/CMPS
+	40: skip exceptions 01 for which the debugger isn't responsible
+	80: stop and prompt user if debugger is about to loose control
+		because an unknown CS:E/IP was found on SS:E/SP
+[TRAPs]
+  Displays trapped vectors
+  1. trapped IDT vectors (vectors 00-0F),
+     to change use function TIDT (not for OS/2, NT or DOSEMU).
+  2. trapped Exception vectors (vectors 00-1F),
+     to change use function TEXC.
+  3. trapped Protected Mode vectors (vectors 00-0F),
+     to change use function TPMI.
+  4. trapped Real Mode vectors (vectors 00-07),
+     to change use function TRMI.
+  5. notifications from int 41h (or toolhelp for Windows)
+
+  Defaults for DOS versions of debugger:
+    - exceptions 0,1,3,6,C,D,E
+    - PM interrupts 1
+    - RM interrupts 0,1,3,6
+    - Int 41h notifications 2, 40, 50, 52, 62, 64, 65
+      (view NOTIFIcations for details)
+      valid only if debugger is visible to int 41h (view .I41 command)
+  Defaults for windows version of debugger:
+    - debugger uses toolhelp. Toolhelp informs a debugger of
+      exceptions 0,6,C,D,E and protected-mode interupts 1 and 3.
+      Toolhelp support may be switched of by .TH command or using
+      macro USETH.
+
+  Trapping IDT vectors is critical for a ring 3 application like
+  the debugger. That's because exceptions caused by ring 0 code
+  cannot be handled properly and will most likely terminate the
+  current DPMI client. If this occurs in the system VM (windows 
+  version of the debugger) the system will crash.
+
+  To debug real mode applications real mode vectors 1 and 3 must be trapped.
+[TSS]
+Syntax:   TSS [address:ADDR]
+Comment:  displays Task State Segment. Without parameter is will be
+          the currently active TSS. <address> parameter will allow to
+          display any linear address interpreted as TSS.
+[TYpe]
+Syntax:   TYpe [filename:STRING|address:ADDR],[size:DWORD]
+Comment:  display a file or a memory area as hex dump in full-screen
+          mode. This will only work if the debugger output goes to
+          a compatible device. For Windows 2K/XP this command will
+          only work if output is to a secondary video adapter.
+          A filename has to be enclosed in quotes to ensure it is
+          recognized as string.
+          Included in the full screen hex viewer is a hex editor as
+          well, so in cases this function is available it should be
+          used instead of the archaic 'Edit' command. 
+          Default for <address> is DS:0, default for <size> is
+          LIM(SEG(address))+1.
+[TYPE()]
+Syntax:   TYPE(expression:EXPRESSION)
+Function: get type of an expression. Known are the following types:
+          00: VOID   - pointer/no content
+          01: BYTE   - 1 byte
+          02: WORD   - 2 byte
+          03: BOOL   - 1 byte (internal)
+          04: DWORD  - 4 byte (is default)
+          05: FWORD  - 6 byte LLLL.BBBBBBBB (for GDTR & IDTR)
+          06: FPTR   - address #SSSS:OOOOOOOO
+          07: LPTR   - address #SSSS:OOOO
+          08: QWORD  - 8 byte 
+          09: STRING - asciiz string
+          0A: LSTRNG - string with length in position 0
+          0B: RMFPTR - address &SSSS:OOOO
+          0C: CHAR   - character (8 bit)
+          0D: LIST   - list 
+          0E: TBYTE  - 10 byte
+          This function is useful for scripts only.
+[Unassemble]
+Syntax:   Unassemble [address:ADDR],[lines:WORD=0x10]
+Comment:  disassembles code instructions. Default for <address> is CS:EIP,
+          but the debugger remembers the last disassembled instruction
+          and will continue at this address if no arguments are given.
+[UNASSFlags]
+Variable
+Comment:  Flags for Unassemble command.
+	01: dont display "short" to indicate a short distance
+	02: add "ax=xxxx" to "INT 21"/"INT 31" if in trace log mode.
+[UNCOMM]
+Syntax:   UNCOMM selector:WORD
+Comment:  displays all pages of a segment, which are currently marked as
+          'Not Present'. This doesn't ensure that an access to such pages
+          will cause a page exception. The DPMI server may handle this
+          case internally.
+[UNLock]
+Syntax:   UNLock address:DWORD, size:DWORD
+Comment:  unlocks a memory area with DPMI function code 0601h so it may
+          be backed up by the paging file again.
+          (s.a. function LOCk)
+[UNLOCKRM]
+Syntax:   UNLOCKRM address:DWORD, size:DWORD
+Comment:  unlocks a real mode memory area with DPMI function code 0603h
+          (relock it with function LOCKRM).
+[UNLOCKD]
+Syntax    UNLOCKD drive:BYTE
+Comment:  unlocks a device.
+[View]
+Syntax:   View
+function: shows debuggee screen. Pressing a key will switch back to debugger
+          screen. Useful only if debugger uses the same output device as
+          the debuggee. View variable OUTMode for details about debugger's
+          output devices.
+[VDS]
+Syntax:   VDS
+Comment:  get VDS API support. Registers values are:
+          AX=version (AH major, AL minor [VDS not installed if AX=8102)
+          BX=product (0001=EMM386.EXE)
+          CX=revision
+          SI:DI=DMA buffer size
+          DX=flags
+[VERsion]
+deb16/32f Vers. 2.10
+Released under MIT license. (C) Copyright Andreas Grech 1993-2022
+Debugger for DPMI applications
+deb16f.exe  - for 16-Bit DPMI and DOS real-mode programs.
+deb16fw.exe - for 16-Bit Windows programs
+deb32f.exe  - for 32-Bit DPMI and DOS real-mode programs.
+[WAITLines]
+Internal variable.
+Comment:  controls after how many lines of output the debugger waits
+          for a key press. 
+
+          - pressing ctrl-C while waiting cancels current operation
+          - a value of 0 will disable the wait.
+          - a value of -1 will cause the debugger to use BIOS variable
+            at 40h:84h (screen rows) as real value 
+          - this variable will be saved to profile file
+Typ:      BYTE, Default=-1
+[WORD]
+Expression (view EXPRession) within range 0000-FFFF.
+[Write]
+Syntax:   Write name:STRING, address:ADDR, size:DWORD, [offset:DWORD=0]
+Comment:  Writes memory area starting at <address> with size <size>
+          into file <name>. <offset> is offset in file to write to, if
+          not specified, file will be created as new. Note: default for 
+          selector of <address> is DS.
+[WS]
+Syntax:   WS drive:BYTE, sector:DWORD, count:DWORD, address:ADDR 
+Comment:  Writes <count> sectors onto <drive> starting with <sector>.
+          The drive will be unlocked when finished.
+[#ERRORS]
+0001 no secondary video adapter in your system
+0002 cannot free memory from DPMI
+0003 debugger must be current task to launch a program
+0004 addr indos-flag invalid
+0005 invalid parameter for 16-Bit-DPMI client
+0006 parameter error
+0007 no module handle available
+0008 can't read CR3 or paging not active
+0009 linear address of pagedir not available
+000A no valid page directory entry for %X
+000B linear address of page dir entry not available
+000C physical address mapping failed
+000D cannot create file %s (errc=%X)
+000E variable is read only
+000F symbhdlr.dll not found
+0010 unsuccessfull load, RC=%u
+0011 can't find a modul for segment
+0012 cancel was unsuccessful
+0013 address needed for hardware watchpoints
+0014 cannot set hardware breakpoint at %X
+0015 cannot get debug watchpoint state (handle=%X)
+0017 missing parameter, use ?
+0018 parameter should be of type STRING
+0019 can't load nonresident names (hModule invalid?)
+001A unknown symbol
+001B no local heap found
+001C syntax error, undef. variable or incompatible types in expression
+001E cannot open file "%s" (errc=%X)
+001F no math coprocessor installed
+0020 No switch to ring 0 possible
+0021 File %s not found
+0022 Not enough memory
+0023 Error during file read
+0024 General error
+0025 PSP of debugger is not active
+0027 deb16fwh.dll not found
+0028 procedure in deb16fwh.dll not found
+0029 GetProcAddr32W not found
+002A CallProc32W not found
+002B FreeLibrary32W not found
+002C LoadLibrary32W not found
+002D page not writeable
+002E cannot clear debug watchpoint state (handle=%X)
+002F function not available if irq=false
+0030 can't find dll
+0031 can't find procedure in DLL
+0032 breakpoint# invalid or not active
+0033 DPMI function failed
+0034 endif without matching if
+0035 else without matching if
+0036 too few parameters
+0037 invalid parameter
+0038 unknown type
+0039 invalid in "strict"-mode
+003A can't get tss base
+003B no fpu registers saved
+003C invalid address specified (%X)
+003D COMSPEC not found in environment
+003E invalid COM# specified
+003F cannot trap real mode vectors
+0040 cannot free selector %X
+0042 direct video output mode not active
+0043 stack overflow
+0044 sectors must be between 1 and FFFFh
+0045 absolute disk read error (eax=%X)
+0046 absolute disk write error (eax=%X) - press a key
+0047 drive# is invalid
+0048 error at lseek (handle=%X,pos=%X)
+0049 error %X at read (handle=%X)
+004A string expected
+004B MSRs not supported
+004C cannot write
+004D debuggee CS:EIP invalid
+004E cannot terminate while a protected mode client is active
+004F memory access caused exception
+0050 watchpoint requires condition parameter
+0051 invalid module handle
+0052 macro not found
+0053 segment %X not present
+0054 no valid directory
+0055 couldn't start shell app [%X]
+0056 single-step mode canceled (unknown protected-mode breakpoint)
+0057 port parameter exceeds TSS limit
+0058 DPMI loader isn't active
+
+1000 protected mode int %X is invalid. System may be unstable!
+1001 error %X returned on try to lock drive
+1002 volume cannot be unlocked or lock/unlock API not supported
+1003 program is about to terminate
+1004 protected mode int %X points into free dos memory block!
+1005 no (more) debug watchpoints available
+1006 real mode int %X points into free dos memory block!
+1007 IRQ 0 or IRQ 1 is in service, interrupts in debugger disabled
+
+2000 GDI disabled
+2001 GDI enabled
+2002 library freed, RC=%X
+2003 selector %X allocated
+2004 program loaded, hInstance=%X
+2005 program terminated, rc=%u, eax=%X
+2006 nonresident names loaded, handle=%X
+2007 no macros defined
+2008 divide by zero error (rep. from toolhelp)
+2009 invalid opcode exception (rep. from toolhelp)
+200A register: %X,%X,%X,%X,%X,%X,%X,%X
+200B debuggee has changed real mode int %X
+200C skip activated
+200D skip deactivated
+200E no debuggee is active, use "q" to quit debugger
+200F page not readable\n
+2010 stack exception (rep. from toolhelp)
+2011 protection exception (rep. from toolhelp)
+2012 page error exception (rep. from toolhelp)
+2013 ctrl-sysreq pressed (rep. from toolhelp)
+2014 item found at offset %X
+2015 out of segment limits
+2016 function not supported
+2017 no dynamically defined variables
+2019 physical address %X mapped at %X
+201A %X sectors read
+201B %X sectors written\n
+201C debuggee has open files, close before termination?\n\
+type Y/es, N/o or C/ancel: \b
+201D debuggee is in interrupt service, close before termination?\n\
+type Y/es, N/o or C/ancel: \b
+201E no breakpoints defined
+201F module loaded, hInstance=%X
+2020 unknown protected-mode breakpoint, continue with single-step?\n\
+type Y/es or N/o: \b
+
+9000 exceptions reported from toolhelp.dll :
+9001 total size=%X\n
+9002 breakpoint set
+9003 program has terminated with FSW=%X,\n\
+if not masked by FCW this would cause an int 0x75 or\n\
+an exception 0x10 on execution of the next FP instruction
+[] end

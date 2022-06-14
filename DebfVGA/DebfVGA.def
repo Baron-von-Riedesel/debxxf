@@ -1,0 +1,20 @@
+
+LIBRARY DEBFVGA
+
+DESCRIPTION "debxxf vga graphic helper dll"
+
+EXETYPE WINDOWS
+
+PROTMODE
+
+CODE MOVEABLE MIXED1632
+DATA NONE
+
+EXPORTS
+ _VideoInit@0                   @1
+ _VideoDone@0                   @2
+ _SaveGraphicScreen@0           @3
+ _RestoreGraphicScreen@0        @4
+ _SetDebuggerVideoMode@0        @5
+;_SaveDebuggerVideoRegister@0   @6
+

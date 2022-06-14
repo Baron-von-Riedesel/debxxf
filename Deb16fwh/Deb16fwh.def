@@ -1,0 +1,13 @@
+
+LIBRARY
+
+
+EXPORTS
+  ListModule		@1
+  ListProcess		@2
+  ProcessInfo		@3
+;  WriteMemory		@4
+  WriteDbgConsole	@5
+  PeekDbgConsole	@6
+  ReadDbgConsole	@7
+  CloseDbgConsole	@8

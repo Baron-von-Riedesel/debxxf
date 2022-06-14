@@ -1,0 +1,14 @@
+
+OP MODNAME=DEBFVESA
+OP DESCRIPTION "debxxf VESA graphic helper dll"
+
+SEGMENT _TEXT MOVEABLE
+
+EXPORT {
+ "_VideoInit@0"                   .1
+ "_VideoDone@0"                   .2
+ "_SaveGraphicScreen@0"           .3
+ "_RestoreGraphicScreen@0"        .4
+ "_SetDebuggerVideoMode@0"        .5
+# "_SaveDebuggerVideoRegister@0"   .6
+}

@@ -1,0 +1,12 @@
+
+OP MODNAME=SYMBHDLR
+OP DESCRIPTION "debxxf symbol helper dll"
+OP PROTMODE
+
+SEGMENT _TEXT PRELOAD MOVEABLE
+
+EXPORT {
+ WEP                        .1  RESIDENT
+ GETSYMBOLNAME              .2
+ GETSYMBOLADDR              .3
+}

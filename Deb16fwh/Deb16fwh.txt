@@ -1,0 +1,10 @@
+
+  Win32 helper dll for deb16fw
+  
+  it is loaded by deb16fw with LoadLibraryEx32W
+  
+  Purpose
+  
+  1. to show some Win32 related info (Modulelist, Processlist,...)
+  2. to communicate with deb16fwp.exe, the debugger console process
+

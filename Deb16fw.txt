@@ -1,0 +1,26 @@
+
+
+ Special Notes for Deb16fw
+
+
+ 1. How to start the Debugger
+
+ Create a link for deb16fw.exe. Executing deb16fw without a parameter will
+ start the debugger without activating it. To activate the debugger
+ double-click the symbol or right-click it and select menu item "Enter
+ debugger". On Windows 3x/9x systems the screen will be switched to text
+ mode (using helper dll deb16fwv.dll), on Windows NT/2k/XP (NT platform)
+ the debugger will start deb16fwp, a simple terminal program.
+
+
+ 2. Known Problems
+ 
+ - On win9x systems starting the debugger from a command line should 
+   only be done combined with the /Q option as argument.
+ - On NT platform some commands (.SFT, .CDS) won't work since "DOS"
+   is emulated only.
+ - On NT platform the "type" command won't work since it requires direct
+   access to the video screen buffer.
+ - Launching the debugger in Win31 standard mode will crash if the
+   Windows 3.1 dosx.exe is used. With the replacement dosx.exe supplied
+   with the HX runtime it works smoothly.

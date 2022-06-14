@@ -1,0 +1,403 @@
+
+ History
+
+ 2022/06/01: version 2.10
+
+ þ bugfix deb16fw: when the debugger was changed from a dll to an overlay,
+   some code inside the disassembler that relied on the windows loader
+   wasn't adjusted, causing a crash.
+ þ bugfix deb16fw: graphics mode detection code - and switching to text
+   mode 3 - was active for the windows version.
+ þ bugfix deb16fw: after a debuggee was loaded, exceptions 0Dh and 0Eh
+   weren't redirected to the debugger when it became active.
+ þ cleaned source so no external includes are needed anymore.
+ þ address InDOS flag now read thru "simulate real-mode int" and stored as
+   linear address.
+ þ changed .q to dummy for deb16f/deb32f - it didn't work.
+ þ .xms cmd: show addresses of memory blocks beyond 4G correctly.
+ þ using OW wrc as resource compiler for deb16fw.exe.
+ þ displays to Windows debug terminal in NTVDM via DebxxVDD implemented.
+ 
+ 2018/07/24: version 2.9.7
+
+ þ source assembled with JWasm.
+ þ JWlink used for linking.
+ þ bugfix: debuggee's FPU emulation status was lost inside debugger.
+ þ removed the DPMILD32 specific int 21h, ax=4B87h calls.
+ þ idle call int 2Fh, ax=1680h now called via int 31h, ax=0300h.
+ þ added checks to automatically switch to "strict" mode if access
+   to GDT or LDT cause a page fault.
+ 
+ 2008/01/11: version 2.9.6
+ 
+ þ K command didn't work in previous version(s).
+ þ bugfix: GPA didn't display mapped pages.
+ þ rx command added to display xmm registers.
+ þ DEBXXVDD for Win NT/XP added to tell the debugger if a page is
+   readable/writeable.
+ þ Under NT/XP, the OS will now notice the debugger's idle state.
+ 
+ 2007/06/12: version 2.9.5
+
+ þ bugfix: the debugger relied upon the BIOS variables if debuggee was
+   in text mode, resulting in a bad debug display if these variables
+   weren't set to match the CRT values. Now the debugger directly queries
+   the CRT if a VGA compatible display has been detected (DOS version only).
+ þ bugfix: if Read/Write failed due to an invalid address, no message was
+   displayed.
+ þ bugfix: in v2.9.4, DEB16FW didn't work. And it tried to load an 
+   experimental VDD, which was not included.
+ þ bugfix: 'write' didn't use DS as default segment/selector.
+ þ if <offset> parameter is given with 'Write', the file will not be
+   truncated if it already exists.
+ þ VDS macro modified so it actually displays something
+ þ MSR command now installs a ring 0 GPF handler before running rdmsr/wrmsr,
+   thus hopefully being able to display all valid MSRs without generating
+   exceptions in ring 0.
+ þ 16-bit dll SYMBHDLD/SYMBHDLW no longer loaded on startup.
+ þ 16-bit KERNEL functions no longer imported by DOS versions of debugger.
+ þ .VID cmd displays debuggee's current video/VESA mode 
+ þ added a "clientview" parameter for .DN and .SEG in DOS version.
+    
+ 
+ 2006/11/17: version 2.9.4a
+
+ þ file RMDBGHLP.BIN missed in v2.9.4.
+
+ 2006/11/15: version 2.9.4
+ 
+ þ DEB32FP renamed to DEB32F.
+ þ bugfix: type command may have caused a GPF if DS held an expand down
+   selector.
+ þ FR command to display floating-point registers changed to RN.
+ þ name of RMS command changed to S2D.
+ þ new RM command to display MMX registers.
+ þ floating point register display improved.
+ þ watch real-mode int 21h and prevent debuggee to set interrupt vectors
+   01 and 03.
+ þ PTEs now displayed without leading zeros.
+ 
+ 2006/09/17: version 2.9.3
+ 
+ þ bugfix: debugger may have caused a GPF on low memory conditions
+   during startup.
+ þ bugfix: if debugger DS was flat and expand down (DPMILDR=2048), it
+   may not have set breakpoints reliably.
+ þ errorcode returned by "lock drive" API in LOCKDrive displayed
+ þ .DS command displays errors now
+ þ in .MCB command type of MCB ('M' or 'Z') is displayed
+ þ linker to build deb32fp.dll changed to POLINK
+ þ bugfix: system was unable to detect breakpoint duplicates (same
+   address + same type) after BD/BE has been implemented.
+ þ added a "clientview" option for .DM and .DM32 in DOS version
+ 
+ 2006/07/13: version 2.9.2
+
+ þ bugfix: keyboard polling didn't take into account that input from port
+   60h may be from PS/2 device. Also IRQ 12 is no longer disabled inside
+   debugger, because if the PS/2 mouse input is not handled, the keyboard
+   may lock.
+ þ added a new value for load option to disable break at real-mode entries
+ þ bugfix: HiWord(EFlags) was lost if debuggee runs in real-mode
+ þ bugfix: if screen was in graphics mode debugger couldn't be started.
+ þ better idle indication when running on WinNT platforms
+ þ BD/BE implemented to disable/enable a breakpoint
+ 
+ 2006/05/09: version 2.9.1
+ 
+ þ display a message if DEB32FP.DLL cannot be loaded
+ þ CR4 now may be edited inside the debugger (if ring 0 access is on)
+ þ added REALLOCMX (DPMI function ax=0505h)
+ þ reading TR3-TR5 on 80486 cpus deactivated. These registers provide
+   no useful information and DosBox crashes if one tries to read them
+   (although it reports an 80486).
+ þ .DN now is able to find the nearest export to a given address
+ þ bugfix: don't display psps which don't start with 'CD 20'
+ þ bugfix: IRM didn't work if DS contained an expand down selector
+ þ display module entry point in .DN
+ 
+ 2006/02/14: version 2.9
+
+ þ PICOFF replaces MPICOFF + SPICOFF, PICON replaces MPICON + SPICON,
+   PICValue replaces MPICValue + SPICValue.
+ þ use DPMI ax=090x functions to get/set (virtual) interrupt flag
+   in STRICT mode (required by WinXP and DosEmu).
+ þ MSR now accepts a parameter (no of MSR to read)
+ þ IW/ID implemented
+ þ bugfix: (linear) memory address 0 accessed by symbol evaluation
+ þ bugfix: another problem with expand down segments fixed
+ þ bugfix: sometimes the debugger crashed on initialization due
+   to a buffer overrun when reading debxxf.mac
+
+ 2005/10/01: version 2.8.1
+
+ þ bugfix: expand down segments still caused problems
+ þ DR4/DR5 no longer read (caused exception 06 on QEMU)
+ þ TSS command accepts a parameter now
+ þ if debugger installs resident with .res return code 0 to dos
+ þ real-mode exceptions 05 and 07 now catchable by debugger.
+   FPU bits in cr0 now show debuggee state.
+ þ bugfix: iop command didn't work and didn't check for size
+   of io permission bitmap
+ þ bugfix: debugger now sets bit 7 of debuggee's PSP:[4Fh] if 
+   debuggee was at least once in protected mode. If debuggee is to
+   be canceled and this bit is set, the debugger will use a int 21h,
+   ah=4Ch in protected mode in any case.
+ þ .SFT command changed so it doesn't use DOS calls
+ þ don't set client's ES,FS,GS to NULL in 'cancel' command
+ þ added an option (on by default) to make the debugger
+   skip exceptions 01 which it isn't responsible for.
+ þ bugfix: .DA32 command didn't work for deb32f because
+   int 21h, ax=4b82h expects a linear address in edx. 
+ þ .DN command: 2. parameter accepted for 32bit modules,
+   and it may be an address (linear/far16) or an ordinal.
+ þ bugfix: adding macros from debxxf.mac didn't work properly.
+ þ bugfix: limits of expand down segments weren't calculated
+   correctly, resulting in "out of segments limit" message
+ þ command "cancel": if current PSP==debugger PSP, don't
+   do a int 21h, ah=4Ch call.
+            
+ 2005/06/15: version 2.8
+
+ þ internal variable MSW added
+ þ commandline option -F documented
+ þ bugfix: debuggee may just have switched to text mode
+   but the screen is inconsistent (i.e. charsets not loaded).
+   So take this situation into account. 
+ þ debugger can now optionally ignore Sysreq
+ þ variable EMSave now true as default.
+ þ GCS renamed to CPStat. It acccepts a parameter now (new value
+   for coprocessor status)
+ þ a slight security check added when restoring debugger screen
+   so there's no danger to overwrite UMBs and HMA when the memory
+   is garbage.
+ þ profile entry "HWBrk=0" will disable usage of HW breakpoints
+ þ int 23h trapping may be disabled by profile entry "Ctrl-C=0"
+ þ some support for 32RTM: int 2F, ax=FB42h, bx=3233h in real mode
+ þ disable loader only during client is running
+ þ Input command did not display a LF
+ þ if base of a LDT selector is unknown (some DOSEMU selectors),
+   dont check for "pm int vector points into free dos mem block"
+ þ PFlags display changed, now able to change paging flags as well
+
+ 2004/08/31: version 2.7.9
+
+ þ ALLOCSS command added
+ þ now debugger sets DPMILDR environment variable internally
+ þ if debugger is active text mode cursor should always be visible
+   now (previously wasn't visible if debuggee switched cursor off)
+ þ graphics helper dlls now loaded in extended memory
+ þ bugfix: move now works with real mode destination address
+
+ 2004/06/16: version 2.7.8
+
+ þ graphics helper dlls now load charset manually
+ þ bugfix: read/write now works with real mode address
+ þ keyboard polling now uses translation table from debxxf.ini
+ þ bugfix: keyboard polling used german key translation
+ þ helper DEBFVGA.DLL now uses int 10, AH=1C to save/restore state
+ þ a second graphics helper DEBFVESA.DLL for VESA graphics created
+   which is now loaded as default.
+ þ the graphics helper dll may be changed by GraphHlp .INI param
+ þ debuggee graphics handling now in a separate binary DEBFVGA.DLL.
+ þ handling debuggee graphics mode extracted to new module GRAPHIC
+ þ IDT/DI command improved
+
+ 2004/06/09: version 2.7.7
+
+ þ SYSREQ may execute an INT 1/3 instead of setting trace flag.
+ þ debuggers INT 09 vector now always remains first in the
+   interrupt chain and thus allows break into debuggee with SYSREQ.
+ þ for NT platform ALT-SCROLL key combination is used for SYSREQ
+   since ALT-PRINT is caught by the system.
+ þ check for SYSREQ no longer relies on BIOS variables
+ þ macro LOAD4G added to debxxf.mac
+ þ TRACEFlag 20 will jump over REP LODS/MOVS/STOS...
+ þ swapping may be forced with new TRACEFlag 10
+ þ bugfix: a breakpoint set before debuggee was loaded caused
+   the debugger not to stop at program entry
+ þ bugfix: launching a shell didn't work if a debuggee was loaded
+ þ tprintf no longer assumes anything about ds/es
+ þ current drive/directory now saved/restored on Save/LoadState
+   for non-windows versions  
+ þ bugfix: v86 mode wasn't detected
+ þ bugfix: showfile.dll couldn't allocate segment for files > 1MB
+ þ value of AX is displayed for int 21/31 in trace mode
+ þ bugfix: screenswap for dos versions of debugger didn't work
+   properly if debugger displayed int 41h messages.
+ þ Unassemble uses segment part of address, so unassemble code
+   in readable GDT segments will work again.
+ þ support for DOS4/GW int 21h, AH=FF installed
+ þ bugfix: check for invalid PM ints didn't work in all cases
+ þ bugfix: if a standard bp cannot be written, use hw break
+ þ bugfix: disabled vcpi wasn't reactivated on debugger exit
+ þ bugfix: parser problem with multiple commands in one line
+ þ bugfix: variable WINversion now NULL if int 2f, ax=1600 wasn't
+   successful
+ þ Go command now always possible for windows version
+ þ windows version: use old int09 vector returned from GetBiosKeyProc
+   while in debugger
+ þ bugfix: .Quit for non-windows versions now works much better
+ þ deb16fwv.dll now has its own profile file
+ þ deb16fw: when setting/resetting breakpoints in win32 code
+   page attributes will be restored
+ þ diassembler prefix doesnt display segment part - and assumes
+   CS D-bit set - if address is zero-based flat.
+ þ .DN now understands 32bit modules
+ þ bugfix: deb16fw didn't terminate if a 16-bit dll wasn't found
+ þ deb16f now uses 32bit profile string functions which don't
+   write back values which haven't changed.
+ þ toolhelp32 functions now loaded dynamically in deb16fwh.dll, 
+   so deb16fw works with NT as well 
+
+ 2004/05/26: version 2.7.6
+
+ þ .DS now implemented for deb32fp.dll
+ þ 32bit version of symbhdld.dll (symbhd32.dll) no longer required
+ þ bugfix: windows version may have overwritten hoststack 
+ þ .sym command now works again (for all versions)
+ þ type command deactivated on XP if output is on standard device
+ þ error message displayed when no output is possible on XP
+   in debugger's windows version.
+ þ debxxhlp.dll renamed to deb16fwh.dll. No longer used by deb32f.exe
+ þ the windows version will work now on XP, output in a console
+   window in a separate process (deb16fwp.exe).
+ þ notification messages will no longer switch to debugger screen
+ þ bugfix: debugger no longer touches segments which are marked
+   as not present.
+ þ saving/restoring windows screen now done on a different stack.
+   This avoids a bug in win31's FreeSelector routine.
+ þ bugfix: .SEG command for a NE module with 0 segments caused a GPF
+ þ windows version: exceptions inside debugger reported from toolhelp
+   will display registers like the DPMI exception handler proc.
+ þ video handling for windows version extracted to 16-bit dll
+   deb16fwv.dll.
+ þ windows version now uses Death/Resurrection to switch to/from
+   debugger screen.
+ þ bugfix: parser knows decimal values (ending with 't') again
+ þ macros now in separate file debxxf.mac
+ þ bugfix: setting a breakpoint at cs:eip located onto SS:ESP
+   didn't work
+ þ bugfix: pressing ctrl-alt-sysreq in the windows version
+   no longer causes a GPF if toolhelp is deactivated
+ þ the different versions of the debugger now all have
+   their own section in debxxf.ini
+ þ the windows version of the debugger will no longer loose
+   control if int 21h, ax=4b00h returns
+ þ more notification displays (load dll, exit dll, ...)
+ þ a break in an interrupt service routine for IRQ 0 or 1 will
+   set debugger's IRQ variable to 0, so continue debugging works.
+ þ bugfix: breakpoint set with go command now works in real-mode
+ þ rmdbghlp.dll changed to plain binary file, so it will
+   be loaded by debugger and ensured it is located in conv. mem.
+ þ windows version of debugger changed from NE to MZ format
+
+ 2004/05/13: version 2.7.5
+
+ þ bugfix: 16-bit debugger version crashed if debuggee switched
+   into graphics mode
+ þ debugger now consumes less stack space if client is in real-mode
+ þ screen swap now works as expected
+ þ .DN with second parameter (wExport) now works as described
+ þ DOSUTIL1.DLL no longer used
+ þ .SFT and .CDS now works for deb32fp as well
+ þ MACro accepts an argument, will then display this macro only
+ þ macros will accept arguments now (^)
+ þ bugfix: .SYM command works again
+ þ debugger recognizes raw mode switches and will set breakpoints
+   in trace mode to ensure control isn't lost.
+ þ bugfix: safe display of [esp] in register command
+ þ .Kill command added
+ þ .LDR command added
+ þ check for invalid real mode int vectors 00-2F added
+ þ .MCBFree added
+ þ reset int 1C (as int 08) while in debugger
+ þ bugfix: D-bit of debugger's data descriptor was set for
+   16-bit version (since debugger has changed to MZ format).
+ þ display various error messages in deb16f/deb32f
+
+ 2004/04/29: version 2.7.4
+ 
+ þ .VIDeo was not documented in debxxf.hlp
+ þ init debugger video screen if it is filled with 00s
+ þ bugfix: executing debugger with /? parameter now works again
+ þ changed address format of real mode dumps to '&SSSS:OOOO'
+ þ default traps changed (exc 0,1,3,6,c,d,e/pmint 1/rmint 0,1,3,6)
+ þ 16-bit debugger version changed from NE TO MZ format, so
+   with TLINK no more 64 kB restriction.
+ þ bugfix: parser had problems to recognize valid end of a
+   number constant
+ þ bugfix: unknown commmand entered caused a crash because
+   PE loader didn't recognize CS as a module handle
+
+ 2004/04/24: version 2.7.3
+
+ þ bugfix: MEMinfo printf output caused buffer overflow
+ þ handle "divide by zero" error in parser
+ þ check for int 21h, ah=1A (set DTA) calls on NT platforms, since
+   this doesnt work if HIWORD(edx) is != 0. As well check for
+   LFN functions used (GetCurrentDirectory) by debugger.
+ þ alway reinitialize environment selector for debugger PSP.
+   On NT platforms this value is converted to a segment if a
+   program is launched.
+ þ avoid to use HW breaks on NT platforms, since they cannot be
+   freed anymore.
+ þ bugfix: initial HW break may have failed because DH register
+   for DPMI call 0B00h was != 0
+ þ display erros/warnings if HW breaks cannot be cleared
+ þ bugfix: internal printf routine causes memory corruption
+   when SS!=DS (displays in int 41h routine)
+ þ if program entry break cannot be set, set trace bit in eflags
+   so after int 41h, ax=F003h returns an trace exception will occur
+ þ check if hw breaks available, if not, use sw breaks
+ þ display dpmi memory handle for 32bit module list
+ þ command .CLRDOS implemented
+ þ repair some important invalid protected mode int vectors
+ þ GPA made more user friendly and no longer assumes that handle
+   is linear base address (like in win9x and HDPMI) 
+ þ after debuggee is done, test if any pm int points to free dos mem
+ þ bugfix: hw breaks in real mode work now, restart flag is set
+ þ Jump command accepts a parameter to force bp in real mode
+ þ .I41 command added
+ þ .FREE32 deleted, is now done by .FREE
+ þ .SEG command now displays 32bit module sections
+ þ commands entered by shortcuts aren't saved in keyboard buffer  
+
+ 2004/04/14: version 2.7.2
+
+ þ command EPM now can show exception vectors from the
+   debuggee's view.
+ þ created own version of Get/WritePrivateProfileString,
+   thus avoiding to include dkrnl32 modules such as
+   VirtualAlloc/VirtualFree, CreateFile,...
+
+ 2004/04/12: version 2.7.1
+
+ þ rewrote code to avoid usage of _lcreat, lopen, lread...            
+ þ .psps command rewritten so it doesnt use any extern obj. module.
+ þ new variable in ini file to set "first chance" exceptions
+   (default is 0xA, exceptions 01 and 03 are "first chance")
+ þ PD command now displays committed pages for each entry
+
+ 2004/03/19: version 2.7.0
+
+ þ implemented emulation of KernelHeapFree function so less
+   code from dkrnl32 library is automatically included. 
+   This was a problem because of IRQ 1 handler in PeekCon.Asm.
+ þ stack of deb32fp.exe changed from 1000h to 10000h.
+   This stack is used when loading a dll for example.
+ þ code for int41, ax=164h (load 32bit dll) added
+ þ LDTSelector added to DPMI status (deactivated)
+ þ command GPA implemented
+ þ command .VCPI implemented
+
+ 2004/01/09: version 2.6.1
+
+ þ fixed bug causing GPF when running on NT/2K/XP version
+
+ 2004/01/01: version 2.6.0
+
+ þ conversion to english done
+ þ started help file conversion to english language
+ þ 32bit debugger dll changed to PE format (version 2.6)
+

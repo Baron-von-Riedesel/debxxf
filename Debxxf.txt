@@ -1,0 +1,129 @@
+
+ 1. About Debxxf
+
+ Debxxf is a set of 3 DPMI debuggers:
+
+ - Deb16f to debug 16-bit DOS DPMI clients and DOS real-mode applications.
+ - Deb32f to debug 32-bit DOS DPMI clients and DOS real-mode applications.
+ - Deb16fw to debug 16-bit Windows applications.
+
+ They're based on the same source code and hence have some things in common:
+
+ - they provide a simple line-oriented user interface.
+ - If supported by the OS/DPMI host, they will make usage of the debug
+   registers supplied by the 80386+ cpus.
+ - they are able to trace mode switches and stop in both real-mode and
+   protected-mode. Also, they should be able to debug applications with
+   mixed (16/32-bit) code segments and stacks.
+ - they allow remote debugging by using a serial port.
+ - the disassembler they use is a bit ancient, but supports things up to
+   SSE2.
+ - if used locally, they may be able to debug graphical applications if
+   supported by the OS/graphics card (VESA).
+ - they don't support debugging on the source code level.
+ - they all assume that the underlying DPMI host also provides a DOS extender.
+   This is true for HDPMI, for Windows and for DOSEmu.
+
+
+ 2. How to use Debxxf
+
+ The Debxxf debuggers have an integrated help function which describes most
+ of its features. At the debugger prompt, type:
+
+ - "?" for a list of available commands.
+ - "? ?" to display help index. Each topic displayed here may
+   be displayed in detail by entering "? <topic>"
+ - "? keys" displays some help about keyboard usage inside Deb16f
+ - "? cmdline" displays format of command line accepted by Deb16f
+
+  A debuggee is loaded by "Load" command. Type "? L" to display
+ format of this command. After a debuggee is loaded you may single-
+ step through it by pressing F8 or just enter "G breakpoint"
+ to execute debuggee in real-time until a breakpoint is reached.
+
+  The DOS debuggers ( deb16f/deb32f) use the NE/PE-loader supplied with
+ HX ( DPMILD16/DPMILD32). They tell these loaders to run each program
+ as a separate DPMI client ( this is to ensure that an unhandled exception
+ caused by the debuggee won't terminate the debugger ). On rare cases
+ this won't suffice, then use command ".LDR 0" to disable the loaders.
+  Additionally, for deb16f/deb32f, it may be necessary to disable HDPMI's
+ ability to load clients in separate address spaces - the debuggers assume
+ they're running in the same address context as the debuggee. So don't set
+ environment variable HDPMI=32!
+
+
+ 3. Debugging Applications that are using Graphics
+ 
+ To debug graphical applications the best and simplest option is to 
+ use remote debugging. Debugging locally forces the debugger to switch
+ the graphics card to graphics mode and back to text mode. For the 
+ DOS debuggers, there a 2 dlls provided for graphics screen switching,
+ DEBFVESA.DLL - which is loaded as default - and DEBFVGA.DLL. To make
+ the debugger actually use the screen switcher dll, one has to enable
+ swapping either in the debugger or in debxxf.ini: ScrnSwap=1.
+
+
+ 4. Files Overview
+
+ DOS debuggers:
+
+ - deb16f.exe:   a simple executable to load deb16f.ovl.
+ - deb16f.ovl:   the 16-bit DOS debugger.
+ - dpmild16.exe: HX's NE file loader, required to load deb16f.exe.
+ - deb32f.exe:   a simple executable to load deb32f.dll.
+ - deb32f.dll:   the 32-bit DOS debugger.
+ - dpmild32.exe: HX's PE file loader, required to load deb32f.exe.
+ - debfvesa.dll: a dll to save/restore screen if debuggee is in graphics
+                 mode. Knows VESA and is loaded as default.
+ - debfvga.dll:  another dll to save/restore screen if debuggee is in
+                 graphics mode. Knows/uses VGA only. To use this dll set
+                 "GraphHlp=debfvga.dll" in debxxf.ini.
+ - symbhdld.dll: optional; a 16-bit dll to make the debugger display names
+                 of exports in the disassembler.
+
+ Windows debugger:
+
+ - deb16fw.exe:  a simple executable to load deb16fw.ovl.
+ - deb16fw.ovl:  the 16-bit Windows debugger.
+ - deb16fwv.dll  switch video modes ( Windows 3x/9x/Me ).
+ - deb16fwp.exe  console terminal for debugger output ( NT platforms ).
+ - deb16fwh.dll  32-bit dll for PE file support and communication with
+                 deb16fwp.exe ( Windows 9x/ME and NT platforms ).
+ - symbhdlw.dll: optional; dll to make the debugger display names of
+                 exports in the disassembler.
+
+ Common:
+
+ - rmdbghlp.bin: helper code that will be loaded into
+                 conventional dos memory to provide support for
+                 real/v86 mode debugging.
+ - debxxvdd.dll: VDD to support the debuggers when running in NTVDM.
+ - debxxf.hlp:   a text file that will be loaded by the debugger
+                 at startup. contains help topics and error messages.
+ - debxxf.mac:   contains macros for the debugger.
+ - debxxf.ini:   profile file for the debugger
+ - debxxf.txt    the file you are reading just now.
+ - showfile.dll: optional; a 16-bit NE dll that is a fullscreen hex editor
+                 and used by the debugger for its "type" command.
+
+
+ 5. How to create the Binaries
+
+ The source code is supplied at https://github.com/Baron-von-Riedesel/debxxf.
+ To create the binaries one needs:
+ 
+ - JWasm   ( or Masm)
+ - JWlink  ( or MS link, either the OMF or the COFF variant )
+ - JWlib   ( or MS lib [16-bit] )
+ - Open Watcom Resource compiler wrc.exe ( or MS rc [16-bit] )
+ - HX development package ( for stubs DPMIST16/DPMIST32 )
+
+ For all modules makefiles in nmake format are provided. 
+ Deb16fwh is written in C, the makefile assumes that the MS "Visual C++
+ Toolkit" is used, but surely Open Watcom may be used as well.
+
+
+ 6. Copyright
+
+ Debxxf is released under the MIT license. Copyright 1993-2022 Andreas Grech.
+

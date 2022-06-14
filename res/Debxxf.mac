@@ -1,0 +1,70 @@
+#
+# macros for debxxf
+# lines beginning with '#' are comments
+# lines beginning with '+' are macros for the windows version only
+# lines beginning with '-' are macros for the dos version only
+# --------------------------------------------------------------------
+# some simple macros for video handling
+#
+-50L=int 10,0083;int 10,1112,0
+-25L=int 10,0083
+-60L=int 10,4f02,108;
+-34L=int 10,4f02,108;int 10,1111,0
+-CRTON=o 3d4,11;out 3d5,inpb(3d5) and 7f
+-CRTOFF=o 3d4,11;out 3d5,inpb(3d5) or 80
+# --------------------------------------------------------------------
+# macro to get system infos
+#
+TRUEDOS=int 21,3306,0,0,0;pri "true dos-version=%u.%u",tebx and ff,tebx >> 8
+I15MEM=int 15,E801,0,0,0;\
+pri "%X kB below 16 MB, %X 64kB-blocks above 16 MB",(word)teax,(word)tebx
+VDS=int 4b,8102,0,0,0;pri "ax=%X bx=%X cx=%X si:di=%x:%x", teax, tebx, tecx, tesi, tedi
+#
+IPX=int 2f,7a00;\
+if (teax and ff)==ff;\
+pri "IPX-Entry -> %X:%X",tes,tedi;\
+else;\
+pri "IPX not installed";\
+endif
+# --------------------------------------------------------------------
+# HARD/SOFT : setting the debugger to HARD mode is required to
+# debug 32bit code in the windows version of the debugger!
+#
++HARD=TIDT(1,1);TIDT(3,1)
++SOFT=TIDT(1,0);TIDT(3,0)
+-HARD=TIDT(1,1);TIDT(3,1)
+-SOFT=TIDT(1,0);TIDT(3,0)
+# --------------------------------------------------------------------
+# USETH 0|1 : this macro will set proper values for trapping exceptions
+# and interrupts if toolhelp isn't used. This is a better method than
+# using .TH, which simply switches toolhelp support on or off.
++USETH=if ^;\
+texc(0,0);texc(1,0);texc(3,0);texc(6,0);texc(c,0);texc(d,0);texc(e,0);tpmi(1,0);\
+.th 1;\
+else;\
+.th 0;\
+texc(0,3);texc(1,3);texc(3,3);texc(6,3);texc(c,3);texc(d,3);texc(e,3);tpmi(1,1);\
+endif
+# --------------------------------------------------------------------
+# EXEC filename : will execute a script
+#
+EXEC=INPMFN="^";inpm=inpm or 4;
+# --------------------------------------------------------------------
+# LOAD4G filename : will load a DOS4/GW executable
+#
+-LOAD4G=tracef=tracef or E;l ^;if winv;tidt(1,1);endif;g
+# --------------------------------------------------------------------
+# LOADLE filename : will load a LE executable and stop if base(cs)==0.
+#        this macro is for DOS4/GW clones lacking support for int 21,ah=FF
+#
+-LOADLE=.vcpi 0;l ^;\
+if winv;bp ,,,"!realm";g;bc;tidt(1,1);else;g pmentry;endif;\
+tracef=tracef or E;bp ,,,"base(cs)==0" ;g;bc
+# --------------------------------------------------------------------
+# PREPTNT : prepare execution of a Phar Lab TNT executable
+#
+-PREPTNT=allocss 14;allocss 1C;allocss 24;allocss 2C;allocss 34;\
+setlim(14,-1);setlim(1c,7FFF);setlim(34,FFFFF);\
+setbase(1C,B8000);\
+setbase(24,base(psp));setlim(24,lim(psp));\
+setbase(2c,base([psp:2c]));setlim(2c,7fff);\

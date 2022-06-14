@@ -1,0 +1,18 @@
+
+LIBRARY DEB16FWV
+
+DESCRIPTION "deb16fw video helper dll"
+
+EXETYPE WINDOWS
+PROTMODE
+
+EXPORTS
+ SwitchToDebuggerScreen     @1
+ SwitchToWindowsScreen      @2
+ VideoInit                  @3
+ VideoDone                  @4
+ Wep                        @5  RESIDENTNAME
+
+;IMPORTS
+; Death=GDI.121
+; Resurrection=GDI.122
