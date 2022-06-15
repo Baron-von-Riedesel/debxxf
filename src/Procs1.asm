@@ -111,43 +111,43 @@ display1 endp
 
 _display proc c public pb:PARMBLK
 
-        mov  cl,byte ptr pb.wArgc
-        and  cl,cl
-        jz   display_ex
-        lea  esi,a1
-        lea  ebx,pb.dwOffs1
+	mov  cl,byte ptr pb.wArgc
+	and  cl,cl
+	jz	 display_ex
+	lea  esi,a1
+	lea  ebx,pb.dwOffs1
 @@:
-        push ecx
-        push ebx
-        call display1
-        pop  ebx
-        add  esi,size ARGDESC
-        add  ebx,3*4            ;je 3 parameter pro argument
-        pop  ecx
-        dec  cl
-        jnz  @B
+	push ecx
+	push ebx
+	call display1
+	pop  ebx
+	add  esi,size ARGDESC
+	add  ebx,3*4			;je 3 parameter pro argument
+	pop  ecx
+	dec  cl
+	jnz  @B
 display_ex:
-        ret
+	ret
 _display endp
 
 _myprintf proc c public pb:PARMBLK
 
-        mov     ecx,pb.wArgc
-        mov     esi,esp
-        lea     ebx,pb.dwOffs2
-        dec     ecx
-        jecxz   myprintf1
+	mov 	ecx,pb.wArgc
+	mov 	esi,esp
+	lea 	ebx,pb.dwOffs2
+	dec 	ecx
+	jecxz	myprintf1
 @@:
-        mov     eax,3*4
-        mul     ecx
-        push    [ebx+eax-3*4]
-        loop    @B
+	mov 	eax,3*4
+	mul 	ecx
+	push	[ebx+eax-3*4]
+	loop	@B
 myprintf1:
-        push    pb.dwOffs1
-        call    printf
-        mov     esp,esi
-        invoke	_crout
-        ret
+	push	pb.dwOffs1
+	call	printf
+	mov 	esp,esi
+	invoke	_crout
+	ret
 _myprintf endp
 
 ;*** variable: wert zuweisen (subroutine von EDIT)
@@ -158,99 +158,99 @@ _myprintf endp
 ;*** DS ist nicht unbedingt == DGROUP!
 
 wrinp_er:
-        @errorout ERR_TOO_FEW_PARAMETERS
-        ret
+	@errorout ERR_TOO_FEW_PARAMETERS
+	ret
 wrinp_er2:
-        add  esp,8
-        @errorout ERR_FROM_FUNCTION
-        ret
+	add  esp,8
+	@errorout ERR_FROM_FUNCTION
+	ret
 
-wrinp   proc stdcall public
+wrinp proc stdcall public
 
-        test cl,_FNCALL_
-        jz   @F
-        dec  ch                  ;variablenadresse weg
-        cmp  ch,cs:[esi.SYMBOL.bType2] ;braucht funktion ein argument?
-        jbe  wrinp_er
-        mov  edx,eax       ;edx=dwOffs2,ebx=p3.dwOffs
-        mov  al,1          ;modus: wert setzen
-        push ebx
-        push edx
-        call dword ptr cs:[esi.SYMBOL.dwProc]
-        jc   wrinp_er2
-        add  esp,8
-        ret
+	test cl,_FNCALL_
+	jz	 @F
+	dec  ch 				 ;variablenadresse weg
+	cmp  ch,cs:[esi.SYMBOL.bType2] ;braucht funktion ein argument?
+	jbe  wrinp_er
+	mov  edx,eax	   ;edx=dwOffs2,ebx=p3.dwOffs
+	mov  al,1		   ;modus: wert setzen
+	push ebx
+	push edx
+	call dword ptr cs:[esi.SYMBOL.dwProc]
+	jc	 wrinp_er2
+	add  esp,8
+	ret
 @@:
-        and  esi,esi
-        jz   @F
-        mov  ebx,[esi.SYMBOL.dwProc]
+	and  esi,esi
+	jz	 @F
+	mov  ebx,[esi.SYMBOL.dwProc]
 @@:
-        cmp  cl,__BYTE__
-        jz   wrinp_b
-        cmp  cl,__WORD__
-        jz   wrinp_w
-        cmp  cl,__DWORD__
-        jz   wrinp_dw
-;        cmp  cl,__CONST__
-;        jz   wrinp_dw
-        cmp  cl,__CHAR__
-        jz   wrinp_b
-        cmp  cl,__BOOL__
-        jz   wrinp_bool
-        cmp  cl,__STRING__
-        jz   wrinp_dw
-        cmp  cl,__LPTR__
-        jz   wrinp_lptr
-        cmp  cl,__RMLPTR__
-        jz   wrinp_lptr
-        cmp  cl,__FPTR__
-        jz   wrinp_fw
-        cmp  cl,__FWORD__
-        jz   wrinp_fw
-        cmp  cl,__QWORD__
-        jz   wrinp_qw
-        cmp  cl,__TBYTE__
-        jz   wrinp_tb
-if 0    
-        cmp  cl,__OWORD__
-        jz   wrinp_ow
+	cmp  cl,__BYTE__
+	jz	 wrinp_b
+	cmp  cl,__WORD__
+	jz	 wrinp_w
+	cmp  cl,__DWORD__
+	jz	 wrinp_dw
+;	cmp  cl,__CONST__
+;	jz   wrinp_dw
+	cmp  cl,__CHAR__
+	jz	 wrinp_b
+	cmp  cl,__BOOL__
+	jz	 wrinp_bool
+	cmp  cl,__STRING__
+	jz	 wrinp_dw
+	cmp  cl,__LPTR__
+	jz	 wrinp_lptr
+	cmp  cl,__RMLPTR__
+	jz	 wrinp_lptr
+	cmp  cl,__FPTR__
+	jz	 wrinp_fw
+	cmp  cl,__FWORD__
+	jz	 wrinp_fw
+	cmp  cl,__QWORD__
+	jz	 wrinp_qw
+	cmp  cl,__TBYTE__
+	jz	 wrinp_tb
+if 0
+	cmp  cl,__OWORD__
+	jz	 wrinp_ow
 endif  
-        ret
+	ret
 wrinp_b:
-        mov [ebx],al
-        ret
+	mov [ebx],al
+	ret
 wrinp_w:
-        mov [ebx],ax
-        ret
+	mov [ebx],ax
+	ret
 wrinp_dw:
-        mov [ebx],eax
-        ret
+	mov [ebx],eax
+	ret
 wrinp_lptr:
-        mov [ebx+0],ax
-        mov [ebx+2],dx
-        ret
+	mov [ebx+0],ax
+	mov [ebx+2],dx
+	ret
 wrinp_fw:
-        mov [ebx+0],eax
-        mov [ebx+4],dx
-        ret
+	mov [ebx+0],eax
+	mov [ebx+4],dx
+	ret
 wrinp_bool:
-        cmp al,1
-        cmc
-        sbb al,al
-        mov [ebx],al
-        ret
+	cmp al,1
+	cmc
+	sbb al,al
+	mov [ebx],al
+	ret
 wrinp_qw:
-        mov [ebx+0],eax
-        mov [ebx+4],edx
-        ret
+	mov [ebx+0],eax
+	mov [ebx+4],edx
+	ret
 wrinp_tb:
-        call wrinp_qw
-        push ecx
-        shr  ecx,16
-        mov  [ebx+8],cx
-        pop  ecx
-        ret
-wrinp   endp
+	call wrinp_qw
+	push ecx
+	shr  ecx,16
+	mov  [ebx+8],cx
+	pop  ecx
+	ret
+wrinp endp
 
 ;*** edit funktion ***
 
@@ -933,48 +933,48 @@ _ldtout endp
 
 gateout proc stdcall public ngate:dword,bereich:dword,maxlen:dword
 
-local   tempvar1:dword
-local   tempvar2:dword
-local   selattr:dword
-local   gateoffs:dword
-local   gatesel:dword
+local	tempvar1:dword
+local	tempvar2:dword
+local	selattr:dword
+local	gateoffs:dword
+local	gatesel:dword
 
-        movzx   ebx,word ptr ngate
-        mov     tempvar1,ebx
-        mov     dword ptr selattr,0
-        cmp     ebx,maxlen
-        jnc     novalgate
-        and     bl,0F8h
-        add     ebx,bereich                ;basisadresse der IDT,GDT,LDT
-        mov     ax,@flat:[ebx+4]
-        mov     word ptr selattr,ax        ;selector attribute
-        shr     ax,13
-        and     ax,03
-        or      word ptr tempvar1,ax
-        mov     ax,@flat:[ebx+6]
-        shl     eax,16
-        mov     ax,@flat:[ebx+0]
-        mov     gateoffs,eax
-        movzx   eax,word ptr @flat:[ebx+2]
-        mov     gatesel,eax
+	movzx ebx, word ptr ngate
+	mov tempvar1, ebx
+	mov dword ptr selattr, 0
+	cmp ebx, maxlen
+	jnc novalgate
+	and bl, 0F8h
+	add ebx, bereich 			; basisadresse der IDT,GDT,LDT
+	mov ax, @flat:[ebx+4]
+	mov word ptr selattr, ax	; selector attribute
+	shr ax, 13
+	and ax, 03
+	or word ptr tempvar1, ax
+	mov ax, @flat:[ebx+6]
+	shl eax, 16
+	mov ax, @flat:[ebx+0]
+	mov gateoffs, eax
+	movzx eax, word ptr @flat:[ebx+2]
+	mov gatesel, eax
 novalgate:
-        mov     eax,tempvar1
-        shr     eax,3
-        mov     tempvar2,eax
-        invoke printf, CStr("Gate=%04X(%02X) "), tempvar1, tempvar2
-        cmp     word ptr selattr,0
-        jnz     @F
-        @strout offset tQuestions
-        invoke  _crout
-        jmp     exit
+	mov eax, tempvar1
+	shr eax, 3
+	mov tempvar2, eax
+	invoke printf, CStr("Gate=%04X(%02X) "), tempvar1, tempvar2
+	cmp word ptr selattr, 0
+	jnz @F
+	@strout offset tQuestions
+	invoke _crout
+	jmp exit
 @@:
-        invoke printf, CStr("Selector=%04X Offset=%08X Attr=%04X "), gatesel, gateoffs, selattr
-        mov     ax,word ptr selattr
-        shr     ax,8
-        call    getstype
-        invoke  _crout
+	invoke printf, CStr("Selector=%04X Offset=%08X Attr=%04X "), gatesel, gateoffs, selattr
+	mov ax, word ptr selattr
+	shr ax, 8
+	call getstype
+	invoke _crout
 exit:
-        ret
+	ret
 gateout endp
 
 selectorout proc stdcall public sel:dword
@@ -1051,85 +1051,86 @@ selectorout_2:
 exit:
 	ret
 dispeax:
-    invoke printf, CStr("%X"), eax
-    retn
+	invoke printf, CStr("%X"), eax
+	retn
 dispunknown:
-    invoke printf, CStr("????????")
-    retn
+	invoke printf, CStr("????????")
+	retn
+
 selectorout endp
 
-mbit7   proc c
-        test    al,80h
-        jnz     @F
-        @stroutc ",NP"
-        ret
+mbit7 proc c
+	test	al,80h
+	jnz 	@F
+	@stroutc ",NP"
+	ret
 @@:
-        @stroutc ",P"
-        ret
-mbit7   endp
+	@stroutc ",P"
+	ret
+mbit7 endp
 
-mbit3   proc c
-        test    al,8
-        jnz     @F
-        @stroutc "Data"
-        ret
+mbit3 proc c
+	test	al,8
+	jnz 	@F
+	@stroutc "Data"
+	ret
 @@:
-        @stroutc "Code"
-        ret
-mbit3   endp
+	@stroutc "Code"
+	ret
+mbit3 endp
 
-mbit14  proc c
-        test    ah,40h
-        jnz     @F
-        @stroutc ",16Bit"
-        ret
+mbit14 proc c
+	test	ah,40h
+	jnz 	@F
+	@stroutc ",16Bit"
+	ret
 @@:
-        @stroutc ",32Bit"
-        ret
-mbit14  endp
+	@stroutc ",32Bit"
+	ret
+mbit14 endp
 
-mbit2   proc c
-        test    al,4
-        jnz     @F
-        ret
+mbit2 proc c
+	test	al,4
+	jnz 	@F
+	ret
 @@:
-        test    al,8
-        jnz     @F
-        @stroutc ",DN"
-        ret
+	test	al,8
+	jnz 	@F
+	@stroutc ",DN"
+	ret
 @@:
-        @stroutc ",CF"
-        ret
-mbit2   endp
+	@stroutc ",CF"
+	ret
+mbit2 endp
 
-mbit1   proc c
-        test    al,2
-        jnz     mbit11
-        test    al,8
-        jnz     @F
-        @stroutc ",R/O"
-        ret
+mbit1 proc c
+	test	al,2
+	jnz 	mbit11
+	test	al,8
+	jnz 	@F
+	@stroutc ",R/O"
+	ret
 @@:
-        @stroutc ",E/O"
-        ret
+	@stroutc ",E/O"
+	ret
 mbit11:
-        test    al,8
-        jnz     @F
-        @stroutc ",R/W"
-        ret
+	test	al,8
+	jnz 	@F
+	@stroutc ",R/W"
+	ret
 @@:
-        @stroutc ",E/R"
-        ret
-mbit1   endp
+	@stroutc ",E/R"
+	ret
+mbit1 endp
 
-mbit0   proc c
-        test    al,1
-        jnz     @F
-        ret
+mbit0 proc c
+	test	al,1
+	jnz 	@F
+	ret
 @@:
-        @stroutc ",Acc"
-        ret
-mbit0   endp
+	@stroutc ",Acc"
+	ret
+mbit0 endp
 
 getstype proc stdcall public
 	test	ax,10h		  ;Memory oder System Segment?
@@ -1273,43 +1274,43 @@ _vcpi proc c public pb:PARMBLK
 local	_vcpihlp:PF32
 local	_rmcs:RMCS
 
-		mov bl, 67h
-		mov ax, 200h
+	mov bl, 67h
+	mov ax, 200h
+	@DpmiCall
+	mov ax, cx
+	or ax, dx
+	jnz @F
+	invoke printf, CStr("int 67h real mode vector is 0",lf)
+	jmp exit
+@@:
+	.if (pb.p1.bType == __VOID__)
+		xor ecx, ecx
+		mov _rmcs.rAX, 0DE00h
+		mov _rmcs.rSSSP, ecx
+		mov _rmcs.rFlags, 202h
+		mov bx, 67h
+		lea edi, _rmcs
+		mov ax, 300h
 		@DpmiCall
-		mov ax, cx
-		or ax, dx
-		jnz @F
-		invoke printf, CStr("int 67h real mode vector is 0",lf)
-		jmp exit
-@@: 	   
-		.if (pb.p1.bType == __VOID__)
-			xor ecx, ecx
-			mov _rmcs.rAX, 0DE00h
-			mov _rmcs.rSSSP, ecx
-			mov _rmcs.rFlags, 202h
-			mov bx, 67h
-			lea edi, _rmcs
-			mov ax, 300h
-			@DpmiCall
-			movzx eax,word ptr _rmcs.rEAX
-			.if (ah != 00h)
-				mov ecx, CStr("off/not installed")
-			.else
-				mov ecx, CStr("on")
-			.endif
-			invoke printf, CStr("vcpi is %s",10,"int 67h, ax=DE00h returned %X",lf), ecx, eax
+		movzx eax,word ptr _rmcs.rEAX
+		.if (ah != 00h)
+			mov ecx, CStr("off/not installed")
 		.else
-			mov edx, [__RmCS]
-			mov fs, edx
-			movzx edx,fs:[DEBRMVAR.wVCPI]
-			mov eax, pb.dwOffs1
-			push ax
-			mov word ptr [_vcpihlp+4], fs
-			mov dword ptr [_vcpihlp+0], edx
-			call _vcpihlp
+			mov ecx, CStr("on")
 		.endif
+		invoke printf, CStr("vcpi is %s",10,"int 67h, ax=DE00h returned %X",lf), ecx, eax
+	.else
+		mov edx, [__RmCS]
+		mov fs, edx
+		movzx edx,fs:[DEBRMVAR.wVCPI]
+		mov eax, pb.dwOffs1
+		push ax
+		mov word ptr [_vcpihlp+4], fs
+		mov dword ptr [_vcpihlp+0], edx
+		call _vcpihlp
+	.endif
 exit:
-		ret
+	ret
 _vcpi endp
 
 if 0
@@ -1320,17 +1321,17 @@ _dpmi proc c public pb:PARMBLK
 local	_dpmihlp:PF32
 local	_rmcs:RMCS
 
-	mov		bl,2Fh
-	mov		ax,0200h
+	mov bl,2Fh
+	mov ax,0200h
 	@DpmiCall
-	mov		edx, [__RmCS]
-	mov		fs, edx
-	movzx	edx,fs:[DEBRMVAR.wDPMI]
-	mov		eax, pb.dwOffs1
-	push	ax
-	mov		dword ptr [_dpmihlp+0], edx
-	mov		word ptr [_dpmihlp+4], fs
-	call	_dpmihlp
+	mov edx, [__RmCS]
+	mov fs, edx
+	movzx edx,fs:[DEBRMVAR.wDPMI]
+	mov eax, pb.dwOffs1
+	push ax
+	mov dword ptr [_dpmihlp+0], edx
+	mov word ptr [_dpmihlp+4], fs
+	call _dpmihlp
 exit:
 	ret
 _dpmi endp
