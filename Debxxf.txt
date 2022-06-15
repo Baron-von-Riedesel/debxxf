@@ -1,4 +1,5 @@
 
+
  1. About Debxxf
 
  Debxxf is a set of 3 DPMI debuggers:
@@ -27,6 +28,10 @@
 
  2. How to use Debxxf
 
+ To be able to start Deb16f/Deb32f you'll need the HX runtime for the DPMI
+ loaders DPMILD16/DPMILD32. This also supplies the DPMI hosts HDPMI16/HDPMI32,
+ required for plain DOS.
+
  The Debxxf debuggers have an integrated help function which describes most
  of its features. At the debugger prompt, type:
 
@@ -53,7 +58,7 @@
 
 
  3. Debugging Applications that are using Graphics
- 
+
  To debug graphical applications the best and simplest option is to 
  use remote debugging. Debugging locally forces the debugger to switch
  the graphics card to graphics mode and back to text mode. For the 
@@ -69,17 +74,17 @@
 
  - deb16f.exe:   a simple executable to load deb16f.ovl.
  - deb16f.ovl:   the 16-bit DOS debugger.
- - dpmild16.exe: HX's NE file loader, required to load deb16f.exe.
  - deb32f.exe:   a simple executable to load deb32f.dll.
  - deb32f.dll:   the 32-bit DOS debugger.
- - dpmild32.exe: HX's PE file loader, required to load deb32f.exe.
  - debfvesa.dll: a dll to save/restore screen if debuggee is in graphics
                  mode. Knows VESA and is loaded as default.
  - debfvga.dll:  another dll to save/restore screen if debuggee is in
                  graphics mode. Knows/uses VGA only. To use this dll set
                  "GraphHlp=debfvga.dll" in debxxf.ini.
+ - debxxvdd.dll: VDD to support the debuggers when running in NTVDM.
  - symbhdld.dll: optional; a 16-bit dll to make the debugger display names
                  of exports in the disassembler.
+ - Deb32f.txt    specific information for deb32f.
 
  Windows debugger:
 
@@ -91,18 +96,18 @@
                  deb16fwp.exe ( Windows 9x/ME and NT platforms ).
  - symbhdlw.dll: optional; dll to make the debugger display names of
                  exports in the disassembler.
+ - Deb16fw.txt   specific information for deb16fw.
 
  Common:
 
  - rmdbghlp.bin: helper code that will be loaded into
                  conventional dos memory to provide support for
                  real/v86 mode debugging.
- - debxxvdd.dll: VDD to support the debuggers when running in NTVDM.
- - debxxf.hlp:   a text file that will be loaded by the debugger
+ - Debxxf.hlp:   a text file that will be loaded by the debugger
                  at startup. contains help topics and error messages.
- - debxxf.mac:   contains macros for the debugger.
- - debxxf.ini:   profile file for the debugger
- - debxxf.txt    the file you are reading just now.
+ - Debxxf.mac:   contains macros for the debugger.
+ - Debxxf.ini:   profile file for the debugger
+ - Debxxf.txt    the file you are reading just now.
  - showfile.dll: optional; a 16-bit NE dll that is a fullscreen hex editor
                  and used by the debugger for its "type" command.
 

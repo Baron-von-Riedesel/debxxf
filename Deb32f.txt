@@ -11,9 +11,9 @@
  virtualization software that don't support using the 80386 hardware
  debug registers.
 
- 
+
  2. Debugging apps written with other dos extenders
- 
+
  2.1  Force debuggee to run as DPMI client in plain DOS
 
  Deb32f is a DPMI client and to be able to debug another protected mode
@@ -22,44 +22,44 @@
  their own DPMI host when they found the cpu in real mode. Or, if cpu is
  in v86 mode, they prefer to run as VCPI client. Although some DOS extenders
  are designed to optionally change this behaviour and always use the current
- DPMI host (for example CauseWay or PMode/W), others lack this feature. Then 
+ DPMI host (for example CauseWay or PMode/W), others lack this feature. Then
  one may do:
- 
+
    - load a memory manager on startup which supports VCPI and
      will put the cpu in v86-mode (EMM386.EXE for example).
    - start Deb32f and enter ".vcpi 0", which tries to disable
      VCPI support.
-     
+
  Now load the debuggee, which has no option as to run as DPMI client now.
-        
+
 
  2.2  Skip the Real-mode Startup Code
 
  One might be able to skip the real-mode portion of a DOS extender's
  initialization phase by entering "G PMENTRY". 'PMENTRY' is the debugger's
  name for the DPMI host's initial entry to protected-mode.
- 
- 
+
+
  2.3. Debugging 32bit dos extended apps in LE/LX format
- 
+
   Many 32bit dos extended apps are in LE/LX file format. This is due
  to the success of the DOS4/G(W) DOS extender. Deb32f supports this
  extender's API to some extend. A macro has been defined:
- 
+
   LOAD4G <full name of executable>
-  
+
  With this macro the debugger will not only stop at the stub's
  real-mode entry but also if an INT 21h, AH=FF, DX=0078 is executed
  in protected-mode. This is done by newer versions of DOS4/GW after
  the executable is loaded and CS is 32bit.
- 
+
  Some other extenders support the LE/LX format as well, but don't 
  understand the DOS4/GW API. To stop the debuggee in protected mode
  for these clones - like PModeW, CauseWay, ... - a macro has been
  defined in Deb32f:
 
    LOADLE <full name of executable>
- 
+
  Please note that this macro isn't foolproved. It will stop if 
  base of CS is 0, assuming debuggee has switched to a flat,
  zero-based code segment. For this the macro uses a watchpoint,
@@ -79,29 +79,29 @@
  If the app isn't stubbed, and HXLDR32 is installed instead, this
  won't work. In the latter case one has to include the DPMI
  loader into the cmd: "l(oad) dpmild32.exe <program_to_debug>".
-  
-  
+
+
  2.5. Gaining control on fatal errors (Exceptions)
-  
+
  In many cases a dos extender will trap fatal errors, display a
  message and terminate the app. Sometimes it would be nice to stop
  the debuggee at the faulting address and examine the error with a
  debuggger. This can be achieved for Deb32f by adding a line in
  DEBXXF.INI:
- 
+
  FirstExc=704b  ;704b ==> bits 0, 1, 3, 6, 0Ch, 0Dh, 0Eh = 1
- 
+
  This will let the debugger gain control at first chance for exceptions
  00h, 01h, 03h, 06h, 0Ch, 0Dh, 0Eh. As default only exceptions 01 and 03
  will be "first chance", because other exceptions may preferably be
  handled by the debuggee first.
- 
- 
+
+
  2.6. Debugging apps with Graphics and Sound
- 
+
   To debug apps using graphics there exist some issues one should be aware
   of:
-  
+
    - screen swapping has to be enabled. This is done by setting debugger
      variable SCREENSwap=1.
    - to force screen swapping for every instruction while single-stepping
@@ -111,7 +111,7 @@
    - if the debugger is running in a fullscreen DOS-box don't switch to
      another application while debuggee is in graphics mode. This may cause
      various effects from destroying video content to a system crash. 
-     
+
   The functions to save and restore the debuggee's graphic screen are
  extracted to a helper dll DEBFVESA.DLL, for which source code is supplied,
  in case it has to be modified. If this dll doesn't work correctly one
@@ -119,7 +119,7 @@
  To change the graphics helper dll, add a line in debxxf.ini:
 
  GraphHlp=DEBFVGA.DLL
- 
+
   For apps using sound set variable IRQ=0. This will disable (virtual)
  interrupts while debugger code is executed. If this doesn't work
  (some DPMI hosts have problems), one may try to set bit 5 of variable
@@ -135,5 +135,4 @@
  - on win9x platforms exception 01h is often not reported to the
    DPMI client. As a workaround let the debugger modify IDT vector 1
    directly with TIDT(1,1) or use macro HARD.
-   
-  
+
