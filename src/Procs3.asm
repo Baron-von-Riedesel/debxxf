@@ -469,7 +469,10 @@ endif
 			pop eax
 			and eax, eax
 			jnz @F
+			movzx eax, byte ptr [esi-1]
+			invoke printf, CStr("Load16bitProcs: cannot load proc# %X",10), eax
 			xor edi, edi
+			mov eax, edi
 @@:
 			mov [esi], eax
 			add esi, 4

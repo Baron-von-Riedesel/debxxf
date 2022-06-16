@@ -33,6 +33,7 @@ $(OUTD):
 
 $(OUTD)\$(dllW).dll: $(OUTD)\$(name).obj $(name).lbc $(modsW) $(mods)
 	@jwlink format win dll f {$(OUTD)\$(name).obj $(modsW) $(mods)} n $*.dll lib $(LIBS) op q,m=$*,align=16 @$(name).lbc
+#	@link16 /A:16 $(OUTD)\$(name).obj $(modsW) $(mods),$*.dll,$*.map,$(LIBS),$(name).def
 
 $(OUTD)\$(dllD).dll: $(OUTD)\$(name).obj $(name).lbc $(modsD) $(mods)
 	@jwlink format win dll f {$(OUTD)\$(name).obj $(modsD) $(mods)} n $*.dll lib $(LIBS) op q,m=$*,align=16 @$(name).lbc

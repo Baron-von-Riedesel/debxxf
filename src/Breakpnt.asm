@@ -51,22 +51,22 @@ bErrors db 0
 
 getlinearbp proc stdcall uses ebx
 
-	mov 	ebx,dword ptr [esi].BREAK.brpAddr+0
-	mov 	cx,word ptr [esi].BREAK.brpAddr+4
-	mov 	dl,1
-	test	[esi].BREAK.bFlags1, FBRP_REAL
-	jnz 	@F
-	mov 	dl,0
-	lar		eax,ecx
-	jnz		error
-	test	ah,4		;expand down?
-	jnz		@F
-	lsl 	eax,ecx
-	jnz 	error
-	cmp 	eax,dword ptr [esi].BREAK.brpAddr+0
-	jc		error
+	mov ebx, dword ptr [esi].BREAK.brpAddr+0
+	mov cx, word ptr [esi].BREAK.brpAddr+4
+	mov dl, 1
+	test [esi].BREAK.bFlags1, FBRP_REAL
+	jnz @F
+	mov dl, 0
+	lar eax, ecx
+	jnz error
+	test ah, 4		;expand down?
+	jnz @F
+	lsl eax, ecx
+	jnz error
+	cmp eax, dword ptr [esi].BREAK.brpAddr+0
+	jc error
 @@:
-	call	getlinearaddr			 ;adresse von CX:EBX holen
+	call getlinearaddr			; adresse von CX:EBX holen
 	ret
 error:
 	stc
@@ -74,44 +74,44 @@ error:
 getlinearbp endp
 
 getactfl:
-		test	[fEntry], FENTRY_REAL
-		jnz 	@F
-		mov 	eax,[r1.rEfl]
-		ret
+	test [fEntry], FENTRY_REAL
+	jnz @F
+	mov eax, [r1.rEfl]
+	ret
 @@:
-		mov 	ax,[r1r.rFlags]
-		ret
+	mov ax, [r1r.rFlags]
+	ret
 setactfl:
-		test	[fEntry], FENTRY_REAL
-		jnz 	@F
-		mov 	[r1.rEfl],eax
-		ret
+	test [fEntry], FENTRY_REAL
+	jnz @F
+	mov [r1.rEfl], eax
+	ret
 @@:
-		mov 	[r1r.rFlags],ax
-		ret
+	mov [r1r.rFlags], ax
+	ret
 
 ;--- read a byte into CH from flat:[EBX]
 
 if ?LOADVDD
 
 VerifyAddress proc stdcall public dqAddress:QWORD, dwMode:dword
-	push	eax
-	push	ebx
-	push	ecx
-	push	edx
-	mov		ecx,dwMode		;readable/writeable address?
-	mov		ebx,dword ptr dqAddress+0
-	mov		edx,dword ptr dqAddress+4
-	mov		eax,[hVDD]
+	push eax
+	push ebx
+	push ecx
+	push edx
+	mov ecx, dwMode		;readable/writeable address?
+	mov ebx, dword ptr dqAddress+0
+	mov edx, dword ptr dqAddress+4
+	mov eax, [hVDD]
  if ?FLAT
 	invoke RunBop, 2
  else
 	DispatchCall 
  endif
-	pop		edx
-	pop		ecx
-	pop		ebx
-	pop		eax
+	pop edx
+	pop ecx
+	pop ebx
+	pop eax
 	ret
 VerifyAddress endp        
 
@@ -319,47 +319,47 @@ checkbpcondition proc stdcall
 
 	@tprintf <"checkpbcondition enter",lf>
         
-	cmp 	byte ptr [esi.BREAK.CondTyp],__STRING__
-	jz		checkbpcondition_3
-	mov 	ebx,[esi.BREAK.brpCAdr]
-        mov     ebx,[ebx.SYMBOL.dwProc]
-	mov 	eax,[ebx]
-	mov 	ebx,[esi.BREAK.brpCVa1]
-	mov 	ecx,[esi.BREAK.brpCVa2]
-	cmp 	byte ptr [esi.BREAK.CondTyp],__BYTE__
-	jz		checkbpcondition_1
-	test	byte ptr [esi.BREAK.CondTyp],__WORD__
-	jz		checkbpcondition_2
-	cmp 	eax,ebx
-	jb		falsecond
-	cmp 	eax,ecx
-	ja		falsecond
+	cmp byte ptr [esi.BREAK.CondTyp], __STRING__
+	jz checkbpcondition_3
+	mov ebx, [esi.BREAK.brpCAdr]
+	mov ebx, [ebx.SYMBOL.dwProc]
+	mov eax, [ebx]
+	mov ebx, [esi.BREAK.brpCVa1]
+	mov ecx, [esi.BREAK.brpCVa2]
+	cmp byte ptr [esi.BREAK.CondTyp], __BYTE__
+	jz checkbpcondition_1
+	test byte ptr [esi.BREAK.CondTyp], __WORD__
+	jz checkbpcondition_2
+	cmp eax, ebx
+	jb falsecond
+	cmp eax, ecx
+	ja falsecond
 	clc
 	ret
 falsecond:
 	stc
 	ret
 checkbpcondition_1:
-	cmp 	al,bl
-	jb		falsecond
-	cmp 	al,cl
-	ja		falsecond
+	cmp al, bl
+	jb falsecond
+	cmp al, cl
+	ja falsecond
 	clc
 	ret
 checkbpcondition_2:
-	cmp 	ax,bx
-	jb		falsecond
-	cmp 	ax,cx
-	ja		falsecond
+	cmp ax, bx
+	jb falsecond
+	cmp ax, cx
+	ja falsecond
 	clc
 	ret
 checkbpcondition_3:
-	push	esi
-	mov 	esi,[esi.BREAK.brpCAdr]
-	invoke	GetExpression,__STRING__
-	pop 	esi
-	@tprintf <"checkbpcondition eax=%X",lf>,eax
-	cmp 	eax,1			;eax==0 -> C
+	push esi
+	mov esi, [esi.BREAK.brpCAdr]
+	invoke GetExpression, __STRING__
+	pop esi
+	@tprintf <"checkbpcondition eax=%X",lf>, eax
+	cmp eax, 1			;eax==0 -> C
 	ret
 checkbpcondition endp
 
@@ -480,10 +480,10 @@ if ?WINDOWS
 @@:        
 endif
 	popad
-	mov esi,[esi.BREAK.pNext]
+	mov esi, [esi.BREAK.pNext]
 	jmp nextitem
 done:
-	mov ecx,korreip
+	mov ecx, korreip
 	jecxz resetthebreaks_4	   ; kein breakpoint aktuell
 
 	test [fEntry], FENTRY_REAL
@@ -491,7 +491,7 @@ done:
 	sub [r1.rEip], ecx
 	jmp resetthebreaks_2
 @@:
-	sub [r1r.rIP],cx
+	sub [r1r.rIP], cx
 resetthebreaks_2:
 resetthebreaks_4:
 	@tprintf <"ResetBreaks exit",lf>
@@ -555,65 +555,65 @@ local	bpflags:dword
 	call breaksout
 	jmp exit
 setbreakpnt_1:
-	call	GetCurrentCS				  ;CS -> AX, type in dl
-	mov 	ebx,pb.dwOffs1
-	cmp 	cl,__VOID__ 				  ;address given?
-	jnz 	@F
-	test	byte ptr bpflags,FBRP_USEHW
-	jnz 	error1
-	cmp 	byte ptr pb.wArgc,4 		  ;watchpoint requires condition
-	jb		error3
-	or		byte ptr bpflags,FBRP_NOADDR
+	call GetCurrentCS				  ;CS -> AX, type in dl
+	mov ebx,pb.dwOffs1
+	cmp cl,__VOID__ 				  ;address given?
+	jnz @F
+	test byte ptr bpflags, FBRP_USEHW
+	jnz error1
+	cmp byte ptr pb.wArgc, 4 		  ;watchpoint requires condition
+	jb error3
+	or byte ptr bpflags, FBRP_NOADDR
 @@:
-	cmp 	cl,__FPTR__
-	jnz 	@F
-	mov 	eax,[pb.wSeg1]
-	mov 	dl,00
+	cmp cl, __FPTR__
+	jnz @F
+	mov eax, [pb.wSeg1]
+	mov dl, 00
 @@:
-	cmp 	cl,__RMLPTR__
-	jnz 	@F
-	mov 	eax,[a1.dwSeg]				;wSeg1 is selector
-	mov 	dl,01
+	cmp cl, __RMLPTR__
+	jnz @F
+	mov eax, [a1.dwSeg]				;wSeg1 is selector
+	mov dl, 01
 @@:
-	mov 	ecx,bpflags 				;Flags
+	mov ecx, bpflags 			;Flags
 
-	cmp 	pb.p3.bType,__STRING__
-	jnz 	@F
-	push	eax
-	invoke	PutStringInHeap,pb.p3.dwOffs
-	mov 	edi,eax
-	pop 	eax
-	or		cl,FBRP_CMDSET
+	cmp pb.p3.bType, __STRING__
+	jnz @F
+	push eax
+	invoke PutStringInHeap, pb.p3.dwOffs
+	mov edi, eax
+	pop eax
+	or cl, FBRP_CMDSET
 @@:
-	call	insertbrkpnt				;set breakpnt AX:EBX
-	jc		exit
+	call insertbrkpnt				;set breakpnt AX:EBX
+	jc exit
 
-	mov 	ebx,eax
-	mov 	eax,pb.dwOffs2
-	mov 	[ebx.BREAK.count],eax
+	mov ebx, eax
+	mov eax, pb.dwOffs2
+	mov [ebx.BREAK.count], eax
 
-	cmp 	byte ptr pb.wArgc,3
-	jna 	setbreakpnt_3
+	cmp byte ptr pb.wArgc, 3
+	jna setbreakpnt_3
 
-	cmp 	pb.p4.bType, __STRING__		; bedingter breakpoint
-	jnz 	@F
-	invoke	transform, pb.p4.dwOffs		; in grossbuchstaben
-	invoke	PutStringInHeap, pb.p4.dwOffs
-	mov 	byte ptr [ebx.BREAK.CondTyp],__STRING__
-	jmp 	setbreakpnt_2
+	cmp pb.p4.bType, __STRING__		; bedingter breakpoint
+	jnz @F
+	invoke transform, pb.p4.dwOffs		; in grossbuchstaben
+	invoke PutStringInHeap, pb.p4.dwOffs
+	mov byte ptr [ebx.BREAK.CondTyp], __STRING__
+	jmp setbreakpnt_2
 @@:
-	push	esi
-	mov 	esi,[a4.ARGDESC.dwPtr]
-	mov 	al,[esi.SYMBOL.bType]
-	mov 	[ebx.BREAK.CondTyp],al
-	mov 	eax,esi
-	pop 	esi
+	push esi
+	mov esi, [a4.ARGDESC.dwPtr]
+	mov al, [esi.SYMBOL.bType]
+	mov [ebx.BREAK.CondTyp], al
+	mov eax, esi
+	pop esi
 setbreakpnt_2:
-	mov 	[ebx.BREAK.brpCAdr],eax
-	mov 	eax,[a5.ARGDESC.dwOfs]
-	mov 	[ebx.BREAK.brpCVa1],eax
-	mov 	eax,[a6.ARGDESC.dwOfs]
-	mov 	[ebx.BREAK.brpCVa2],eax
+	mov [ebx.BREAK.brpCAdr], eax
+	mov eax, [a5.ARGDESC.dwOfs]
+	mov [ebx.BREAK.brpCVa1], eax
+	mov eax, [a6.ARGDESC.dwOfs]
+	mov [ebx.BREAK.brpCVa2], eax
 setbreakpnt_3:
 	@errorout MSG_BREAKPNT_SET
 exit:
@@ -747,25 +747,25 @@ breaksout endp
 
 checkifbpexists proc stdcall uses esi ecx
 
-	and 	cl, not (FBRP_CMDSET or FBRP_USEHW)
-	jmp		skipitem
+	and cl, not (FBRP_CMDSET or FBRP_USEHW)
+	jmp skipitem
 nextitem:
-	mov		esi, [esi].BREAK.pNext
-	mov 	dh, [esi].BREAK.bFlags1
-	and 	dh, FBRP_AUTO or FBRP_REAL or FBRP_ACTIVE or FBRP_ENABLED
-	cmp 	cl, dh
-	jnz 	skipitem
-	cmp 	ebx, dword ptr [esi].BREAK.brpAddr
-	jnz 	skipitem
-	cmp 	ax, word ptr [esi].BREAK.brpAddr+4
-	jnz 	skipitem
+	mov esi, [esi].BREAK.pNext
+	mov dh, [esi].BREAK.bFlags1
+	and dh, FBRP_AUTO or FBRP_REAL or FBRP_ACTIVE or FBRP_ENABLED
+	cmp cl, dh
+	jnz skipitem
+	cmp ebx, dword ptr [esi].BREAK.brpAddr
+	jnz skipitem
+	cmp ax, word ptr [esi].BREAK.brpAddr+4
+	jnz skipitem
 ;	@stroutc "breakpoint exists",cr,lf
-	mov		eax, esi
+	mov eax, esi
 	clc
 	ret
 skipitem:
-	cmp 	[esi].BREAK.pNext,0
-	jnz		nextitem
+	cmp [esi].BREAK.pNext, 0
+	jnz nextitem
 	stc
 	ret
 checkifbpexists endp
@@ -854,16 +854,16 @@ insertbrkpnt endp
 ;*** breakpnt ^esi loeschen ***
 
 clearbreakpnt1 proc stdcall
-	xor 	eax,eax
-	mov 	[esi].BREAK.bFlags2, al
-	xchg	[esi].BREAK.bFlags1, al
-	xchg	[esi.BREAK.CondTyp], ah
-	test	al,FBRP_ACTIVE
-	jz		error
-	test	al,FBRP_USEHW
-	jz		@F
-	mov 	eax,[esi.BREAK.brpHW]
-	call	deletedebughandle
+	xor eax,eax
+	mov [esi].BREAK.bFlags2, al
+	xchg [esi].BREAK.bFlags1, al
+	xchg [esi.BREAK.CondTyp], ah
+	test al,FBRP_ACTIVE
+	jz error
+	test al,FBRP_USEHW
+	jz @F
+	mov eax,[esi.BREAK.brpHW]
+	call deletedebughandle
 @@:
 	ret
 error:
@@ -875,41 +875,41 @@ clearbreakpnt1 endp
 
 findbreakpnt proc stdcall uses esi
 
-	mov 	esi,breakpointtab
-	xor 	ecx, ecx
+	mov esi,breakpointtab
+	xor ecx, ecx
 @@:
-	and 	esi,esi
-	jz		error
-	cmp 	eax,ecx
-	jz		found
-	mov 	esi,[esi].BREAK.pNext
-	inc 	ecx
-	jmp 	@B
+	and esi,esi
+	jz error
+	cmp eax,ecx
+	jz found
+	mov esi,[esi].BREAK.pNext
+	inc ecx
+	jmp @B
 error:
 	stc
 found:
-	mov		eax, esi
+	mov eax, esi
 	ret
 findbreakpnt endp
 
 _clearbreakpnt proc c public pb:PARMBLK
 
-	mov 	eax,pb.dwOffs1
-	call	findbreakpnt
-	jnc		@F
+	mov eax,pb.dwOffs1
+	call findbreakpnt
+	jnc @F
 	@errorout <ERR_NO_BREAKPOINT>
         ret
 @@:
-	mov		esi, eax
-	call	clearbreakpnt1
+	mov esi, eax
+	call clearbreakpnt1
 	ret
 _clearbreakpnt endp
 
 _disablebreakpnt proc c public pb:PARMBLK
 
-	mov 	eax,pb.dwOffs1
-	call	findbreakpnt
-	jnc 	@F
+	mov eax,pb.dwOffs1
+	call findbreakpnt
+	jnc @F
 	@errorout <ERR_NO_BREAKPOINT>
 	ret
 @@:
@@ -919,9 +919,9 @@ _disablebreakpnt endp
 
 _enablebreakpnt proc c public pb:PARMBLK
 
-	mov 	eax,pb.dwOffs1
-	call	findbreakpnt
-	jnc 	@F
+	mov eax,pb.dwOffs1
+	call findbreakpnt
+	jnc @F
 	@errorout <ERR_NO_BREAKPOINT>
 	ret
 @@:
@@ -944,11 +944,11 @@ debughandles label word
 
 deletedebughandle proc stdcall uses esi
 
-	mov 	esi,eax
-	cmp 	[esi.HWBP.hwbpTyp],-1
+	mov esi,eax
+	cmp [esi.HWBP.hwbpTyp],-1
 	stc
-	jz		exit
-	mov 	[esi.HWBP.hwbpTyp],-1
+	jz exit
+	mov [esi.HWBP.hwbpTyp],-1
 	clc
 exit:
 	ret
@@ -1057,39 +1057,39 @@ if ?SUPPBRL
 
 listhwbreaks proc stdcall
 
-	mov 	esi,offset debughandles
-	mov 	ecx,ANZDEBUGHANDLES
+	mov esi,offset debughandles
+	mov ecx,ANZDEBUGHANDLES
 listhwbreaks_1:
-	cmp 	[esi.HWBP.hwbpTyp],-1
-	jz		listhwbreaks_3
-	mov 	eax,ANZDEBUGHANDLES
-	sub 	eax,ecx
-	movzx	ebx,byte ptr [esi.HWBP.hwbpLen]
-	movzx	edx,byte ptr [esi.HWBP.hwbpState]
+	cmp [esi.HWBP.hwbpTyp],-1
+	jz listhwbreaks_3
+	mov eax,ANZDEBUGHANDLES
+	sub eax,ecx
+	movzx ebx,byte ptr [esi.HWBP.hwbpLen]
+	movzx edx,byte ptr [esi.HWBP.hwbpState]
 	invoke printf, CStr("%4X %08X %8X[%02X] %02X "), eax, esi, [esi.HWBP.hwbpAddr], ebx, edx
-	mov 	al,[esi.HWBP.hwbpTyp]
-	cmp 	al,0
-	jnz 	@F
+	mov al,[esi.HWBP.hwbpTyp]
+	cmp al,0
+	jnz @F
 	@stroutc "execute"
-	jmp 	listhwbreaks_2
+	jmp listhwbreaks_2
 @@:
-	cmp 	al,1
-	jnz 	@F
+	cmp al,1
+	jnz @F
 	@stroutc "write"
-	jmp 	listhwbreaks_2
+	jmp listhwbreaks_2
 @@:
 	@stroutc "read & write"
 listhwbreaks_2:
 	@putchr lf
 listhwbreaks_3:
-	add 	esi,size HWBP
-	dec 	ecx
-	jnz 	listhwbreaks_1
+	add esi,size HWBP
+	dec ecx
+	jnz listhwbreaks_1
 	ret
 listhwbreaks endp
 
 _listhwbreaks proc c public pb:PARMBLK
-	call	listhwbreaks
+	call listhwbreaks
 	ret
 _listhwbreaks endp
 endif
@@ -1099,36 +1099,36 @@ endif
 
 ActAllHWBreaks proc stdcall public
 
-	mov 	ecx,ANZDEBUGHANDLES
-	mov 	esi,offset debughandles
+	mov ecx,ANZDEBUGHANDLES
+	mov esi,offset debughandles
 nextitem:
-	mov 	dh,[esi.HWBP.hwbpTyp]
-	cmp 	dh,-1							;unbenutzt?
-	jz		skipitem						;dann naechster
-	test	[esi.HWBP.hwbpState],FHWBP_SET	;bereits gesetzt?
-	jnz 	skipitem
-	mov 	[esi.HWBP.hwbpState],FHWBP_SET
-	test	bHWBrk,1
-	jz		nohwbreak
-	push	ecx
-	mov 	bx,word ptr [esi.HWBP.hwbpAddr+2]
-	mov 	cx,word ptr [esi.HWBP.hwbpAddr+0]
-	mov 	dl,[esi.HWBP.hwbpLen]
-	mov 	ax,0B00h					;watchpoint set
+	mov dh,[esi.HWBP.hwbpTyp]
+	cmp dh,-1							;unbenutzt?
+	jz skipitem						;dann naechster
+	test [esi.HWBP.hwbpState],FHWBP_SET	;bereits gesetzt?
+	jnz skipitem
+	mov [esi.HWBP.hwbpState],FHWBP_SET
+	test bHWBrk,1
+	jz nohwbreak
+	push ecx
+	mov bx,word ptr [esi.HWBP.hwbpAddr+2]
+	mov cx,word ptr [esi.HWBP.hwbpAddr+0]
+	mov dl,[esi.HWBP.hwbpLen]
+	mov ax,0B00h					;watchpoint set
 	@DpmiCall
-	pop 	ecx
-	jnc 	@F
+	pop ecx
+	jnc @F
 nohwbreak:        
-	and 	[esi.HWBP.hwbpState],not FHWBP_SET
-	push	[esi].HWBP.hwbpAddr
+	and [esi.HWBP.hwbpState],not FHWBP_SET
+	push [esi].HWBP.hwbpAddr
 	@errorout ERR_CANNOT_SET_HWBREAKS
-	add		esp,4
-	jmp 	skipitem
+	add esp,4
+	jmp skipitem
 @@:
-	mov 	[esi.HWBP.hwbpHandle],bx
+	mov [esi.HWBP.hwbpHandle],bx
 skipitem:
-	add 	esi,size HWBP
-	loop	nextitem
+	add esi,size HWBP
+	loop nextitem
 	ret
 ActAllHWBreaks endp
 
@@ -1138,61 +1138,61 @@ ActAllHWBreaks endp
 
 DeactAllHWBreaks proc stdcall public
 	pushad
-	mov 	ecx,ANZDEBUGHANDLES
-	mov 	esi,offset debughandles
+	mov ecx,ANZDEBUGHANDLES
+	mov esi,offset debughandles
 nextitem:
-	cmp 	[esi.HWBP.hwbpTyp],-1	  ;frei
-	jz		skipitem
-	test	[esi.HWBP.hwbpState],FHWBP_SET	;bp gesetzt?
-	jz		skipitem
-	movzx 	ebx,[esi.HWBP.hwbpHandle]
-	mov 	ax,0B02h						;get watchpoint state
+	cmp [esi.HWBP.hwbpTyp],-1	  ;frei
+	jz skipitem
+	test [esi.HWBP.hwbpState],FHWBP_SET	;bp gesetzt?
+	jz skipitem
+	movzx ebx,[esi.HWBP.hwbpHandle]
+	mov ax,0B02h						;get watchpoint state
 	@DpmiCall
-	jnc 	@F
-	push	ebx
+	jnc @F
+	push ebx
 	@errorout ERR_CANNOT_GET_HWBREAK_STATE
-	add		esp,4
-	mov 	al,[esi.HWBP.hwbpState]
+	add esp,4
+	mov al,[esi.HWBP.hwbpState]
 @@:
-	test	al,1
-	jz		@F
-	or		[fEntry], FENTRY_HWBREAK
+	test al,1
+	jz @F
+	or [fEntry], FENTRY_HWBREAK
 @@:
-	and 	al,7Eh							;watchpoint nicht gesetzt
-	mov 	[esi.HWBP.hwbpState],al
-	mov 	ax,0B01h						;clear debug watchpoint
+	and al,7Eh							;watchpoint nicht gesetzt
+	mov [esi.HWBP.hwbpState],al
+	mov ax,0B01h						;clear debug watchpoint
 	@DpmiCall
-	jnc		@F
-	push	ebx
+	jnc @F
+	push ebx
 	@errorout ERR_CANNOT_CLEAR_HWBREAK
-	add		esp,4
+	add esp,4
 @@:        
 skipitem:
-	add 	esi,size HWBP
-	loop	nextitem
+	add esi,size HWBP
+	loop nextitem
 	popad
 	ret
 DeactAllHWBreaks endp
 
 HWBreakHit proc stdcall public
 	pushad
-	mov 	ecx,ANZDEBUGHANDLES
-	mov 	esi,offset debughandles
+	mov ecx,ANZDEBUGHANDLES
+	mov esi,offset debughandles
 nextitem:
-	cmp 	[esi.HWBP.hwbpTyp],-1	  ;frei
-	jz		skipitem
-	test	[esi.HWBP.hwbpState],FHWBP_SET	;bp gesetzt?
-	jz		skipitem
-	movzx 	ebx,[esi.HWBP.hwbpHandle]
-	mov 	ax,0B02h						;get watchpoint state
+	cmp [esi.HWBP.hwbpTyp],-1	  ;frei
+	jz skipitem
+	test [esi.HWBP.hwbpState],FHWBP_SET	;bp gesetzt?
+	jz skipitem
+	movzx ebx,[esi.HWBP.hwbpHandle]
+	mov ax,0B02h						;get watchpoint state
 	@DpmiCall
-	jc		skipitem
-	test	al,1
+	jc skipitem
+	test al,1
 	stc
-	jnz 	found
+	jnz found
 skipitem:
-	add 	esi,size HWBP
-	loop	nextitem
+	add esi,size HWBP
+	loop nextitem
 	clc
 found:  
 	popad

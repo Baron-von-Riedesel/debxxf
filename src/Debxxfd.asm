@@ -2280,148 +2280,148 @@ _errorout endp
 
 errorformout proc
 
-		mov 	ah,al
-		or		al,20h
-		cmp		al,'x'
-		jz		isok
-		cmp		al,'u'
-		jz		isok
-		cmp		al,'s'
-		jnz		isnotok
+	mov 	ah,al
+	or		al,20h
+	cmp		al,'x'
+	jz		isok
+	cmp		al,'u'
+	jz		isok
+	cmp		al,'s'
+	jnz		isnotok
 isok:
-		push	edx
-		mov		al,'%'
-		movzx	eax,ax
-		push	eax
-		@loadesp ecx
-		invoke printf, ecx, dword ptr ss:[ebx]
-		add		ebx, 4
-		add		esp, 4
-		pop		edx
-		ret
+	push	edx
+	mov		al,'%'
+	movzx	eax,ax
+	push	eax
+	@loadesp ecx
+	invoke printf, ecx, dword ptr ss:[ebx]
+	add		ebx, 4
+	add		esp, 4
+	pop		edx
+	ret
 isnotok:
-		@putchr al
-		ret
+	@putchr al
+	ret
 errorformout endp
 
 ;*** fehler# in [#ERRORS] gefunden ***
 
 msgout proc
-		call	errmsgout			;display error# + type
-		lea 	ebx,[ebp+12]		;zeiger auf parameter
+	call	errmsgout			;display error# + type
+	lea 	ebx,[ebp+12]		;zeiger auf parameter
 nextchar:
-		mov 	al,@flat:[esi]
-		inc 	esi
-		and 	al,al
-		jz		exit
-		cmp 	al,cr
-		jz		exit
-		cmp 	al,'%'
-		jnz 	@F
-		mov 	al,@flat:[esi]
-		inc 	esi
-		and 	al,al
-		jz		exit
-		call	errorformout
-		jmp 	nextchar
+	mov 	al,@flat:[esi]
+	inc 	esi
+	and 	al,al
+	jz		exit
+	cmp 	al,cr
+	jz		exit
+	cmp 	al,'%'
+	jnz 	@F
+	mov 	al,@flat:[esi]
+	inc 	esi
+	and 	al,al
+	jz		exit
+	call	errorformout
+	jmp 	nextchar
 @@:
-		cmp 	al,"\"
-		jnz 	@F
-		mov 	al,@flat:[esi]
-		inc 	esi
-		and 	al,al
-		jz		exit
-		call	msgoutesc
-        jc		nextchar
+	cmp 	al,"\"
+	jnz 	@F
+	mov 	al,@flat:[esi]
+	inc 	esi
+	and 	al,al
+	jz		exit
+	call	msgoutesc
+	jc		nextchar
 @@:
-		@putchr al
-		jmp 	nextchar
+	@putchr al
+	jmp 	nextchar
 exit:
-		ret
+	ret
 msgout endp
 
 ;--- print excape (\) characters
 
 msgoutesc proc
-		cmp 	al,"\"			;is it '\\'?
-		jz		exit
-		cmp 	al,"n"
-		jnz 	@F
-		@putchr cr
-		mov 	al,lf
-		jmp 	exit
+	cmp 	al,"\"			;is it '\\'?
+	jz		exit
+	cmp 	al,"n"
+	jnz 	@F
+	@putchr cr
+	mov 	al,lf
+	jmp 	exit
 @@:
-		cmp		al,"b"
-		jnz		@F
-		or		dh,08h			;dont write a lf at end
-		stc						;skip this character
-		jmp		exit2
+	cmp		al,"b"
+	jnz		@F
+	or		dh,08h			;dont write a lf at end
+	stc						;skip this character
+	jmp		exit2
 @@:
-		cmp 	al,cr
-		jnz 	@F
-		mov 	ax,@flat:[esi]
-		cmp 	al,lf			;is it a '\' at line end?
-		jnz 	@F
-		inc 	esi				;skip CRLF
-		inc 	esi
-		mov 	al,ah
-		cmp 	al,0
-		jnz 	@F
-		dec 	esi
+	cmp 	al,cr
+	jnz 	@F
+	mov 	ax,@flat:[esi]
+	cmp 	al,lf			;is it a '\' at line end?
+	jnz 	@F
+	inc 	esi				;skip CRLF
+	inc 	esi
+	mov 	al,ah
+	cmp 	al,0
+	jnz 	@F
+	dec 	esi
 @@:        
 exit:
-		clc
+	clc
 exit2:
-		ret
+	ret
 msgoutesc endp
 
 ;--- display error # and type (error, warning, msg)
 
 errmsgout proc
-		cmp 	dh,90h				;fehler# >= 9000h? -> nur texte
-		jnc 	errmsg_ex
-		cmp 	dh,20h				;fehler# >= 2000h? -> message#
-		jnc 	errmsg_2
-		cmp 	dh,10h				;fehler# >= 1000h? -> warning#
-		jnc 	errmsg_3
-		@stroutc "error "
-		jmp 	errmsg_1
+	cmp 	dh,90h				;fehler# >= 9000h? -> nur texte
+	jnc 	errmsg_ex
+	cmp 	dh,20h				;fehler# >= 2000h? -> message#
+	jnc 	errmsg_2
+	cmp 	dh,10h				;fehler# >= 1000h? -> warning#
+	jnc 	errmsg_3
+	@stroutc "error "
+	jmp 	errmsg_1
 errmsg_3:
-		@stroutc "warning "
-		jmp 	errmsg_1
+	@stroutc "warning "
+	jmp 	errmsg_1
 errmsg_2:
-		@stroutc "msg "
+	@stroutc "msg "
 errmsg_1:
-		@wordout edx
-		@stroutc ": "
+	@wordout edx
+	@stroutc ": "
 errmsg_ex:
-		ret
+	ret
 errmsgout endp
 
 chkziff:
-		cmp al,'0'
-		jb	@F
-		cmp al,'9'+1
-		cmc
-		jnc @F
-		or	al,20h
-		cmp al,'a'
-		jb	@F
-		cmp al,'g'
-		cmc
+	cmp al,'0'
+	jb	@F
+	cmp al,'9'+1
+	cmc
+	jnc @F
+	or	al,20h
+	cmp al,'a'
+	jb	@F
+	cmp al,'g'
+	cmc
 @@:
-		ret
+	ret
 chkhex:
-		call	chkziff
-		jc		chkhex_er
-		sub 	al,'0'
-		cmp 	al,9
-		jbe 	@F
-		sub 	al,'a'-'0'-10
+	call	chkziff
+	jc		chkhex_er
+	sub 	al,'0'
+	cmp 	al,9
+	jbe 	@F
+	sub 	al,'a'-'0'-10
 @@:
-		clc
+	clc
 chkhex_er:
-		ret
+	ret
 
 checkcpuid proc stdcall
 	pushfd
@@ -2449,177 +2449,177 @@ getdpmiparms proc stdcall
 
 local	myrmcs:RMCS
 
-		call	checkcpuid
-		jc		@F
-		or		byte ptr fCPUID,1
-		mov 	[idcpu],ah			 ;cpu
-		mov 	[idstep],al 		 ;maske/stepping
-		mov 	[idflags],edx
+	call	checkcpuid
+	jc		@F
+	or		byte ptr fCPUID,1
+	mov 	[idcpu],ah			 ;cpu
+	mov 	[idstep],al 		 ;maske/stepping
+	mov 	[idflags],edx
 @@:
-		@DpmiCall 400h
-		mov 	dpmiversion,ax
-		mov 	dpmicpu,cl
-		mov 	dpmiflags,bx
-		mov 	dpmipics,dx
+	@DpmiCall 400h
+	mov 	dpmiversion,ax
+	mov 	dpmicpu,cl
+	mov 	dpmiflags,bx
+	mov 	dpmipics,dx
 
-		lea 	edi,myrmcs
-		xor 	eax,eax
-		mov		dword ptr myrmcs.rSP,eax
-		mov		myrmcs.rFlags,ax
-		mov 	myrmcs.rEAX,1687h
-		mov 	bx,002Fh
-		xor 	ecx,ecx
-		@DpmiCall 300h
-		jc		@F
-		mov 	eax,[edi.RMCS.rEDI]
-		mov 	word ptr dpmiPMentry+0,ax
-		mov 	ax,[edi.RMCS.rES]
-		mov 	word ptr dpmiPMentry+2,ax
-		mov 	eax,[edi.RMCS.rESI]
-		mov 	dpmitaskdat,ax
-		mov 	eax,[edi.RMCS.rEBX]
-		mov 	dpmi32bitap,ax
-		@DpmiCall 0306h 			 ; get raw mode switch addresses
-		mov 	word ptr dpmirm2pm+0,cx
-		mov 	word ptr dpmirm2pm+2,bx
+	lea 	edi,myrmcs
+	xor 	eax,eax
+	mov		dword ptr myrmcs.rSP,eax
+	mov		myrmcs.rFlags,ax
+	mov 	myrmcs.rEAX,1687h
+	mov 	bx,002Fh
+	xor 	ecx,ecx
+	@DpmiCall 300h
+	jc		@F
+	mov 	eax,[edi.RMCS.rEDI]
+	mov 	word ptr dpmiPMentry+0,ax
+	mov 	ax,[edi.RMCS.rES]
+	mov 	word ptr dpmiPMentry+2,ax
+	mov 	eax,[edi.RMCS.rESI]
+	mov 	dpmitaskdat,ax
+	mov 	eax,[edi.RMCS.rEBX]
+	mov 	dpmi32bitap,ax
+	@DpmiCall 0306h 			 ; get raw mode switch addresses
+	mov 	word ptr dpmirm2pm+0,cx
+	mov 	word ptr dpmirm2pm+2,bx
 if ?32BIT
-		mov 	dword ptr dpmipm2rm+0,edi
-		mov 	word ptr dpmipm2rm+4,si
+	mov 	dword ptr dpmipm2rm+0,edi
+	mov 	word ptr dpmipm2rm+4,si
 else
-		mov 	word ptr dpmipm2rm+0,di
-		mov 	word ptr dpmipm2rm+2,si
+	mov 	word ptr dpmipm2rm+0,di
+	mov 	word ptr dpmipm2rm+2,si
 endif
 @@:
-		test [fStat], FSTAT_ISNT
-		jz		@F
-		mov		wPMStop, si
+	test [fStat], FSTAT_ISNT
+	jz		@F
+	mov		wPMStop, si
 @@:
-		@DpmiCall 0604h
-		mov		word ptr dpmipagesiz+0,cx
-		mov		word ptr dpmipagesiz+2,bx
+	@DpmiCall 0604h
+	mov		word ptr dpmipagesiz+0,cx
+	mov		word ptr dpmipagesiz+2,bx
 
 if ?LDTSEL							;has problems on NT platforms
-		push	es
-		mov		esi, CCStr("MS-DOS")
-		mov		ax,168Ah
-		@callint2F
-		cmp		al,0
-		jnz		@F
+	push	es
+	mov		esi, CCStr("MS-DOS")
+	mov		ax,168Ah
+	@callint2F
+	cmp		al,0
+	jnz		@F
 if ?32BIT
-		test [fStat], FSTAT_ISNT
-		jnz		@F
-		push	es
-		push	edi
-		mov		ax,100h
-		call	fword ptr [esp]   ; 32bit only
-		add		esp,8
+	test [fStat], FSTAT_ISNT
+	jnz		@F
+	push	es
+	push	edi
+	mov		ax,100h
+	call	fword ptr [esp]   ; 32bit only
+	add		esp,8
 else
-		mov		eax,es
-		shl		eax,16
-		mov		ax,di
-		push	eax
-		movzx	esi,sp
-		mov		ax,100h
-		db		66h
-		call	fword ptr ss:[esi]
-		pop		edx
+	mov		eax,es
+	shl		eax,16
+	mov		ax,di
+	push	eax
+	movzx	esi,sp
+	mov		ax,100h
+	db		66h
+	call	fword ptr ss:[esi]
+	pop		edx
 endif
-		mov		ldtsel,ax
+	mov		ldtsel,ax
 @@:
-		pop		es
+	pop		es
 endif
-		ret
+	ret
 getdpmiparms endp
 
 ;--- erweiterte register retten
 ;--- muss im ring0 aufgerufen werden
 
 savexregs proc stdcall public
-		mov eax,cr0
-		mov [rCR0],eax
-		mov eax,cr2
-		mov [rCR2],eax
-		mov eax,cr3
-		mov [rCR3],eax
-		test byte ptr idflags,ID_V86EXT 	  ;v86 extensions da?
-		jz	 @F
-;		 mov eax,cr4
-		@moveaxcr4
-		mov [rCR4],eax
+	mov eax,cr0
+	mov [rCR0],eax
+	mov eax,cr2
+	mov [rCR2],eax
+	mov eax,cr3
+	mov [rCR3],eax
+	test byte ptr idflags,ID_V86EXT 	  ;v86 extensions da?
+	jz	 @F
+;	mov eax,cr4
+	@moveaxcr4
+	mov [rCR4],eax
 @@:
-		mov eax,dr0
-		mov [rDR0],eax
-		mov eax,dr1
-		mov [rDR1],eax
-		mov eax,dr2
-		mov [rDR2],eax
-		mov eax,dr3
-		mov [rDR3],eax
+	mov eax,dr0
+	mov [rDR0],eax
+	mov eax,dr1
+	mov [rDR1],eax
+	mov eax,dr2
+	mov [rDR2],eax
+	mov eax,dr3
+	mov [rDR3],eax
 if ?DR4DR5
-		cmp byte ptr dpmicpu,4
-		jb	@F
-;		 mov eax,dr4
-		@moveaxdr4
-		mov [rDR4],eax
-;		 mov eax,dr5
-		@moveaxdr5
-		mov [rDR5],eax
+	cmp byte ptr dpmicpu,4
+	jb	@F
+;	mov eax,dr4
+	@moveaxdr4
+	mov [rDR4],eax
+;	mov eax,dr5
+	@moveaxdr5
+	mov [rDR5],eax
 @@:
 endif
-		mov eax,dr6
-		mov [rDR6],eax
-		mov eax,dr7
-		mov [rDR7],eax
+	mov eax,dr6
+	mov [rDR6],eax
+	mov eax,dr7
+	mov [rDR7],eax
 
 if ?TR3TR5
-		cmp byte ptr dpmicpu,4
-		jb	@F
-		cmp byte ptr idcpu,4
-		jnz @F				;nicht fuer pentium
-;		 mov eax,tr3
-		@moveaxtr3
-		mov [rTR3],eax
-;		 mov eax,tr4
-		@moveaxtr4
-		mov [rTR4],eax
-;		 mov eax,tr5
-		@moveaxtr5
-		mov [rTR5],eax
+	cmp byte ptr dpmicpu,4
+	jb	@F
+	cmp byte ptr idcpu,4
+	jnz @F				;nicht fuer pentium
+;	mov eax,tr3
+	@moveaxtr3
+	mov [rTR3],eax
+;	mov eax,tr4
+	@moveaxtr4
+	mov [rTR4],eax
+;	mov eax,tr5
+	@moveaxtr5
+	mov [rTR5],eax
 @@:
 endif
-		cmp byte ptr idcpu,-1
-		jnz @F				;nicht fuer pentium
-		mov eax,tr6
-		mov [rTR6],eax
-		mov eax,tr7
-		mov [rTR7],eax
+	cmp byte ptr idcpu,-1
+	jnz @F				;nicht fuer pentium
+	mov eax,tr6
+	mov [rTR6],eax
+	mov eax,tr7
+	mov [rTR7],eax
 @@:
 savexregsex:
-		ret
+	ret
 savexregs endp
 
 GetEflInhalt proc stdcall
 
-		push	edi
-		push	ecx
-		mov 	edi,[pNearHeap]
-		push	edi
-		mov 	ebx,[r1.rEfl]
-		shl 	ebx,10
-		mov 	ecx,22
+	push	edi
+	push	ecx
+	mov 	edi,[pNearHeap]
+	push	edi
+	mov 	ebx,[r1.rEfl]
+	shl 	ebx,10
+	mov 	ecx,22
 @@:
-		shl 	ebx,1
-		mov 	al,'0'
-		adc 	al,0
-		stosb
-		loop	@B
-		mov 	al,00
-		stosb
-		pop 	eax
-		pop 	ecx
-		pop 	edi
-		mov 	cl,__STRING__
-		ret
+	shl 	ebx,1
+	mov 	al,'0'
+	adc 	al,0
+	stosb
+	loop	@B
+	mov 	al,00
+	stosb
+	pop 	eax
+	pop 	ecx
+	pop 	edi
+	mov 	cl,__STRING__
+	ret
 GetEflInhalt endp
 
 ;*** memory von ax:esi nach es:edi kopieren (max 4 bytes)
@@ -3096,38 +3096,38 @@ setmyenvironment endp
 ReadReg proc near
 
 if ?FLOATREGS
-		test byte ptr [f80x87],F80X87_STATE_SAVED
-		jz readreg_1
-		frstor [frsave]
-		call restoredebuggeefpustate
-		and byte ptr [f80x87], not F80X87_STATE_SAVED
+	test byte ptr [f80x87],F80X87_STATE_SAVED
+	jz readreg_1
+	frstor [frsave]
+	call restoredebuggeefpustate
+	and byte ptr [f80x87], not F80X87_STATE_SAVED
 readreg_1:
 endif
-		test [fEntry], FENTRY_REAL
-		jz @F
-		push ds
-		pop es
-		mov edi, offset rmcsi0y
-		mov esi, offset r1
-		mov ecx, 8
-		rep movsd
-		mov esi, offset r1r
-		mov cl, 9
-		rep movsw
-		jmp rr_1
+	test [fEntry], FENTRY_REAL
+	jz @F
+	push ds
+	pop es
+	mov edi, offset rmcsi0y
+	mov esi, offset r1
+	mov ecx, 8
+	rep movsd
+	mov esi, offset r1r
+	mov cl, 9
+	rep movsw
+	jmp rr_1
 @@:
-		mov esi,[r1.rEsi]
-		mov edi,[r1.rEdi]
-		mov ebp,[r1.rEbp]
-		mov eax,[r1.rEax]
-		mov ebx,[r1.rEbx]
-		mov ecx,[r1.rEcx]
-		mov edx,[r1.rEdx]
+	mov esi,[r1.rEsi]
+	mov edi,[r1.rEdi]
+	mov ebp,[r1.rEbp]
+	mov eax,[r1.rEax]
+	mov ebx,[r1.rEbx]
+	mov ecx,[r1.rEcx]
+	mov edx,[r1.rEdx]
 rr_1:    
-		mov es,[r1.rES]
-		mov fs,[r1.rFS]
-		mov gs,[r1.rGS]
-		ret
+	mov es,[r1.rES]
+	mov fs,[r1.rFS]
+	mov gs,[r1.rGS]
+	ret
 ReadReg endp
 
 eaxout proc stdcall public
@@ -5494,52 +5494,52 @@ GetCurrentDirectory proc stdcall uses esi edi maxlen:dword,buffer:dword
 
 local	tmpbuf[MAXPATH]:byte
 
-		mov 	eax,maxlen
-		cmp 	eax,4
-		jb		getcwd_er
-		mov 	ah,19h			   ;get drive
-		@DosCall
-		mov 	dl,al
-		inc 	dl
-		add 	al,'A'
-		mov 	edi,buffer
-		mov 	ah,':'
-		stosw
-		mov 	ax,'\'
-		stosw
-		dec		edi
+	mov 	eax,maxlen
+	cmp 	eax,4
+	jb		getcwd_er
+	mov 	ah,19h			   ;get drive
+	@DosCall
+	mov 	dl,al
+	inc 	dl
+	add 	al,'A'
+	mov 	edi,buffer
+	mov 	ah,':'
+	stosw
+	mov 	ax,'\'
+	stosw
+	dec		edi
 
-		lea 	esi,tmpbuf
-;		mov		byte ptr [esi],0FFh	;OS should change this byte or function failed!!
-		mov 	ax,7147h
-		stc
-		@DosCall
-		jc		getcwd_1
-;		cmp		byte ptr [esi],0FFh
-;		jz		getcwd_1
-		cmp 	ax,7100h			;function supported?
-		jnz 	getcwd_2
+	lea 	esi,tmpbuf
+;	mov		byte ptr [esi],0FFh	;OS should change this byte or function failed!!
+	mov 	ax,7147h
+	stc
+	@DosCall
+	jc		getcwd_1
+;	cmp		byte ptr [esi],0FFh
+;	jz		getcwd_1
+	cmp 	ax,7100h			;function supported?
+	jnz 	getcwd_2
 getcwd_1:
-		mov 	ah,47h
-		@DosCall
-		jc		getcwd_er
+	mov 	ah,47h
+	@DosCall
+	jc		getcwd_er
 getcwd_2:
-		mov 	ecx,maxlen
-		sub 	ecx,3
-		cmp 	byte ptr [esi],'\'
-		jnz 	@F
-		inc 	esi
+	mov 	ecx,maxlen
+	sub 	ecx,3
+	cmp 	byte ptr [esi],'\'
+	jnz 	@F
+	inc 	esi
 @@:
-		lodsb
-		stosb
-		and 	al,al
-		loopnz	@B
-		mov 	eax,buffer
-		jmp 	getcwd_ex
+	lodsb
+	stosb
+	and 	al,al
+	loopnz	@B
+	mov 	eax,buffer
+	jmp 	getcwd_ex
 getcwd_er:
-		xor 	eax,eax
+	xor 	eax,eax
 getcwd_ex:
-		ret
+	ret
 GetCurrentDirectory endp
 
 ;--- function CUR_DIR()
@@ -5741,57 +5741,57 @@ getpspname endp
 ;--- getdta
 
 getdta proc
-		test	[fStat], FSTAT_DTAREAD
-		jnz 	@F
-		push	es
-		push	ebx
-		@DosCall 2Fh
-		or		[fStat], FSTAT_DTAREAD
-		mov 	dword ptr [dfCurDta+0],ebx
-		mov 	word ptr [dfCurDta+?SEGOFFS],es
-        @tprintf <"getdta: dta read from dos %X:%X",lf>, es, ebx
-		pop 	ebx
-		pop 	es
+	test	[fStat], FSTAT_DTAREAD
+	jnz 	@F
+	push	es
+	push	ebx
+	@DosCall 2Fh
+	or		[fStat], FSTAT_DTAREAD
+	mov 	dword ptr [dfCurDta+0],ebx
+	mov 	word ptr [dfCurDta+?SEGOFFS],es
+	@tprintf <"getdta: dta read from dos %X:%X",lf>, es, ebx
+	pop 	ebx
+	pop 	es
 @@:
-		mov 	dx,word ptr [dfCurDta+?SEGOFFS]
-		mov 	eax,dword ptr [dfCurDta+0]
-        @tprintf <"getdta: dta is %X:%X",lf>,edx,eax
-		ret
+	mov 	dx,word ptr [dfCurDta+?SEGOFFS]
+	mov 	eax,dword ptr [dfCurDta+0]
+	@tprintf <"getdta: dta is %X:%X",lf>,edx,eax
+	ret
 getdta endp
 
 ;--- getindosflag
 
 getindosflag proc
-		push es
-		push ebx
-;		les bx,[dwIndos]
-		mov ebx, [dwIndos]
+	push es
+	push ebx
+;	les bx,[dwIndos]
+	mov ebx, [dwIndos]
 if 0;?CHECKINDOSVALID
-		movzx	ebx,bx
-		mov 	eax,es
-		lsl 	eax,eax
-		cmp 	eax,ebx
-		jnb 	@F
-		@errorout ERR_INVALID_INDOS_ADDR
-		mov 	al,0
-		jmp 	getindosflag_1
+	movzx	ebx,bx
+	mov 	eax,es
+	lsl 	eax,eax
+	cmp 	eax,ebx
+	jnb 	@F
+	@errorout ERR_INVALID_INDOS_ADDR
+	mov 	al,0
+	jmp 	getindosflag_1
 @@:
 endif
-		mov al, @flat:[ebx]
-;		movzx	ebx, bx
-;		mov 	al,es:[ebx]
+	mov al, @flat:[ebx]
+;	movzx	ebx, bx
+;	mov 	al,es:[ebx]
 getindosflag_1:
-		pop 	ebx
-		pop 	es
-		ret
+	pop 	ebx
+	pop 	es
+	ret
 getindosflag endp
 
 getvmid proc
-		mov   bx,0000h
-		mov   ax,1683h				   ;VM id holen
-		@callint2F
-		mov   eax,ebx
-		ret
+	mov   bx,0000h
+	mov   ax,1683h				;VM id holen
+	@callint2F
+	mov   eax,ebx
+	ret
 getvmid endp
 
 getfEMU proc c value:dword
@@ -5925,26 +5925,26 @@ SetVIF endp
 
 getfIrq proc c value:dword
 
-		cmp   al,1
-		mov   al,fIrq
-		jnz   exit
-		mov   al,byte ptr value
-		and   al,al
-		setne al
-		@tprintf <"getfIrq: AL=%X",lf>,eax
-		mov    dl,al
-		invoke SetVIF
-		invoke GetVIF
-		cmp   al,dl
-		jnz   error
-		mov   fIrq,al
+	cmp   al,1
+	mov   al,fIrq
+	jnz   exit
+	mov   al,byte ptr value
+	and   al,al
+	setne al
+	@tprintf <"getfIrq: AL=%X",lf>,eax
+	mov    dl,al
+	invoke SetVIF
+	invoke GetVIF
+	cmp   al,dl
+	jnz   error
+	mov   fIrq,al
 exit:
-		clc
-		ret
+	clc
+	ret
 error:
-		@stroutc "error: (V)IF cannot be changed",lf
-		clc
-		ret
+	@stroutc "error: (V)IF cannot be changed",lf
+	clc
+	ret
 getfIrq endp
 
 getrealmode:
@@ -6078,284 +6078,284 @@ getlimitr endp
 getbaser proc stdcall public uses ebx ecx edx selector:dword
 
 restartproc:
-		mov ebx,selector
-		test bl,04
-		jnz localbase
-		and ebx,0000FFF8h
-		jz error
-		cmp bx,word ptr [rGDTR]
-		jnc error
-		add ebx,dword ptr [rGDTR+2]
+	mov ebx,selector
+	test bl,04
+	jnz localbase
+	and ebx,0000FFF8h
+	jz error
+	cmp bx,word ptr [rGDTR]
+	jnc error
+	add ebx,dword ptr [rGDTR+2]
 getbaser_1:
-		test [fMode], FMODE_STRICT
-		jnz error
-		mov [excexit],offset forcestrict
-		mov al,@flat:[ebx+7]
-		shl eax,24
-		mov edx,@flat:[ebx+2]
-		and edx,00FFFFFFh
-		or eax,edx
-		jmp exit
+	test [fMode], FMODE_STRICT
+	jnz error
+	mov [excexit],offset forcestrict
+	mov al,@flat:[ebx+7]
+	shl eax,24
+	mov edx,@flat:[ebx+2]
+	and edx,00FFFFFFh
+	or eax,edx
+	jmp exit
 localbase:
-		test [fMode], FMODE_LDTDIRECT
-		jnz @F
-		mov ax,6
-		@DpmiCall
-		jc error
-		push cx
-		push dx
-		pop eax
-		jmp exit
+	test [fMode], FMODE_LDTDIRECT
+	jnz @F
+	mov ax,6
+	@DpmiCall
+	jc error
+	push cx
+	push dx
+	pop eax
+	jmp exit
 @@:
-		call getldtaddr
-		jnc getbaser_1
+	call getldtaddr
+	jnc getbaser_1
 error:
-		stc
+	stc
 exit:
-		ret
+	ret
 forcestrict:
-		or [fMode], FMODE_STRICT
-		jmp restartproc
+	or [fMode], FMODE_STRICT
+	jmp restartproc
 getbaser endp
 
 getbase proc c sel:dword
 
-		push ecx
-		invoke getbaser,sel
-		pop  ecx
-		jnc  @F
-		mov  cl,__VOID__
-		clc
+	push ecx
+	invoke getbaser,sel
+	pop  ecx
+	jnc  @F
+	mov  cl,__VOID__
+	clc
 @@:
-		ret
+	ret
 getbase endp
 
 getbasex:
-		lodsd
-		mov  cl,__DWORD__
-		push [eax]
-		call getbase
-		pop  ebx
-		ret
+	lodsd
+	mov  cl,__DWORD__
+	push [eax]
+	call getbase
+	pop  ebx
+	ret
 
 setbase proc c wert:dword,msel:dword
 
-		push ecx
-		mov  cx,word ptr wert+2
-		mov  dx,word ptr wert+0
-		mov  ebx,msel
-		mov  ax,7
-		int  31h
-		mov  eax,wert
-		pop  ecx
-		jnc  @F
-		mov  cl,__VOID__
-		clc
+	push ecx
+	mov  cx,word ptr wert+2
+	mov  dx,word ptr wert+0
+	mov  ebx,msel
+	mov  ax,7
+	int  31h
+	mov  eax,wert
+	pop  ecx
+	jnc  @F
+	mov  cl,__VOID__
+	clc
 @@:
-		ret
+	ret
 setbase endp
 
 getlimit proc c sel:dword
 
-		push ecx
-		mov  ebx,sel
-		call getlimitr
-		pop  ecx
-		jnc  @F
-		mov  cl,__VOID__
-		clc
+	push ecx
+	mov  ebx,sel
+	call getlimitr
+	pop  ecx
+	jnc  @F
+	mov  cl,__VOID__
+	clc
 @@:
-		ret
+	ret
 getlimit endp
 
 getlimx:
-		lodsd
-		mov  cl,__DWORD__
-		push [eax]
-		call getlimit
-		pop  ebx
-		ret
+	lodsd
+	mov  cl,__DWORD__
+	push [eax]
+	call getlimit
+	pop  ebx
+	ret
 
 setlimit proc c wert:dword,sel:dword
 
-		push ecx
-		mov  ebx,sel
-		mov  cx,word ptr wert+2
-		mov  dx,word ptr wert+0
-		mov  ax,8
-		int  31h
-		mov  eax,wert
-		pop  ecx
-		jnc  @F
-		mov  cl,__VOID__
-		clc
+	push ecx
+	mov  ebx,sel
+	mov  cx,word ptr wert+2
+	mov  dx,word ptr wert+0
+	mov  ax,8
+	int  31h
+	mov  eax,wert
+	pop  ecx
+	jnc  @F
+	mov  cl,__VOID__
+	clc
 @@:
-		ret
+	ret
 setlimit endp
 
 getattr proc c msel:dword
 
-		push ecx
-		mov  ebx,msel
-		call getaccr
-		jc	 getattrx_ex
-		shr  eax,8
-		clc
+	push ecx
+	mov  ebx,msel
+	call getaccr
+	jc	 getattrx_ex
+	shr  eax,8
+	clc
 getattrx_ex:
-		pop  ecx
-		jnc  @F
-		mov  cl,__VOID__
-		clc
+	pop  ecx
+	jnc  @F
+	mov  cl,__VOID__
+	clc
 @@:
-		ret
+	ret
 getattr endp
 
 getattrx:
-		lodsd
-		mov  cl,__WORD__
-		push [eax]
-		call getattr
-		pop  ebx
-		ret
+	lodsd
+	mov  cl,__WORD__
+	push [eax]
+	call getattr
+	pop  ebx
+	ret
 
 setattr proc c wert:dword,sel:dword
 
-		push ecx
-		mov  ebx,sel
-		mov  cx,word ptr wert+0
-		mov  ax,9
-		int  31h
-		mov  eax,wert
-		pop  ecx
-		jnc  @F
-		mov  cl,__VOID__
-		clc
+	push ecx
+	mov  ebx,sel
+	mov  cx,word ptr wert+0
+	mov  ax,9
+	int  31h
+	mov  eax,wert
+	pop  ecx
+	jnc  @F
+	mov  cl,__VOID__
+	clc
 @@:
-		ret
+	ret
 setattr endp
 
 getseg proc c value2:dword,value1:dword
 
-		movzx  eax,word ptr value1
-		cmp ch,__FPTR__
-		jz	@F
-		cmp ch,__LPTR__
-		jz	@F
-		cmp ch,__RMLPTR__
-		jz	@F
-		stc
+	movzx  eax,word ptr value1
+	cmp ch,__FPTR__
+	jz	@F
+	cmp ch,__LPTR__
+	jz	@F
+	cmp ch,__RMLPTR__
+	jz	@F
+	stc
 @@:
-		ret
+	ret
 getseg endp
 
 getlptr proc c value2:dword,value1:dword
 
-		mov eax,value2
-		mov edx,value1
+	mov eax,value2
+	mov edx,value1
 if 0
-		pushad
-		invoke printf,CStr("getlptr: eax=%x, edx=%x, ecx=%x",lf),eax,edx,ecx
-		popad
+	pushad
+	invoke printf,CStr("getlptr: eax=%x, edx=%x, ecx=%x",lf),eax,edx,ecx
+	popad
 endif
-		cmp ch,__FPTR__
-		jz	@F
-		cmp ch,__LPTR__
-		jz	getlptr_2
-		cmp ch,__RMLPTR__
-		jz	getlptr_2
-		cmp ch,__DWORD__
-		jz	getlptr_1
-		stc
-		jmp getlptr_ex
+	cmp ch,__FPTR__
+	jz	@F
+	cmp ch,__LPTR__
+	jz	getlptr_2
+	cmp ch,__RMLPTR__
+	jz	getlptr_2
+	cmp ch,__DWORD__
+	jz	getlptr_1
+	stc
+	jmp getlptr_ex
 getlptr_2:
-		push dx
-		push ax
-		pop eax
-		jmp @F
+	push dx
+	push ax
+	pop eax
+	jmp @F
 getlptr_1:
-		mov edx,eax 		;nur bei typ DWORD
-		shr edx,16
-		movzx eax,ax
-		clc
+	mov edx,eax 		;nur bei typ DWORD
+	shr edx,16
+	movzx eax,ax
+	clc
 @@:
 getlptr_ex:
-		ret
+	ret
 getlptr endp
 
-getoff	proc c xvalue:dword
+getoff proc c xvalue:dword
 
-		mov eax,xvalue
-		ret
-getoff	endp
+	mov eax,xvalue
+	ret
+getoff endp
 
 getcompl proc c xvalue:dword
 
-		mov eax,xvalue
-		xor eax,-1
-		ret
+	mov eax,xvalue
+	xor eax,-1
+	ret
 getcompl endp
 
 inportb proc c port:dword
 
-		mov  edx,port
-		in	 al,dx
-		movzx eax,al
-		ret
+	mov  edx,port
+	in	 al,dx
+	movzx eax,al
+	ret
 inportb endp
 
 outportb proc c wert:dword,port:dword
 
-		mov  edx,port
-		mov  al,byte ptr wert
-		out  dx,ax
-		ret
+	mov  edx,port
+	mov  al,byte ptr wert
+	out  dx,ax
+	ret
 outportb endp
 
 inportw proc c mport:dword
 
-		mov  edx,mport
-		in	 ax,dx
-		movzx eax,ax
-		ret
+	mov  edx,mport
+	in	 ax,dx
+	movzx eax,ax
+	ret
 inportw endp
 
 outportw proc c wert:dword,port:dword
 
-		mov  edx,port
-		mov  eax,wert
-		out  dx,ax
-		ret
+	mov  edx,port
+	mov  eax,wert
+	out  dx,ax
+	ret
 outportw endp
 
 _highword proc pascal wert:dword
 
-		mov ax,word ptr wert+2
-		ret
+	mov ax,word ptr wert+2
+	ret
 _highword endp
 
 _lowword proc pascal wert:dword
 
-		mov ax,word ptr wert+0
-		ret
+	mov ax,word ptr wert+0
+	ret
 _lowword endp
 
 _highbyte proc pascal wert:dword
 
-		mov al,byte ptr wert+1
-		ret
+	mov al,byte ptr wert+1
+	ret
 _highbyte endp
 
 _lowbyte proc pascal wert:dword
 
-		mov al,byte ptr wert
-		ret
+	mov al,byte ptr wert
+	ret
 _lowbyte endp
 
 gettype proc c
 
-		movzx eax,ch		   ;in ch ist typ des letzten funktionsarguments
-		and   al,0Fh
-		ret
+	movzx eax,ch		   ;in ch ist typ des letzten funktionsarguments
+	and   al,0Fh
+	ret
 gettype endp
 
 ;*** unterroutine fuer help ***
@@ -6364,59 +6364,59 @@ gettype endp
 
 searchkap proc stdcall uses ds esi edi sbereich:dword,searchstr:near ptr byte
 
-		mov    edi,sbereich
-		and    edi,edi
-		jz	   searchkap1
+	mov    edi,sbereich
+	and    edi,edi
+	jz	   searchkap1
 searchkap3:
-		mov    al,@flat:[edi]
-		and    al,al
-		jz	   searchkap1
-		cmp    al,'['
-		jz	   searchkap2
+	mov    al,@flat:[edi]
+	and    al,al
+	jz	   searchkap1
+	cmp    al,'['
+	jz	   searchkap2
 searchkap4:
-		mov    al,@flat:[edi]
-		inc    edi
-		and    al,al
-		jz	   searchkap1	 ;fertig
-		cmp    al,lf
-		jnz    searchkap4
-		jmp    searchkap3
+	mov    al,@flat:[edi]
+	inc    edi
+	and    al,al
+	jz	   searchkap1	 ;fertig
+	cmp    al,lf
+	jnz    searchkap4
+	jmp    searchkap3
 searchkap2:
-		mov    esi,searchstr
-		inc    edi
+	mov    esi,searchstr
+	inc    edi
 @@:
-		mov    al,@flat:[edi]
-		inc    edi
-		call   kl2gr
-		mov    ah,al
-		lodsb
-		cmp    al,ah
-		jz	   @B
-		and    al,al
-		jz	   searchkap5
-		cmp    al,' '		 ;ist parameter zuende?
-		jz	   searchkap5
-		jmp    searchkap4
+	mov    al,@flat:[edi]
+	inc    edi
+	call   kl2gr
+	mov    ah,al
+	lodsb
+	cmp    al,ah
+	jz	   @B
+	and    al,al
+	jz	   searchkap5
+	cmp    al,' '		 ;ist parameter zuende?
+	jz	   searchkap5
+	jmp    searchkap4
 searchkap5: 				 ;eingegebener parameter ist zuende
-		cmp    ah,']'		 ;wie siehts mit fileparameter aus?
-		jz	   searchkap6
-		mov    al,@flat:[edi-1]
-		call   tstkl		 ;nur noch kleinbuchstaben?
-		jnc    searchkap4
+	cmp    ah,']'		 ;wie siehts mit fileparameter aus?
+	jz	   searchkap6
+	mov    al,@flat:[edi-1]
+	call   tstkl		 ;nur noch kleinbuchstaben?
+	jnc    searchkap4
 searchkap6:
-		mov    al,@flat:[edi]
-		inc    edi
-		and    al,al
-		jz	   @F
-		cmp    al,lf
-		jnz    searchkap6
+	mov    al,@flat:[edi]
+	inc    edi
+	and    al,al
+	jz	   @F
+	cmp    al,lf
+	jnz    searchkap6
 @@:
-		mov    eax,edi
-		jmp    searchkapex
+	mov    eax,edi
+	jmp    searchkapex
 searchkap1:
-		xor    eax,eax
+	xor    eax,eax
 searchkapex:
-		ret
+	ret
 searchkap endp
 
 ;*** unterroutine fuer help; kapitel ausgeben ***
@@ -6425,52 +6425,52 @@ TABEXPAND	equ 0
 
 kapout proc stdcall uses esi kbereich:dword
 
-		mov    esi,kbereich
-		mov    ebx,esi
-		mov    al,lf
+	mov    esi,kbereich
+	mov    ebx,esi
+	mov    al,lf
 kapout1:
-		mov    ah,al
-		mov    al,@flat:[esi]
-		inc    esi
-		and    al,al
-		jz	   kapout2
-		cmp    al,'['
-		jnz    kapout1
-		cmp    ah,lf
-		jnz    kapout1
-		dec    esi
+	mov    ah,al
+	mov    al,@flat:[esi]
+	inc    esi
+	and    al,al
+	jz	   kapout2
+	cmp    al,'['
+	jnz    kapout1
+	cmp    ah,lf
+	jnz    kapout1
+	dec    esi
 kapout2:
-		mov    ecx,esi
-		sub    ecx,ebx
-		dec    ecx
-		mov    esi,ebx
-		xor		edx,edx
-		.while (ecx)
+	mov    ecx,esi
+	sub    ecx,ebx
+	dec    ecx
+	mov    esi,ebx
+	xor		edx,edx
+	.while (ecx)
 if TABEXPAND
-			mov		al,@flat:[esi]
-			.if (al == 9)				;expand TABS!
-				.repeat
-					@putchr ' '
-					inc		edx
-					test	dl,03		;expand tab to max 4 spaces
-				.until (ZERO?)
-			.else
-				push	eax
-				@putchr al
-				pop		eax
-				inc		edx				;inc tab counter
-				.if (al == cr)
-					xor		edx,edx
-				.endif
+		mov		al,@flat:[esi]
+		.if (al == 9)				;expand TABS!
+			.repeat
+				@putchr ' '
+				inc		edx
+				test	dl,03		;expand tab to max 4 spaces
+			.until (ZERO?)
+		.else
+			push	eax
+			@putchr al
+			pop		eax
+			inc		edx				;inc tab counter
+			.if (al == cr)
+				xor		edx,edx
 			.endif
+		.endif
 else
-			@putchr @flat:[esi]
+		@putchr @flat:[esi]
 endif
-			inc 	esi
-			dec		ecx
-		.endw
-		invoke	_crout
-		ret
+		inc 	esi
+		dec		ecx
+	.endw
+	invoke	_crout
+	ret
 kapout endp
 
 hindexout proc stdcall uses esi hbereich:dword
@@ -6538,124 +6538,124 @@ local base:dword
 local flag:dword
 local dwRdWr:dword
 
-		mov 	byte ptr flag,al
-		mov 	ebx,dword ptr pBuffer+4
-		mov		ax,6
-		int		31h
-		jc		exit
-		push	cx
-		push	dx
-		pop 	eax
-		add 	eax,dword ptr pBuffer+0
-		mov 	base,eax 		;linear address of read/write buffer
+	mov 	byte ptr flag,al
+	mov 	ebx,dword ptr pBuffer+4
+	mov		ax,6
+	int		31h
+	jc		exit
+	push	cx
+	push	dx
+	pop 	eax
+	add 	eax,dword ptr pBuffer+0
+	mov 	base,eax 		;linear address of read/write buffer
 
-		sub 	eax,eax
-		mov 	dwRdWr,eax
+	sub 	eax,eax
+	mov 	dwRdWr,eax
         
-		mov		cx,1
-		mov		ax,0
-		int		31h				;get a scratch selector
-		jc		exit
-        mov		ebx, eax
-		mov 	ds,eax
+	mov		cx,1
+	mov		ax,0
+	int		31h				;get a scratch selector
+	jc		exit
+	mov		ebx, eax
+	mov 	ds,eax
 
-		mov		dx, ?CHKSIZE-1
-        xor		ecx,ecx
-		mov		ax,8
-		int		31h
-		jc		sm1_er_pm4
+	mov		dx, ?CHKSIZE-1
+	xor		ecx,ecx
+	mov		ax,8
+	int		31h
+	jc		sm1_er_pm4
         
 nextblock:
-								;1. set new base of DS
-		mov 	ebx,ds
-		mov 	eax,base
-		add 	eax,dwRdWr
-		push	eax
-		pop 	dx
-		pop 	cx
-		mov		ax,7
-		int		31h
-		jc		sm1_er_pm3
-		push	ds				;make sure ds has new values
-		pop 	ds
+							;1. set new base of DS
+	mov 	ebx,ds
+	mov 	eax,base
+	add 	eax,dwRdWr
+	push	eax
+	pop 	dx
+	pop 	cx
+	mov		ax,7
+	int		31h
+	jc		sm1_er_pm3
+	push	ds				;make sure ds has new values
+	pop 	ds
 
-		mov 	eax,numBytes	;2. ecx = _min(laenge,?CHKSIZE)
-		and 	eax,eax
-		jz		sm1
-		mov 	ecx,?CHKSIZE
-		sub 	eax,ecx
-		jnc 	@F				;restlaenge ist groesser
-		add 	ecx,eax
-		sub 	eax,eax
+	mov 	eax,numBytes	;2. ecx = _min(laenge,?CHKSIZE)
+	and 	eax,eax
+	jz		sm1
+	mov 	ecx,?CHKSIZE
+	sub 	eax,ecx
+	jnc 	@F				;restlaenge ist groesser
+	add 	ecx,eax
+	sub 	eax,eax
 @@:
-		mov 	numBytes,eax
-		xor 	edx,edx
-		mov 	ebx,handle
-		mov 	ah,byte ptr flag
-		@DosCall
-		jc		sm1_er
-		movzx	eax,ax
-		add 	dwRdWr,eax
-		cmp 	ax,?CHKSIZE
-		jz		nextblock		;---->
+	mov 	numBytes,eax
+	xor 	edx,edx
+	mov 	ebx,handle
+	mov 	ah,byte ptr flag
+	@DosCall
+	jc		sm1_er
+	movzx	eax,ax
+	add 	dwRdWr,eax
+	cmp 	ax,?CHKSIZE
+	jz		nextblock		;---->
 sm1:
-		mov 	eax,dwRdWr
-		clc
+	mov 	eax,dwRdWr
+	clc
 sm1_er:
 sm1_er_pm3:
 sm1_er_pm4:
-		pushfd
-		push	eax
-		mov 	ebx,ds
-		push	0
-		pop		ds
-		mov		ax,1
-		int		31h		;free descriptor
-		pop		eax
-		popfd
+	pushfd
+	push	eax
+	mov 	ebx,ds
+	push	0
+	pop		ds
+	mov		ax,1
+	int		31h		;free descriptor
+	pop		eax
+	popfd
 exit:        
-		ret
-_rdwr	endp
+	ret
+_rdwr endp
 
 endif
 
 _fileread proc stdcall public uses ebx handle:dword,buffer:qword,laenge:dword,addrinfile:dword
 
-		call	MarkDOSused
-		mov 	cx,word ptr addrinfile+2
-		mov 	dx,word ptr addrinfile+0
-		mov 	ebx,handle
-		mov 	ax,4200h
-		@DosCall
-		jc		err1
+	call	MarkDOSused
+	mov 	cx,word ptr addrinfile+2
+	mov 	dx,word ptr addrinfile+0
+	mov 	ebx,handle
+	mov 	ax,4200h
+	@DosCall
+	jc		err1
 ife ?32BIT
-		invoke	__read, ebx, buffer, laenge
-		jc		err2
+	invoke	__read, ebx, buffer, laenge
+	jc		err2
 else
-		push	ds
-		lds 	edx,fword ptr buffer
-		mov 	ecx,laenge
-		mov 	ah,3fh
-		@DosCall
-        pop		ds
-		jc		err2
+	push	ds
+	lds 	edx,fword ptr buffer
+	mov 	ecx,laenge
+	mov 	ah,3fh
+	@DosCall
+	pop		ds
+	jc		err2
 endif
-		jmp		done
+	jmp		done
 err1:
-		mov 	ecx, ERR_FILE_LSEEK
-		jmp 	@F
+	mov 	ecx, ERR_FILE_LSEEK
+	jmp 	@F
 err2:
-		mov 	ecx, ERR_FILE_READ
+	mov 	ecx, ERR_FILE_READ
 @@:
-		push	handle
-        movzx	eax,ax
-		push	eax
-		@errorout ecx
-        pop		eax
-        pop		eax
-		@mov 	eax,-1
+	push	handle
+	movzx	eax,ax
+	push	eax
+	@errorout ecx
+	pop		eax
+	pop		eax
+	@mov 	eax,-1
 done:        
-		ret
+	ret
 _fileread endp
 
 
@@ -6666,101 +6666,101 @@ _readfile proc c pb:PARMBLK
 
 local	xhandle:dword
 
-		call	MarkDOSused
-		mov 	edx,pb.dwOffs1
-		mov		ax,3d20h			;r/o, deny write
-		@DosCall
-		jnc 	readfile1
-		movzx	eax,ax
-		push	eax
-		push	edx
-		@errorout ERR_FILE_OPEN
-		add 	esp,2*4
-		jmp 	exit
+	call	MarkDOSused
+	mov 	edx,pb.dwOffs1
+	mov		ax,3d20h			;r/o, deny write
+	@DosCall
+	jnc 	readfile1
+	movzx	eax,ax
+	push	eax
+	push	edx
+	@errorout ERR_FILE_OPEN
+	add 	esp,2*4
+	jmp 	exit
 readfile1:
-		mov 	xhandle,eax
+	mov 	xhandle,eax
 
-		mov 	ebx,pb.p3.dwOffs
-		cmp 	pb.p3.bType, __VOID__
-		jnz		@F
-		call	GetFileSize					;handle in eax
-		mov 	ebx,eax						;max. laenge
+	mov 	ebx,pb.p3.dwOffs
+	cmp 	pb.p3.bType, __VOID__
+	jnz		@F
+	call	GetFileSize					;handle in eax
+	mov 	ebx,eax						;max. laenge
 @@:
-		mov		esi, pb.wSeg2
-		mov 	eax,pb.dwOffs2
-		cmp 	pb.p2.bType,__RMLPTR__
-		jnz		@F
-		shl		esi,4
-		add		eax, esi
-		mov		esi, @flat
-@@: 	   
-		cmp 	pb.p2.bType, __VOID__		; adresse angegeben?
-		jnz 	@F
-		mov 	eax, ebx					; kB allokieren
-		call	allocdpmimem				; returns flat address in EBX
-		jc		exit
-		mov		esi, @flat
+	mov		esi, pb.wSeg2
+	mov 	eax,pb.dwOffs2
+	cmp 	pb.p2.bType,__RMLPTR__
+	jnz		@F
+	shl		esi,4
+	add		eax, esi
+	mov		esi, @flat
 @@:
-		xor 	ecx, ecx
-		cmp 	pb.p4.bType, __CONST__
-		jnz 	@F
-		mov 	ecx,pb.p4.dwOffs
+	cmp 	pb.p2.bType, __VOID__		; adresse angegeben?
+	jnz 	@F
+	mov 	eax, ebx					; kB allokieren
+	call	allocdpmimem				; returns flat address in EBX
+	jc		exit
+	mov		esi, @flat
 @@:
-		verw	si
-		jz		@F
-		push	esi
-		@errorout ERR_INVALID_POINTER
-		pop		esi
-		jmp		exit
-@@: 	   
-		invoke	_fileread, xhandle, esi::eax, ebx, ecx
+	xor 	ecx, ecx
+	cmp 	pb.p4.bType, __CONST__
+	jnz 	@F
+	mov 	ecx,pb.p4.dwOffs
+@@:
+	verw	si
+	jz		@F
+	push	esi
+	@errorout ERR_INVALID_POINTER
+	pop		esi
+	jmp		exit
+@@:
+	invoke	_fileread, xhandle, esi::eax, ebx, ecx
 
-		push	eax
-		@close xhandle
-		pop eax
-		cmp eax,-1
-		jz exit
-		invoke printf, CStr("%X Bytes read",lf),eax
+	push	eax
+	@close xhandle
+	pop eax
+	cmp eax,-1
+	jz exit
+	invoke printf, CStr("%X Bytes read",lf),eax
 exit:
-		ret
+	ret
 _readfile endp
 
 _filewrite proc stdcall uses ebx handle:dword,buffer:qword,laenge:dword,addrinfile:dword
 
-		call	MarkDOSused
-		mov 	cx,word ptr addrinfile+2
-		mov 	dx,word ptr addrinfile+0
-		mov 	ebx,handle
-		mov 	ax,4200h
-		@DosCall
-		jc		err1
+	call	MarkDOSused
+	mov 	cx,word ptr addrinfile+2
+	mov 	dx,word ptr addrinfile+0
+	mov 	ebx,handle
+	mov 	ax,4200h
+	@DosCall
+	jc		err1
 ife ?32BIT
-		invoke	__write, ebx, buffer, laenge
-		jc		err2
+	invoke	__write, ebx, buffer, laenge
+	jc		err2
 else
-		push	ds
-		lds 	edx,fword ptr buffer
-		mov 	ecx,laenge
-		mov 	ah,40h
-		@DosCall
-		pop		ds
-		jc		err2
+	push	ds
+	lds 	edx,fword ptr buffer
+	mov 	ecx,laenge
+	mov 	ah,40h
+	@DosCall
+	pop		ds
+	jc		err2
 endif
-		jmp		done
+	jmp		done
 err1:
-		mov 	ecx,ERR_FILE_LSEEK
-		jmp 	@F
+	mov 	ecx,ERR_FILE_LSEEK
+	jmp 	@F
 err2:
-		mov 	ecx,ERR_FILE_WRITE
+	mov 	ecx,ERR_FILE_WRITE
 @@:
-		push	handle
-		movzx	eax,ax
-		push	eax
-		@errorout ecx
-		add 	esp,2*4
-		mov 	eax,-1
+	push	handle
+	movzx	eax,ax
+	push	eax
+	@errorout ecx
+	add 	esp,2*4
+	mov 	eax,-1
 done:
-		ret
+	ret
 _filewrite endp
 
 ;*** write file ***
@@ -6769,71 +6769,71 @@ _writefile proc c pb:PARMBLK
 
 local	xhandle:dword
 
-		call	MarkDOSused
-		mov		esi, pb.wSeg2
-		mov 	cl, pb.p2.bType
-		cmp 	cl,__FPTR__						;memory adresse ok?
-		jz		parm2ok
-		cmp 	cl,__RMLPTR__			
-		jz		isrm
-		cmp 	cl,__CONST__
-		jnz 	writefile_err
-		mov 	esi,[r1.rDS]
-		test	[fEntry],FENTRY_REAL
-		jz		parm2ok
-		movzx	esi,[r1r.rDS]
-isrm:	
-		shl		esi, 4
-		add		pb.dwOffs2, esi
-useflat:		
-		mov		esi, @flat
+	call	MarkDOSused
+	mov		esi, pb.wSeg2
+	mov 	cl, pb.p2.bType
+	cmp 	cl,__FPTR__						;memory adresse ok?
+	jz		parm2ok
+	cmp 	cl,__RMLPTR__			
+	jz		isrm
+	cmp 	cl,__CONST__
+	jnz 	writefile_err
+	mov 	esi,[r1.rDS]
+	test	[fEntry],FENTRY_REAL
+	jz		parm2ok
+	movzx	esi,[r1r.rDS]
+isrm:
+	shl		esi, 4
+	add		pb.dwOffs2, esi
+useflat:
+	mov		esi, @flat
 parm2ok:
-		cmp 	pb.p3.bType, __CONST__	;laenge ok?
-		jz		@F
+	cmp 	pb.p3.bType, __CONST__	;laenge ok?
+	jz		@F
 writefile_err:
-		@errorout ERR_WRONG_PARAM
-		jmp 	exit
+	@errorout ERR_WRONG_PARAM
+	jmp 	exit
 @@:
-		mov		edx,pb.dwOffs1
-		cmp 	pb.p4.bType, __CONST__
-		jnz		@F
-		mov		ax,3D01h	;open file for writing
-		@DosCall
-		jnc		writefile1
-@@: 	   
-		mov		ah,3ch		;create file?
-		xor		ecx,ecx
-		@DosCall
-		jnc 	writefile1
-		movzx	eax,ax	
-		push	eax
-		push	pb.dwOffs1
-		@errorout ERR_FILE_CREATE
-		add 	esp,2*4
-		jmp 	exit
+	mov		edx,pb.dwOffs1
+	cmp 	pb.p4.bType, __CONST__
+	jnz		@F
+	mov		ax,3D01h	;open file for writing
+	@DosCall
+	jnc		writefile1
+@@:
+	mov		ah,3ch		;create file?
+	xor		ecx,ecx
+	@DosCall
+	jnc 	writefile1
+	movzx	eax,ax	
+	push	eax
+	push	pb.dwOffs1
+	@errorout ERR_FILE_CREATE
+	add 	esp,2*4
+	jmp 	exit
 writefile1:
-		mov		xhandle,eax
-		xor 	ecx,ecx						;offset in file
-		cmp 	pb.p4.bType, __CONST__
-		jnz 	@F
-		mov 	ecx,pb.p4.dwOffs
+	mov		xhandle,eax
+	xor 	ecx,ecx						;offset in file
+	cmp 	pb.p4.bType, __CONST__
+	jnz 	@F
+	mov 	ecx,pb.p4.dwOffs
 @@:
-		verr	si
-		jz		@F
-		push	esi
-		@errorout ERR_INVALID_POINTER
-		pop		esi
-		jmp		exit
-@@: 	   
-		mov		edi, pb.dwOffs2
-		invoke	_filewrite, xhandle, esi::edi, pb.p3.dwOffs, ecx
+	verr	si
+	jz		@F
+	push	esi
+	@errorout ERR_INVALID_POINTER
+	pop		esi
+	jmp		exit
+@@:
+	mov		edi, pb.dwOffs2
+	invoke	_filewrite, xhandle, esi::edi, pb.p3.dwOffs, ecx
 
-		push	eax
-		@close	xhandle
-		pop 	eax
-		invoke printf, CStr("%X Bytes written from %X:%X",lf), eax, esi, edi
+	push	eax
+	@close	xhandle
+	pop 	eax
+	invoke printf, CStr("%X Bytes written from %X:%X",lf), eax, esi, edi
 exit:
-		ret
+	ret
 _writefile endp
 
 if 0
@@ -6842,60 +6842,60 @@ searchentry proc stdcall kapitel:dword,entry:dword
 
 local	entrylen:dword
 
-		push	esi
-		push	edi
-		xor 	eax,eax
-		mov 	esi,kapitel
-		mov 	edi,entry
-		mov 	ecx,-1
-		mov 	al,0
-		repnz	scasb
-		not 	ecx
-		dec 	ecx
-		mov 	entrylen,ecx
+	push	esi
+	push	edi
+	xor 	eax,eax
+	mov 	esi,kapitel
+	mov 	edi,entry
+	mov 	ecx,-1
+	mov 	al,0
+	repnz	scasb
+	not 	ecx
+	dec 	ecx
+	mov 	entrylen,ecx
 searchentry_1:
-		mov 	ecx,entrylen
-		mov 	edi,entry
+	mov 	ecx,entrylen
+	mov 	edi,entry
 
 if ?WINDOWS eq 0
-		cmp 	byte ptr [esi],'-'
-		jnz 	@F
-		inc 	esi
+	cmp 	byte ptr [esi],'-'
+	jnz 	@F
+	inc 	esi
 @@:
 else
-		cmp 	byte ptr [esi],'+'
-		jnz 	@F
-		inc 	esi
+	cmp 	byte ptr [esi],'+'
+	jnz 	@F
+	inc 	esi
 @@:
 endif
 
 searchentry_2:
-		lodsb
-		mov 	ah,es:[edi]
-		or		al,20h
-		or		ah,20h
-		cmp 	al,ah
-		jnz 	@F
-		inc 	edi
-		loop	searchentry_2
-		cmp 	byte ptr [esi],'='
-		jnz 	@F
-		mov 	eax,esi
-		inc 	eax
-		jmp 	searchentry_ex
+	lodsb
+	mov 	ah,es:[edi]
+	or		al,20h
+	or		ah,20h
+	cmp 	al,ah
+	jnz 	@F
+	inc 	edi
+	loop	searchentry_2
+	cmp 	byte ptr [esi],'='
+	jnz 	@F
+	mov 	eax,esi
+	inc 	eax
+	jmp 	searchentry_ex
 @@:
-		lodsb
-		and 	al,al
-		jz		searchentry_ex
-		cmp 	al,lf
-		jnz 	@B
-		cmp 	byte ptr [esi],'['
-		jnz 	searchentry_1
-		xor 	eax,eax
+	lodsb
+	and 	al,al
+	jz		searchentry_ex
+	cmp 	al,lf
+	jnz 	@B
+	cmp 	byte ptr [esi],'['
+	jnz 	searchentry_1
+	xor 	eax,eax
 searchentry_ex:
-		pop 	edi
-		pop 	esi
-		ret
+	pop 	edi
+	pop 	esi
+	ret
 searchentry endp
 
 endif
@@ -8081,54 +8081,54 @@ checknextinstruction proc stdcall
 
 local eipinh:dword
 
-		test	[fMode], FMODE_SKIP	;dont skip int1/3 if skip is active
-        jnz		exit
-		call	getactcseipx
-		mov 	esi,ebx
-		lea 	edi,eipinh
+	test	[fMode], FMODE_SKIP	;dont skip int1/3 if skip is active
+	jnz		exit
+	call	getactcseipx
+	mov 	esi,ebx
+	lea 	edi,eipinh
 
-		call	getmemory			;get AX:ESI to ES:EDI
-		cmp 	bl,1
-		jb		eiperror
+	call	getmemory			;get AX:ESI to ES:EDI
+	cmp 	bl,1
+	jb		eiperror
 
-		mov 	al,byte ptr eipinh
+	mov 	al,byte ptr eipinh
 
-		xor 	ecx,ecx
-		cmp 	al,0CCh 	  ;INT 3?
-		jz		cni_1
-		cmp 	al,0CDh
-		jz		@F
-		clc
-		jmp 	exit
+	xor 	ecx,ecx
+	cmp 	al,0CCh 	  ;INT 3?
+	jz		cni_1
+	cmp 	al,0CDh
+	jz		@F
+	clc
+	jmp 	exit
 @@:
-		cmp 	bl,2
-		jb		eiperror
-		mov 	al,byte ptr eipinh+1
-		cmp 	al,3		  ;INT 3?
-		jz		cni_2
-		cmp 	al,1		  ;INT 1?
-		jz		cni_2
-		clc
-		jmp 	exit
+	cmp 	bl,2
+	jb		eiperror
+	mov 	al,byte ptr eipinh+1
+	cmp 	al,3		  ;INT 3?
+	jz		cni_2
+	cmp 	al,1		  ;INT 1?
+	jz		cni_2
+	clc
+	jmp 	exit
 eiperror:
-		@errorout ERR_CSEIP_INVALID
-		jmp 	mains
+	@errorout ERR_CSEIP_INVALID
+	jmp 	mains
 cni_2:
-		inc 	ecx
+	inc 	ecx
 cni_1:
-		inc 	ecx
-		test	[fEntry], FENTRY_REAL
-		jnz 	@F
-		add 	[r1.rEip],ecx
-		jmp 	cni_3
+	inc 	ecx
+	test	[fEntry], FENTRY_REAL
+	jnz 	@F
+	add 	[r1.rEip],ecx
+	jmp 	cni_3
 @@:
-		add 	[r1r.rIP],cx
+	add 	[r1r.rIP],cx
 cni_3:
-		call	gettracemode  ;im tracemodus dann gleich in debugger gehen
-		jz		exit
-		stc
+	call	gettracemode  ;im tracemodus dann gleich in debugger gehen
+	jz		exit
+	stc
 exit:
-		ret
+	ret
 checknextinstruction endp
 
 ;--- MarkDOSused will do 2 things
@@ -8395,12 +8395,12 @@ ljmpopctab2 equ $ - jmpopctab2
 
 
 setdl2rmpm:
-		mov 	dl,00			  ;typ des breakpoints
-		test	[fEntry], FENTRY_REAL
-		jz		@F
-		inc 	dl
+	mov 	dl,00			  ;typ des breakpoints
+	test	[fEntry], FENTRY_REAL
+	jz		@F
+	inc 	dl
 @@:
-		ret
+	ret
 
 ;--- CS:EIP -> INT 21, check if app terminates
 
@@ -8773,19 +8773,19 @@ checkifappactive:
 ;---      AL!=0 -> trace will not be logged
 
 settracevars proc stdcall public
-		or [fExit], FEXIT_TRACE
-		call	settracemode
-		cmp 	al,-1
-		jnz 	@F
-		mov 	al,[bTraceFlags]
+	or [fExit], FEXIT_TRACE
+	call	settracemode
+	cmp 	al,-1
+	jnz 	@F
+	mov 	al,[bTraceFlags]
 @@:
-		and 	al,FTRAC_LOG
-		cmp		al,1
-		sbb		al,al			;0->FF,1->0
-		and 	[fMode], not FMODE_NODISP
-		and 	al, FMODE_NODISP
-		or		[fMode], al
-		ret
+	and 	al,FTRAC_LOG
+	cmp		al,1
+	sbb		al,al			;0->FF,1->0
+	and 	[fMode], not FMODE_NODISP
+	and 	al, FMODE_NODISP
+	or		[fMode], al
+	ret
 settracevars endp
 
 ;--- command Trace
@@ -9589,31 +9589,31 @@ endif	;?usetoolhelp
 ;--- int 06 invalidopcode
 
 divbyzero_16:
-		@switch32bit
+	@switch32bit
 divbyzero:
-		push MSG_DIVBYZERO
-		jmp xxxexc
+	push MSG_DIVBYZERO
+	jmp xxxexc
 invalidopcode_16:
-		@switch32bit
+	@switch32bit
 invalidopcode:
-		push MSG_INVALID_OPCODE
-		jmp xxxexc
+	push MSG_INVALID_OPCODE
+	jmp xxxexc
 stackexc:
-		push MSG_STACK_EXC
-		jmp xxxexc
+	push MSG_STACK_EXC
+	jmp xxxexc
 protexc:
-		push MSG_PROT_EXC
-		jmp xxxexc
+	push MSG_PROT_EXC
+	jmp xxxexc
 pageexc:
-		push MSG_PAGE_EXC
-		jmp xxxexc
+	push MSG_PAGE_EXC
+	jmp xxxexc
 sysrequest:
-		push MSG_CTRL_SYSREQ
+	push MSG_CTRL_SYSREQ
 xxxexc:
-		@errorout
-		jmp xxxexcx
+	@errorout
+	jmp xxxexcx
 xxxexcx_16:
-		@switch32bit
+	@switch32bit
 
 ;--- here the following code will finally come
 ;--- toolhelp interrupt callback for exc 00, 06, 0C, 0D, 0E and sysreq
@@ -9621,94 +9621,94 @@ xxxexcx_16:
 ;--- handler for int 04, 05 
 
 xxxexcx:
-		push ds
-		mov ds,cs:[__csalias]
-		or [fEntry], FENTRY_EXCEPTION
-		and [fMode], not FMODE_EXEACTIVE
-		test [fMode], FMODE_INDEBUG
-		pop ds
-		jz debug_entry
+	push ds
+	mov ds,cs:[__csalias]
+	or [fEntry], FENTRY_EXCEPTION
+	and [fMode], not FMODE_EXEACTIVE
+	test [fMode], FMODE_INDEBUG
+	pop ds
+	jz debug_entry
 
-		push gs
-		push fs
-		push ds
-		push es
-		pushad
-		mov ds,cs:[__csalias]
-		push ds
-		pop es
-		@loadesp ebp
-		lea ebx, [ebp+12*4]
-		mov al, 0
-		call PutRegsOnHeap
-		popad
-		pop es
-		pop ds
-		pop fs
-		pop gs
-		jmp debug_entry
+	push gs
+	push fs
+	push ds
+	push es
+	pushad
+	mov ds,cs:[__csalias]
+	push ds
+	pop es
+	@loadesp ebp
+	lea ebx, [ebp+12*4]
+	mov al, 0
+	call PutRegsOnHeap
+	popad
+	pop es
+	pop ds
+	pop fs
+	pop gs
+	jmp debug_entry
 
 ;--- std interrupt handler for int 08-0F
 
 xxxirqx_16:
-		@switch32bit
+	@switch32bit
 xxxirqx:
-		push ds
-		mov ds,cs:[__csalias]
-		and [fMode], not FMODE_EXEACTIVE
-;		 @stroutc "irq received",lf
+	push ds
+	mov ds,cs:[__csalias]
+	and [fMode], not FMODE_EXEACTIVE
+;	@stroutc "irq received",lf
 if 0
-		push eax
-		mov al,0Bh		 ;get interrupt service register
-		out 20h,al
-		in al,20h
-		test al,02h		 ;tastatur interrupt in service?
-		jz @F
-		in al,60h
-		mov al,20h
-		out 20h,al
+	push eax
+	mov al,0Bh		 ;get interrupt service register
+	out 20h,al
+	in al,20h
+	test al,02h		 ;tastatur interrupt in service?
+	jz @F
+	in al,60h
+	mov al,20h
+	out 20h,al
 @@:
-		pop eax
+	pop eax
 endif
-		pop ds
-		jmp debug_entry
+	pop ds
+	jmp debug_entry
 
 ;*** single step handler protected mode (INT 01) ***
 
 singlstep_16:
-		@switch32bit
+	@switch32bit
 singlstep:
-		push ds
-		mov ds, cs:[__csalias]
-		or [fEntry], FENTRY_INT01
-		pop ds
-		jmp debug_entry
+	push ds
+	mov ds, cs:[__csalias]
+	or [fEntry], FENTRY_INT01
+	pop ds
+	jmp debug_entry
 
 ;*** int 02 (NMI) handler (INT 02) ***
 
 intr02_16:
-		@switch32bit
+	@switch32bit
 intr02:
 
-		push ds
-		mov ds, cs:[__csalias]
-		and [fMode], not FMODE_EXEACTIVE
-		or [fEntry], FENTRY_SYSREQ
-		@stroutc lf,"Int 02 has occured, will break into debugger",lf
-		pop ds
-		jmp debug_entry
+	push ds
+	mov ds, cs:[__csalias]
+	and [fMode], not FMODE_EXEACTIVE
+	or [fEntry], FENTRY_SYSREQ
+	@stroutc lf,"Int 02 has occured, will break into debugger",lf
+	pop ds
+	jmp debug_entry
 
 ;*** breakpoint handler protected mode (INT 03) ***
 
 breakpnt_16:
-		@switch32bit
+	@switch32bit
 breakpnt:
-		push ds
-		mov ds, cs:[__csalias]
-		and [fMode], not FMODE_INDEBUG ;falls breakpoint in debugger routine: reset
-		or [fEntry], FENTRY_INT03
-		pop ds
-		jmp debug_entry
+	push ds
+	mov ds, cs:[__csalias]
+	and [fMode], not FMODE_INDEBUG ;falls breakpoint in debugger routine: reset
+	or [fEntry], FENTRY_INT03
+	pop ds
+	jmp debug_entry
 
 ;*** entry callbacks real mode (int 00,01,02,03,06)
 ;*** der stack ist nur 100h bytes gross!
@@ -9729,69 +9729,69 @@ if ?RMCALLBACK
 ;*** SS:(E)SP ist auf LPMS
 
 rm2pmentry:
-		push ds
-		pushad
-		cld
+	push ds
+	pushad
+	cld
 if ?32BIT eq 0
-		movzx edi,di
-		movzx esi,si
+	movzx edi,di
+	movzx esi,si
 endif
-		lodsw						 ;cpumode
-		mov cl,al
-		lodsw						 ;original ax
-		mov word ptr es:[edi.rEAX],ax
-		lodsw						 ;int#
-		mov bl,al
-		lodsd
-		mov dword ptr es:[edi.rIP],eax
-		lodsw
-;		and ah,0FEh			  ;reset trace flag
-		mov es:[edi.rFlags],ax
-		mov word  ptr es:[edi.rSP],si
-		mov ds,cs:[__csalias]
-		assume ds:@data
-		mov fCPUMode,cl
-		cmp bl,0
-		jz intxxx
-		cmp bl,1
-		jz intx01
-		cmp bl,2
-		jz intx02
-		cmp bl,3
-		jz intx03
-		cmp bl,6
-		jz intxxx
+	lodsw						 ;cpumode
+	mov cl,al
+	lodsw						 ;original ax
+	mov word ptr es:[edi.rEAX],ax
+	lodsw						 ;int#
+	mov bl,al
+	lodsd
+	mov dword ptr es:[edi.rIP],eax
+	lodsw
+;	and ah,0FEh			  ;reset trace flag
+	mov es:[edi.rFlags],ax
+	mov word  ptr es:[edi.rSP],si
+	mov ds,cs:[__csalias]
+	assume ds:@data
+	mov fCPUMode,cl
+	cmp bl,0
+	jz intxxx
+	cmp bl,1
+	jz intx01
+	cmp bl,2
+	jz intx02
+	cmp bl,3
+	jz intx03
+	cmp bl,6
+	jz intxxx
 intrxx_ex:
-		popad
-		pop ds
-		@iret
+	popad
+	pop ds
+	@iret
 else	 ;!(?RMCALLBACK)
 
 ;*** hierher nach iret, raw mode switch to real mode ausfuehren ***
 
 pm2rm:
 if	?32BIT eq 0
-		pop si						;2 bytes mehr bei 16 bit
+	pop si						;2 bytes mehr bei 16 bit
 endif
-		mov [myesp],esp 			;debugger stack korrigieren
+	mov [myesp],esp 			;debugger stack korrigieren
 pm2rmback:
-		mov esi, offset rmcsi0y
-		mov edi, offset DEBRMVAR.rm
-		mov ecx, sizeof RMCS/2
-		mov es, [__RmDS]
-		assume es:_TEXT16
-		cld
-		rep movsw
+	mov esi, offset rmcsi0y
+	mov edi, offset DEBRMVAR.rm
+	mov ecx, sizeof RMCS/2
+	mov es, [__RmDS]
+	assume es:_TEXT16
+	cld
+	rep movsw
 ;pm2rm_x:
-		mov dx, es:[DEBRMVAR.rm.rSS]		;ss
-		mov bx, es:[DEBRMVAR.rm.rSP]		;sp
-		mov di, es:[DEBRMVAR.wPM2RMEntry]	;ip
+	mov dx, es:[DEBRMVAR.rm.rSS]		;ss
+	mov bx, es:[DEBRMVAR.rm.rSP]		;sp
+	mov di, es:[DEBRMVAR.wPM2RMEntry]	;ip
 
-		mov ax,[__RmSeg]			;ds
-		mov cx,ax					;es
-		mov si,ax					;cs
-		jmp fword ptr [pm2rmjump]
-		assume es:nothing
+	mov ax,[__RmSeg]			;ds
+	mov cx,ax					;es
+	mov si,ax					;cs
+	jmp fword ptr [pm2rmjump]
+	assume es:nothing
 
 ;*** --- entry from real mode (raw mode) --- ***
 ;*** --- interrupts sind gesperrt?		 --- ***
@@ -9800,55 +9800,55 @@ pm2rmback:
 
 rm2pmentry:
 if ?32BIT
-		pushfd						;nach iret aus _reset an pm2rm
-		push cs						;springen
-		push offset pm2rm
+	pushfd						;nach iret aus _reset an pm2rm
+	push cs						;springen
+	push offset pm2rm
 else
-		pushfd						;damit stack aligned bleibt
-		mov eax,cs
-		push ax
-		mov eax,offset pm2rm
-		push ax
+	pushfd						;damit stack aligned bleibt
+	mov eax,cs
+	push ax
+	mov eax,offset pm2rm
+	push ax
 endif
-		mov [myesp],esp
-		push ds
-		pushad
-		push ds
-		pop es
-		mov edi,offset rmcsi0y
-		mov ds, [__RmDS]
-		assume ds:_TEXT16
+	mov [myesp],esp
+	push ds
+	pushad
+	push ds
+	pop es
+	mov edi,offset rmcsi0y
+	mov ds, [__RmDS]
+	assume ds:_TEXT16
 
-		mov esi, offset DEBRMVAR.rm
-		mov ecx, sizeof RMCS/2
-		cld
-		push edi
-		rep movsw
-		pop edi
-		mov cl,ds:[DEBRMVAR.bMode]
-		mov bl,byte ptr ds:[DEBRMVAR.intno]
-		push es
-		pop ds
-		assume ds:@data
-		mov fCPUMode,cl
-		cmp bl,0
-		jz intxxx
-		cmp bl,1
-		jz intx01
-		cmp bl,2
-		jz intx02
-		cmp bl,3
-		jz intx03
-		cmp bl,5
-		jz intx05
-		cmp bl,6
-		jz intxxx
-		cmp bl,7
-		jz intxxx
+	mov esi, offset DEBRMVAR.rm
+	mov ecx, sizeof RMCS/2
+	cld
+	push edi
+	rep movsw
+	pop edi
+	mov cl,ds:[DEBRMVAR.bMode]
+	mov bl,byte ptr ds:[DEBRMVAR.intno]
+	push es
+	pop ds
+	assume ds:@data
+	mov fCPUMode,cl
+	cmp bl,0
+	jz intxxx
+	cmp bl,1
+	jz intx01
+	cmp bl,2
+	jz intx02
+	cmp bl,3
+	jz intx03
+	cmp bl,5
+	jz intx05
+	cmp bl,6
+	jz intxxx
+	cmp bl,7
+	jz intxxx
 intrxx_ex:
-		popad
-		pop ds
-		@iret
+	popad
+	pop ds
+	@iret
 
 endif  ;!(?RMCALLBACK)
 
@@ -10273,100 +10273,100 @@ excproc endp
 
 
 exception_protokoll:
-		test [fMode], FMODE_INDEBUG
-		jnz x_exception_protokoll
+	test [fMode], FMODE_INDEBUG
+	jnz x_exception_protokoll
 exception_protokoll_1:
 if ?32BIT
-		movzx eax, word ptr [ebp].rCS
-		movzx ecx, word ptr [ebp].rSS
-		invoke printf, CStr(" errc=%X, cs:ip=%X:%X, fl=%X, ss:sp=%X:%X",lf),
-			[ebp].ErrCode, eax, [ebp].rIP, [ebp].rFL, ecx, [ebp].rSP
+	movzx eax, word ptr [ebp].rCS
+	movzx ecx, word ptr [ebp].rSS
+	invoke printf, CStr(" errc=%X, cs:ip=%X:%X, fl=%X, ss:sp=%X:%X",lf),
+		[ebp].ErrCode, eax, [ebp].rIP, [ebp].rFL, ecx, [ebp].rSP
 else
-		movzx edi, [ebp].ErrCode
-		movzx esi, [ebp].rFL
-		movzx eax, [ebp].rCS
-		movzx edx, [ebp].rIP
-		movzx ecx, [ebp].rSS
-		movzx ebx, [ebp].rSP
-		invoke printf, CStr(" errc=%X cs:ip=%X:%X fl=%X ss:sp=%X:%X",lf),
-			edi, eax, edx, esi, ecx, ebx
+	movzx edi, [ebp].ErrCode
+	movzx esi, [ebp].rFL
+	movzx eax, [ebp].rCS
+	movzx edx, [ebp].rIP
+	movzx ecx, [ebp].rSS
+	movzx ebx, [ebp].rSP
+	invoke printf, CStr(" errc=%X cs:ip=%X:%X fl=%X ss:sp=%X:%X",lf),
+		edi, eax, edx, esi, ecx, ebx
 endif
-		invoke printf, CStr("eax=%X ebx=%X ecx=%X edx=%X esi=%X edi=%X",lf),
-			[ebp].rEax, [ebp].rEbx, [ebp].rEcx, [ebp].rEdx, [ebp].rEsi, [ebp].rEdi
-		movzx eax, word ptr [ebp].rDS
-		movzx edx, word ptr [ebp].rES
-		movzx ecx, word ptr [ebp].rFS
-		movzx ebx, word ptr [ebp].rGS
-		invoke printf, CStr("ebp=%X ds=%X, es=%X, fs=%X, gs=%X",lf),
-			[ebp].rEbp, eax, edx, ecx, ebx
-		ret
+	invoke printf, CStr("eax=%X ebx=%X ecx=%X edx=%X esi=%X edi=%X",lf),
+		[ebp].rEax, [ebp].rEbx, [ebp].rEcx, [ebp].rEdx, [ebp].rEsi, [ebp].rEdi
+	movzx eax, word ptr [ebp].rDS
+	movzx edx, word ptr [ebp].rES
+	movzx ecx, word ptr [ebp].rFS
+	movzx ebx, word ptr [ebp].rGS
+	invoke printf, CStr("ebp=%X ds=%X, es=%X, fs=%X, gs=%X",lf),
+		[ebp].rEbp, eax, edx, ecx, ebx
+	ret
 
 ;--- create a MYREGSTR on near heap
 
 x_exception_protokoll:
-		@stroutc " - occured in debugger",lf
-		inc byte ptr [excentry]
-		cmp [excentry],1
-		ja x_exception_protokoll_2
-		lea ebx, [ebp].rIP
-		mov al,1
-		call PutRegsOnHeap
-		ret
+	@stroutc " - occured in debugger",lf
+	inc byte ptr [excentry]
+	cmp [excentry],1
+	ja x_exception_protokoll_2
+	lea ebx, [ebp].rIP
+	mov al,1
+	call PutRegsOnHeap
+	ret
 
-		assume ebp:nothing
+	assume ebp:nothing
 
 ;--- inp: ebx = IRETS, ebp=MYREGSTR 12 DWORDS (regs + ds,es,fs,gs)
 ;--- if al == 0, SS:ESP is not in IRETS
 ;--- out: [pNearHeap] = MYREGSTR
 
 PutRegsOnHeap proc
-		push ds
-		mov edi,[pNearHeap]
-		push edi
-		push ss
-		pop ds
-		mov esi, ebp
-		mov ecx, 12		;copy 8 std regs + 4 segment regs
-		rep movsd
-		pop edi
-		pop ds
-		push ebp
-		mov ebp, ebx
+	push ds
+	mov edi,[pNearHeap]
+	push edi
+	push ss
+	pop ds
+	mov esi, ebp
+	mov ecx, 12		;copy 8 std regs + 4 segment regs
+	rep movsd
+	pop edi
+	pop ds
+	push ebp
+	mov ebp, ebx
 if ?32BIT
-		mov ecx,[ebp].IRETS.rIP
-		movzx edx, word ptr [ebp].IRETS.rCS
+	mov ecx,[ebp].IRETS.rIP
+	movzx edx, word ptr [ebp].IRETS.rCS
 else
-		movzx ecx,[ebp].IRETS.rIP
-		movzx edx,[ebp].IRETS.rCS
+	movzx ecx,[ebp].IRETS.rIP
+	movzx edx,[ebp].IRETS.rCS
 endif
-		mov [edi].MYREGSTR.rEip, ecx
-		mov [edi].MYREGSTR.rCS, edx
+	mov [edi].MYREGSTR.rEip, ecx
+	mov [edi].MYREGSTR.rCS, edx
 if ?32BIT
-		mov ecx,[ebp].IRETS.rFL
+	mov ecx,[ebp].IRETS.rFL
 else
-		movzx ecx,[ebp].IRETS.rFL
+	movzx ecx,[ebp].IRETS.rFL
 endif
-		mov [edi].MYREGSTR.rEfl, ecx
+	mov [edi].MYREGSTR.rEfl, ecx
 
-		lea ecx, [ebx].IRETS.rSP
-		mov edx, ss
-		movzx edx, dx
-		and al,al
-		jz	@F
+	lea ecx, [ebx].IRETS.rSP
+	mov edx, ss
+	movzx edx, dx
+	and al,al
+	jz @F
 if ?32BIT
-		mov ecx, [ebp].IRETS.rSP
-		movzx edx, word ptr [ebp].IRETS.rSS
+	mov ecx, [ebp].IRETS.rSP
+	movzx edx, word ptr [ebp].IRETS.rSS
 else
-		movzx ecx, [ebp].IRETS.rSP
-		movzx edx, [ebp].IRETS.rSS
+	movzx ecx, [ebp].IRETS.rSP
+	movzx edx, [ebp].IRETS.rSS
 endif
 @@:
-		mov [edi].MYREGSTR.rEsp, ecx
-		mov [edi].MYREGSTR.rSS, edx
+	mov [edi].MYREGSTR.rEsp, ecx
+	mov [edi].MYREGSTR.rSS, edx
 
-		pop ebp
-		or [fMode], FMODE_REGSOUT
-		ret
+	pop ebp
+	or [fMode], FMODE_REGSOUT
+	ret
 PutRegsOnHeap endp
 
 	.const
@@ -10380,183 +10380,183 @@ szFatal db "exception while handling an internal exception",lf
 	.code
 
 x_exception_protokoll_2:
-		assume ebp:ptr MYREGSTR
-		cli
-		mov fIrq,0
-		invoke printf, addr szFatal
-		call exception_protokoll_1
+	assume ebp:ptr MYREGSTR
+	cli
+	mov fIrq,0
+	invoke printf, addr szFatal
+	call exception_protokoll_1
 @@:
-		in al,64h
-		test al,1
-		jz @B
-		in al,60h
-		cmp al,1
-		jz _fexit
-		cmp al,1Ch
-		jnz @B
-		jmp mains
+	in al,64h
+	test al,1
+	jz @B
+	in al,60h
+	cmp al,1
+	jz _fexit
+	cmp al,1Ch
+	jnz @B
+	jmp mains
 
 if ?CHECKSEGREGS
 checksegregs:
-		and ax,ax
-		jz @F
-		lar eax,eax
-		jnz checkregs_1
+	and ax,ax
+	jz @F
+	lar eax,eax
+	jnz checkregs_1
 @@:
-		and bx,bx
-		jz @F
-		lar ebx,ebx
-		jnz checkregs_1
+	and bx,bx
+	jz @F
+	lar ebx,ebx
+	jnz checkregs_1
 @@:
-		jcxz @F
-		lar ecx,ecx
-		jnz checkregs_1
+	jcxz @F
+	lar ecx,ecx
+	jnz checkregs_1
 @@:
-		and dx,dx
-		jz @F
-		lar edx,edx
-		jnz checkregs_1
+	and dx,dx
+	jz @F
+	lar edx,edx
+	jnz checkregs_1
 @@:
-		ret
+	ret
 checkregs_1:
-		invoke printf, CStr("severe error: segment register invalid.",lf,"ds=%X es=%X fs=%X, gs=%X",lf),\
-			dword ptr [ebp].rDS, dword ptr [ebp].rES, dword ptr [ebp].rFS, dword ptr [ebp].rGS
-		ret
-		assume ebp:nothing
+	invoke printf, CStr("severe error: segment register invalid.",lf,"ds=%X es=%X fs=%X, gs=%X",lf),\
+		dword ptr [ebp].rDS, dword ptr [ebp].rES, dword ptr [ebp].rFS, dword ptr [ebp].rGS
+	ret
+	assume ebp:nothing
 endif
 
 ;--------------------------------------------------
 
 checkifenhmode proc stdcall public
-		pushad
-		xor ebx,ebx
-		mov ax,1683h
-		@callint2F
-		cmp bx,1
-		popad
-		jc @F
-		ret
+	pushad
+	xor ebx,ebx
+	mov ax,1683h
+	@callint2F
+	cmp bx,1
+	popad
+	jc @F
+	ret
 @@:
-		@stroutc "enhanced mode windows not running",lf
-		jmp mains
+	@stroutc "enhanced mode windows not running",lf
+	jmp mains
 checkifenhmode endp
 
 
 _getpic proc stdcall
 
-		@stroutc "Master PIC:"
-		mov dx,020h
-		call getpic1
-		@stroutc "Slave PIC:"
-		mov dx,0A0h
-		call getpic1
-		ret
+	@stroutc "Master PIC:"
+	mov dx,020h
+	call getpic1
+	@stroutc "Slave PIC:"
+	mov dx,0A0h
+	call getpic1
+	ret
 getpic1:
-		@stroutc "IMR="
-		inc dx
-		in al,dx
-		dec dx
-		invoke _hexout
-		@stroutc " IRR="
-		mov al,0Ah
-		call getpic2
-		@stroutc " ISR="
-		mov  al,0Bh
-		call getpic2
-;		@stroutc " SMM="
-;		mov  al,0Fh
-;		call getpic2
-		invoke _crout
-		ret
+	@stroutc "IMR="
+	inc dx
+	in al,dx
+	dec dx
+	invoke _hexout
+	@stroutc " IRR="
+	mov al,0Ah
+	call getpic2
+	@stroutc " ISR="
+	mov  al,0Bh
+	call getpic2
+;	@stroutc " SMM="
+;	mov  al,0Fh
+;	call getpic2
+	invoke _crout
+	ret
 getpic2:
-		out dx,al
-		nop
-		nop
-		in al,dx
-		invoke _hexout
-		ret
+	out dx,al
+	nop
+	nop
+	in al,dx
+	invoke _hexout
+	ret
 _getpic endp
 
 if ?SUPPVPICD
 
-_vpicd	proc c public pb:PARMBLK
+_vpicd proc c public pb:PARMBLK
 
-local	sysvm:dword
+local sysvm:dword
 
-		call checkifenhmode
-		@ring0call getsysvm
-		mov  sysvm,ebx
-		invoke printf, CStr("IRQ V CurVM    SysVM  ",lf)
-        invoke printchars, '-', eax, 1
-		mov  ecx,10h
-		mov  al,0
-		movzx eax,al
+	call checkifenhmode
+	@ring0call getsysvm
+	mov  sysvm,ebx
+	invoke printf, CStr("IRQ V CurVM    SysVM  ",lf)
+	invoke printchars, '-', eax, 1
+	mov  ecx,10h
+	mov  al,0
+	movzx eax,al
 vpicd_1:
-		push ecx
-		push eax
-		mov  esi,sysvm
-		@ring0call getirqs
-		pushfd
-		invoke _hexout
-		@stroutc ": "
-		popfd
-		jnc  @F
-		@putchr 'v'
-		jmp  vpicd_2
+	push ecx
+	push eax
+	mov  esi,sysvm
+	@ring0call getirqs
+	pushfd
+	invoke _hexout
+	@stroutc ": "
+	popfd
+	jnc  @F
+	@putchr 'v'
+	jmp  vpicd_2
 @@:
-		@putchr ' '
+	@putchr ' '
 vpicd_2:
-		@putchr ' '
-		@dwordout ecx
-		@putchr ' '
-		@dwordout edx
-		invoke	_crout
-		pop  eax
-		pop  ecx
-		inc  eax
-		loop vpicd_1
-		ret
-_vpicd	endp
+	@putchr ' '
+	@dwordout ecx
+	@putchr ' '
+	@dwordout edx
+	invoke	_crout
+	pop  eax
+	pop  ecx
+	inc  eax
+	loop vpicd_1
+	ret
+_vpicd endp
 
 endif
 
 ;--- this is a ring 0 proc
 
 getsysvm proc
-		push ds
-		push es
-		push ss
-		pop  ds
-		push ss
-		pop  es
-		VMMCall Get_Sys_VM_Handle
-		pop  es
-		pop  ds
-		ret
+	push ds
+	push es
+	push ss
+	pop  ds
+	push ss
+	pop  es
+	VMMCall Get_Sys_VM_Handle
+	pop  es
+	pop  ds
+	ret
 getsysvm endp
 
 ;--- this is a ring 0 proc
 
 getirqs proc
-		push ds
-		push es
+	push ds
+	push es
 
-		push ss
-		pop  ds
-		push ss
-		pop  es
-		push eax
-		VxDCall VPICD_DEVICE_ID,VPICD_Get_IRQ_Complete_Status
-		pop  eax
+	push ss
+	pop  ds
+	push ss
+	pop  es
+	push eax
+	VxDCall VPICD_DEVICE_ID,VPICD_Get_IRQ_Complete_Status
+	pop  eax
 
-		push ecx
-		mov  ebx,esi
-		VxDCall VPICD_DEVICE_ID,VPICD_Get_IRQ_Complete_Status
-		mov  edx,ecx
-		pop  ecx
-		pop  es
-		pop  ds
-		ret
+	push ecx
+	mov  ebx,esi
+	VxDCall VPICD_DEVICE_ID,VPICD_Get_IRQ_Complete_Status
+	mov  edx,ecx
+	pop  ecx
+	pop  es
+	pop  ds
+	ret
 getirqs endp
 
 ;-------------------------------------------------------------
@@ -10691,58 +10691,58 @@ GetModuleName endp
 ;---
 
 setargdefaults proc
-		xor eax,eax
-		push edi
+	xor eax,eax
+	push edi
 @@:
-		mov byte ptr [edi.ARGDESC.dwType],__VOID__
-		mov [edi.ARGDESC.dwOfs],eax
-		add edi,size ARGDESC
-		cmp edi,offset argend
-		jb @B
-		pop edi
-		ret
+	mov byte ptr [edi.ARGDESC.dwType],__VOID__
+	mov [edi.ARGDESC.dwOfs],eax
+	add edi,size ARGDESC
+	cmp edi,offset argend
+	jb @B
+	pop edi
+	ret
 setargdefaults endp
 
 
 if 0
 strcat proc pascal string1:dword,string2:dword
 
-		push esi
-		push edi
-		mov edi,[pNearHeap]
-		mov esi,string1
+	push esi
+	push edi
+	mov edi,[pNearHeap]
+	mov esi,string1
 @@:
-		lodsb
-		and al,al
-		jz @F
-		stosb
-		jmp @B
+	lodsb
+	and al,al
+	jz @F
+	stosb
+	jmp @B
 @@:
-		mov esi,string2
+	mov esi,string2
 @@:
-		lodsb
-		stosb
-		and al,al
-		jnz @B
-		mov eax,edi
-		xchg eax,[pNearHeap]
-		pop edi
-		pop esi
-		ret
-strcat	endp
+	lodsb
+	stosb
+	and al,al
+	jnz @B
+	mov eax,edi
+	xchg eax,[pNearHeap]
+	pop edi
+	pop esi
+	ret
+strcat endp
 endif
 
-croutx	proc stdcall public
-		cmp byte ptr fSkipLF,0
-		jz @F
-		dec byte ptr fSkipLF
-		stc
-		ret
+croutx proc stdcall public
+	cmp byte ptr fSkipLF,0
+	jz @F
+	dec byte ptr fSkipLF
+	stc
+	ret
 @@:
-		invoke _crout
-		clc
-		ret
-croutx	endp
+	invoke _crout
+	clc
+	ret
+croutx endp
 
 ;*** aufgerufen aus parser ***
 ;*** nur edx darf geaendert werden ***
@@ -11310,90 +11310,90 @@ getdosparms proc stdcall uses edi
 
 local	trmcs:RMCS
 
-		call getindosflag
-		and al, al
-		jnz exit
-		lea edi,trmcs
-		xor eax,eax
-		mov dword ptr [edi.RMCS.rSP],eax
-		mov dword ptr [edi.RMCS.rFlags], 202h
-		mov word ptr [edi.RMCS.rEAX+0],5d06h	;get SDA
-		xor ecx, ecx
-		mov bx, 21h
-		mov ax, 300h
-		int 31h		;sim real-mode int
-		mov ax,[edi.RMCS.rDS]
-		shl eax,16
-		mov ax,word ptr [edi.RMCS.rESI]
-		mov [sdaadr],eax
-		mov eax,[edi.RMCS.rECX]
-		mov word ptr [sdalen1],ax
-		mov eax,[edi.RMCS.rEDX]
-		mov word ptr [sdalen2],ax
+	call getindosflag
+	and al, al
+	jnz exit
+	lea edi,trmcs
+	xor eax,eax
+	mov dword ptr [edi.RMCS.rSP],eax
+	mov dword ptr [edi.RMCS.rFlags], 202h
+	mov word ptr [edi.RMCS.rEAX+0],5d06h	;get SDA
+	xor ecx, ecx
+	mov bx, 21h
+	mov ax, 300h
+	int 31h		;sim real-mode int
+	mov ax,[edi.RMCS.rDS]
+	shl eax,16
+	mov ax,word ptr [edi.RMCS.rESI]
+	mov [sdaadr],eax
+	mov eax,[edi.RMCS.rECX]
+	mov word ptr [sdalen1],ax
+	mov eax,[edi.RMCS.rEDX]
+	mov word ptr [sdalen2],ax
 
-		mov byte ptr [trmcs.rEAX+1],52h	;get LoL
-;		mov cx, 0
-;		mov bx, 21h
-		mov ax, 300h
-		int 31h
-		movzx eax,[edi.RMCS.rES]
-		movzx ecx,word ptr [edi.RMCS.rEBX]
-		shl eax,4
-		add eax,ecx
-		mov [dwLoL],eax
+	mov byte ptr [trmcs.rEAX+1],52h	;get LoL
+;	mov cx, 0
+;	mov bx, 21h
+	mov ax, 300h
+	int 31h
+	movzx eax,[edi.RMCS.rES]
+	movzx ecx,word ptr [edi.RMCS.rEBX]
+	shl eax,4
+	add eax,ecx
+	mov [dwLoL],eax
 exit:
-		ret
+	ret
 getdosparms endp
 
 if ?32BIT
 if ?WIN32REBOOT
 handlewin32reboot proc stdcall uses es
-		push edx
-		push 0
-		pop es
-		mov ax,1684h
-		mov bx,0009h
-		@callint2F
-		pop edx
-		mov eax,es
-		and ax,ax
-		jz exit
+	push edx
+	push 0
+	pop es
+	mov ax,1684h
+	mov bx,0009h
+	@callint2F
+	pop edx
+	mov eax,es
+	and ax,ax
+	jz exit
 if 1
-		push eax
-		movzx edi,di
-		push edi
-		mov ebx,esp
-		mov ecx,cs
-		mov ax,0204h		  ; CX:EDX -> int 01 handler
-		call fword ptr [ebx]
-		pop eax
-		pop eax
+	push eax
+	movzx edi,di
+	push edi
+	mov ebx,esp
+	mov ecx,cs
+	mov ax,0204h		  ; CX:EDX -> int 01 handler
+	call fword ptr [ebx]
+	pop eax
+	pop eax
 endif
 exit:
-		ret
+	ret
 handlewin32reboot endp
 endif
 endif
 
 resetexception proc stdcall
 
-		pushad
-		movzx ebx,bl
-		clc
-		test byte ptr [ebx*8+offset oldexcvecs+6],FTRAP_ACTIVE
-		jz resetexcvec_2
-		mov edx,dword ptr [ebx*8+offset oldexcvecs]
-		mov cx,word ptr [ebx*8+offset oldexcvecs+?SEGOFFS]
-		@DpmiCall 203h
+	pushad
+	movzx ebx,bl
+	clc
+	test byte ptr [ebx*8+offset oldexcvecs+6],FTRAP_ACTIVE
+	jz resetexcvec_2
+	mov edx,dword ptr [ebx*8+offset oldexcvecs]
+	mov cx,word ptr [ebx*8+offset oldexcvecs+?SEGOFFS]
+	@DpmiCall 203h
 if ?WINDOWS
-		jnc @F
-		@DpmiCall 283h
+	jnc @F
+	@DpmiCall 283h
 @@:
 endif
-		mov word ptr [ebx*8+offset oldexcvecs+6],0
+	mov word ptr [ebx*8+offset oldexcvecs+6],0
 resetexcvec_2:
-		popad
-		ret
+	popad
+	ret
 resetexception endp
 
 ;--- BL = exception no
@@ -11401,48 +11401,48 @@ resetexception endp
 
 setexception proc stdcall
 
-		movzx ebx,bl
-		clc
-		test byte ptr [ebx*8+offset oldexcvecs+6],FTRAP_ACTIVE
-		jnz setexcvec_2
+	movzx ebx,bl
+	clc
+	test byte ptr [ebx*8+offset oldexcvecs+6],FTRAP_ACTIVE
+	jnz setexcvec_2
 
-		pushad
-		@DpmiCall 202h
-		jc setexcvec_1
-		mov dword ptr [ebx*8+offset oldexcvecs],edx
-		mov word ptr [ebx*8+offset oldexcvecs+?SEGOFFS],cx
+	pushad
+	@DpmiCall 202h
+	jc setexcvec_1
+	mov dword ptr [ebx*8+offset oldexcvecs],edx
+	mov word ptr [ebx*8+offset oldexcvecs+?SEGOFFS],cx
 
-		mov edx,ebx
-		shl edx,2
-		add edx,offset exc00h
+	mov edx,ebx
+	shl edx,2
+	add edx,offset exc00h
 ife ?32BIT
-		mov ecx,[__cs16alias]
+	mov ecx,[__cs16alias]
 else
-		mov ecx,cs
+	mov ecx,cs
 endif
-		@DpmiCall 203h
+	@DpmiCall 203h
 if ?WINDOWS
-		jnc @F
-		@DpmiCall 283h
+	jnc @F
+	@DpmiCall 283h
 @@:
 endif
 if ?32BIT
 if ?WIN32REBOOT
-		cmp bl,1
-		jnz @F
-		pushfd
-		call handlewin32reboot
-		popfd
+	cmp bl,1
+	jnz @F
+	pushfd
+	call handlewin32reboot
+	popfd
 @@:
 endif
 endif
 setexcvec_1:
-		popad
+	popad
 setexcvec_2:
-		jc @F
-		mov word ptr [ebx*8+offset oldexcvecs+6],ax
+	jc @F
+	mov word ptr [ebx*8+offset oldexcvecs+6],ax
 @@:
-		ret
+	ret
 setexception endp
 
 ;--- in: bl=interrupt number
@@ -12276,72 +12276,72 @@ getfatalexitaddr:
 
 AllocRing0Switch proc
 
-		test [fMode], FMODE_STRICT
-		jnz exit
-		mov bx,[rLDT]
-		invoke getbaser,ebx			;get base of LDT
-		jc forcestrict 			;not possible
+	test [fMode], FMODE_STRICT
+	jnz exit
+	mov bx,[rLDT]
+	invoke getbaser,ebx			;get base of LDT
+	jc forcestrict 			;not possible
 
-		mov [excexit],offset forcestrict
+	mov [excexit],offset forcestrict
 
-		mov ebx,eax
-		mov eax, [worksel]
-		lea eax, [eax+8]
-		mov [ring0sel],eax
-		movzx ecx,ax
-		mov dl,cl
-		and cl,0F8h
-		add ebx,ecx
-		add cx,08h
-		and dl,04
-		add cl,dl					;1. selector ist call gate
-		mov eax,offset ring0rou 	;basisadresse
+	mov ebx,eax
+	mov eax, [worksel]
+	lea eax, [eax+8]
+	mov [ring0sel],eax
+	movzx ecx,ax
+	mov dl,cl
+	and cl,0F8h
+	add ebx,ecx
+	add cx,08h
+	and dl,04
+	add cl,dl					;1. selector ist call gate
+	mov eax,offset ring0rou 	;basisadresse
 if ?USEFLATR0CS
-		add eax,MyBase
+	add eax,MyBase
 endif
 ;--- direct write into LDT. will cause a page fault
 ;--- if LDT is r/o. set mode to strict to avoid
 ;--- exceptions inside the exception routine.
-		or [fMode], FMODE_STRICT
-		mov @flat:[ebx+0],ax		;LOWORD(offset)
-		mov @flat:[ebx+2],cx		;selector (in LDT)
-		shr eax,16
-		mov @flat:[ebx+6],ax		;HIWORD(offset)
-		mov eax,cs
-		lar eax,eax
-		and ax,6000h
-		or ah,8Ch						;386 call gate, present
-		mov word ptr @flat:[ebx+4],ax
+	or [fMode], FMODE_STRICT
+	mov @flat:[ebx+0],ax		;LOWORD(offset)
+	mov @flat:[ebx+2],cx		;selector (in LDT)
+	shr eax,16
+	mov @flat:[ebx+6],ax		;HIWORD(offset)
+	mov eax,cs
+	lar eax,eax
+	and ax,6000h
+	or ah,8Ch						;386 call gate, present
+	mov word ptr @flat:[ebx+4],ax
 
-		add ebx,8
+	add ebx,8
 
 if ?USEFLATR0CS
-		mov word ptr @flat:[ebx+0],0FFFFh
-		xor eax,eax
-		mov dword ptr @flat:[ebx+2],eax
-		mov word ptr @flat:[ebx+5],0CF9Bh	  ;ring 0,code,present, 32-Bit
-		mov byte ptr @flat:[ebx+7],al
+	mov word ptr @flat:[ebx+0],0FFFFh
+	xor eax,eax
+	mov dword ptr @flat:[ebx+2],eax
+	mov word ptr @flat:[ebx+5],0CF9Bh	  ;ring 0,code,present, 32-Bit
+	mov byte ptr @flat:[ebx+7],al
 else
-											  ;2. selector ist code segment
-		mov eax, MyBase
-		mov ecx,cs
-		lsl ecx,ecx
-		mov word ptr @flat:[ebx+0],cx
-		mov word ptr @flat:[ebx+2],ax
-		shr eax,16
-		mov byte ptr @flat:[ebx+4],al
-		mov word ptr @flat:[ebx+5],409Bh	  ;ring 0,code,present, 32-Bit
-		mov byte ptr @flat:[ebx+7],ah
+										  ;2. selector ist code segment
+	mov eax, MyBase
+	mov ecx,cs
+	lsl ecx,ecx
+	mov word ptr @flat:[ebx+0],cx
+	mov word ptr @flat:[ebx+2],ax
+	shr eax,16
+	mov byte ptr @flat:[ebx+4],al
+	mov word ptr @flat:[ebx+5],409Bh	  ;ring 0,code,present, 32-Bit
+	mov byte ptr @flat:[ebx+7],ah
 endif
-		and [fMode], not FMODE_STRICT
-		jmp exit
+	and [fMode], not FMODE_STRICT
+	jmp exit
 forcestrict:
-		@tprintf <"AllocRing0Switch: no write access to LDT",lf>
-		or fMode, FMODE_STRICT
-		mov ring0sel, 0
+	@tprintf <"AllocRing0Switch: no write access to LDT",lf>
+	or fMode, FMODE_STRICT
+	mov ring0sel, 0
 exit:
-		mov excexit,0
-		ret
+	mov excexit,0
+	ret
         
 AllocRing0Switch endp
 

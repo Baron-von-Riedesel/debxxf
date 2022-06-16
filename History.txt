@@ -1,6 +1,11 @@
 
  History
 
+ 2022/__/__: version 2.11
+ 
+ þ fixed symbhdlw.dll: was linked incorrectly ( flags in the binary
+   indicated a "dgroup" segment, but it actually has none ).
+ 
  2022/06/15: version 2.10
 
  þ bugfix deb16fw: when the debugger was changed from a dll to an overlay,
