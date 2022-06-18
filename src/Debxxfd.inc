@@ -59,8 +59,7 @@ GMEM_SHARE	  equ 2000h
 FL_TRACE	equ 01h
 FL_INT		equ 02h
 
-;fStat flags
-
+;--- fStat flags
 FSTAT_DEBUGINIT   equ 02h   ;firstentry has been called
 FSTAT_free        equ 04h   ;
 FSTAT_BUFNOTEMPTY equ 08h   ;line buffer is filled
@@ -69,8 +68,7 @@ FSTAT_DTAREAD	  equ 20h
 FSTAT_RESIDENT    equ 40h   ;debugger is resident
 FSTAT_ISNT        equ 80h   ;running under NT/2K/XP?
 
-;fMode flags
-
+;--- fMode flags
 FMODE_QUIET		equ 01h	; dont display debugger logo 
 FMODE_SKIP		equ 02h	; skip is active
 FMODE_NODISP	equ 04h	; no display on entry until prompt
@@ -82,8 +80,7 @@ FMODE_EXEACTIVE	equ 80h	; an exit proc has been set
 
 FMODE_SKIP_BIT	equ 1	; for BTx instructions
 
-;fEntry flags
-
+;--- fEntry flags
 FENTRY_INT01	  equ 01h	;debugger has been entered thru EXC/INT 01
 FENTRY_EXCEPTION  equ 02h	;debugger has been entered thru EXC 0,6,c,d,e
 FENTRY_INT03	  equ 04h	;debugger has been entered thru EXC/INT 03
@@ -96,8 +93,7 @@ FENTRY_SYSREQ	  equ 80h	;entry ctrl-alt-sysreq
 FTRAP_ACTIVE	  equ 01h	;exception trap aktiv
 FTRAP_STOP		  equ 02h	;stop bei exception
 
-;fExit flags
-
+;--- fExit flags
 FEXIT_TRACE 	equ 01h		;trace exit
 FEXIT_NOSWITCH	equ 02h		;dont switch to debuggee screen
 FEXIT_CANCEL	equ 04h		;exit with cancel, quit, not go, perform
@@ -107,12 +103,11 @@ F80X87_FPU_PRESENT equ 01h
 F80X87_STATE_SAVED equ 02h
 F80X87_IGNORE	   equ 80h
 
-;fException flags
+;--- fException flags
 FEXC_USEXREGS	equ 1		;use saved values of CS:EIP and EFL
 FEXC_SAVESTACK	equ 2		;use saved values of SS:ESP
 
-;fTMode flags
-
+;--- fTMode flags
 FTMODE_NOTRACEIFCSINGDT equ 01h	;dont set trace if CS is in GDT
 FTMODE_CHECKINT 		equ 02h	;check if next instr is a INT
 FTMODE_NOTRACEFORINT	equ 04h	;reset trace flag if next instr is a INT
@@ -124,18 +119,15 @@ FTMODE_STOPIFCTRLLOST	equ 80h	;stop trace (prompt user) if control may be
 								;lost (unknown protected-mode breakpoint)
                                  
 
-;bTraceFlags flags
-
+;--- bTraceFlags flags
 FTRAC_LOG 			equ 01h	;log trace step
 
-;fUnass flags
-
+;--- fUnass flags
 FUNAS_NOSHORTDISP	equ 01h	;dont display "short" for short distances
 FUNAS_DISPLAYAX		equ 02h	;display "ax=xxxx" behind int 21/31
 FUNAS_TRANSLATECS	equ 80h	;translate CS to owner
 
-;fVideo flags
-
+;--- fVideo flags
 FVIDEO_GRAPH		equ 1	;debuggee is in a graphics mode                        
 FVIDEO_ISDBGER		equ 2	;screen owned by debugger?
 FVIDEO_NOSWITCH		equ 4	;dont switch to debugger screen
@@ -144,21 +136,23 @@ FVIDEO_WASINGRFX	equ 10h ;on last exit debuggee was in graphics mode!
 FVIDEO_ERROR		equ 40h	;error on video output
 FVIDEO_INIT			equ 80h	;debugger screen initialized?
 
-;fKeybrd flags
+;--- fKeybrd flags
 FKB_SYSREQ		equ 01h		;handle Sysreq
 FKB_EXECINT01	equ 02h		;exec an INT 01 in IRQ 1 routine for SYSREQ
 FKB_EXECINT03	equ 04h		;exec an INT 03 in IRQ 1 routine for SYSREQ
 FKB_ALTSCROLL	equ 08h		;use Alt-Scroll instead of SysReq
 
+if ?WINDOWS
+;--- fToolhelp flags
 FTH_REGISTERED		equ 1	;Toolhelp aktiv
+endif
 
-;--- dump flags
+;--- fDump flags
+FDT_RMADDR		equ 1
+FDT_SWITCHSCREEN equ 2		;switch to debuggee screen when getting bytes
 
-FDT_RMADDR		  equ 1
-FDT_SWITCHSCREEN  equ 2		;switch to debuggee screen when getting bytes
-
-FUT_RMADDR		  equ 1
-
+;--- fUnastype flags
+FUT_RMADDR		equ 1
 
 
 NF_NORMAL		  equ 0
@@ -168,13 +162,11 @@ NFY_STARTTASK	  equ 4
 SEM_NOOPENFILEERRORBOX equ 8000h
 SEM_FAILCRITICALERRORS equ 0001h
 
-
-;*** Flags fDosUsed ***
-
+;--- fDosUsed flags
 FDU_SAVED		  equ 1
 FDU_PSPSWITCHED   equ 2
 
-							  ;feature flags in EDX bei cpuid, eax=1
+;--- feature flags in EDX bei cpuid, eax=1
 ID_INTFPU		equ 00000001h ;FPU: FPU is integrated
 ID_V86EXT		equ 00000002h ;VME: supports CR4 VME/PVI, EFL VIF/VIP
 ID_IOBREAKS 	equ 00000004h ;DE:  supports i/o breakpoints + CR4 DE
@@ -199,10 +191,10 @@ ID_reserved7	equ 00100000h
 ID_reserved8	equ 00200000h
 ID_reserved9	equ 00400000h
 ID_MMX			equ 00800000h ;MMX supported
-							  ;rest reserved
 
 
-__VOID__	   equ 0		  ;datentypen der symboltabelle
+;--- data types of debxxf symbol table
+__VOID__	   equ 0
 __BYTE__	   equ 1
 __WORD__	   equ 2
 __BOOL__	   equ 3
@@ -226,7 +218,7 @@ _RDONLY_ equ 20h
 							  ;Flags SYMXTYP (bits 0-3 parmanzahl)
 							  ;bzw. default segment bei registern
 
-;*** Strukturen ***
+;*** structs
 
 DPMIEXC struct
 if ?32BIT
@@ -710,12 +702,16 @@ endm
   endif
 endm  
 
-@CallInt macro oldint
+@pushf macro
   if ?32BIT
 	pushfd
   else
 	pushf
   endif
+endm  
+
+@CallInt macro oldint
+	@pushf
 	call cs:oldint
 endm
 

@@ -24,17 +24,21 @@ endif
 	include isvbop.inc
 	.list
 
-?CATCHCTRLALTSYSREQ	equ 1
-?WIN95IRQ1SUP		equ 0	; special handling ctrl-alt-sysreq for win95
-?MAXSAVELINE		equ 12
-?PROMPTSIZE			equ 3
-?DOSLEEP			equ 1	; std=1
-?USEINT16			equ 0	; 1=use int 16h instead of BIOS variable 41Ah/41Ch
-?SAVEINT09			equ 0; 1 - ?WINDOWS
-?SAVEINT15RM		equ 1 - ?WINDOWS; 1=save/restore int 15h (because int 15h, ah=4Fh)
-?USERMINT09			equ 0	; call real mode IRQ1 (Int 09)?
-?DISABLEPD			equ 1 - ?WINDOWS
-;?INT2FIDLE		equ 1		; show idle state (?USEINT16=0)
+;--- there was a problem in hdpmi v3.19, causing a crash in debxxf after
+;--- a client has terminated and ?CATCHINT09 was active. Fixed in hdpmi v3.20
+
+?CATCHINT09		equ 1 - ?WINDOWS
+?LLSYSREQ		equ 1	; 1=low-level ctrl-sysreq detection
+?USERMINT09		equ 0	; 1=call real mode IRQ1 directly
+
+?SAVEINT09		equ 0	;1 - ?WINDOWS; not sure what the purpose of this is
+
+?MAXSAVELINE	equ 12
+?PROMPTSIZE		equ 3
+?DOSLEEP		equ 1	; std=1
+?USEINT16		equ 0	; 1=use int 16h instead of BIOS variable 41Ah/41Ch
+?SAVEINT15RM	equ 1 - ?WINDOWS; 1=save/restore int 15h (because int 15h, ah=4Fh)
+?DISABLEPD		equ 1 - ?WINDOWS; 1=disable "pointing device" while in debugger
 
 ;*** keyboard BIOS variables
 
@@ -48,27 +52,22 @@ ESCAPE	 equ 1Bh
 
 @callint16 macro func
 	mov ah, func
-if ?32BIT
-	pushfd
-else
-	pushf
-endif
-	call cs:[oldint16]
+	@CallInt [oldint16]
 endm
 
 	.DATA
 
-lastkey    dd 0 		;taste mit der die eingabe beendet wurde
+lastkey    dd 0			;taste mit der die eingabe beendet wurde
 ttycurpos  dd 0
-
-if ?USERMINT09
-rmint09  dd 0			;real mode int 09
-else
-  if ?32BIT
+if ?CATCHINT09
+ if ?USERMINT09
+rmint09    dd 0			;real mode int 09
+ endif
+ if ?32BIT
 oldint09 PF32 0
-  else
+ else
 oldint09 PF16 0
-  endif
+ endif
 endif
 
 if ?USEINT16
@@ -92,16 +91,16 @@ savedint15r dd 0
 endif
 
 kbdvartab label byte
-ife ?WINDOWS
-  if ?USERMINT09
+if ?CATCHINT09
+	@symbol 'KEYBFlags'	   ,__BYTE__, ,fKeybrd
+ if ?USERMINT09
 	@symbol 'INT_09RM'	   ,_RDONLY_+__RMLPTR__, ,rmint09
-  else
-	if ?32BIT
+ endif
+ if ?32BIT
 	@symbol 'INT_09'	   ,_RDONLY_+__FPTR__, ,oldint09
-	else
+ else
 	@symbol 'INT_09'	   ,_RDONLY_+__LPTR__, ,oldint09
-	endif
-  endif
+ endif
 endif
 kbdvartabend label byte
 
@@ -204,200 +203,158 @@ exit:
 	ret
 setkeys endp
 
-;*** not used: unter win95 (prerelease) muss
-;*** ein expliziter breakpnt gesetzt werden
+if ?CATCHINT09
 
-if ?WIN95IRQ1SUP
-handlewin95sysreq proc
-	push gs
-	push fs
-	push es
-	pushad
+if ?LLSYSREQ
+
+;--- ensure that the bits in the BIOS data are set to allow
+;--- Ctrl-SysReq detection.
+;--- it might be better to trap rm int 15h, ah=85h instead.
+
+setsysreqbits proc
 	push ds
-	pop es
-  if ?32BIT
-	mov ebx,[ebp+4*4]
-	mov eax,[ebp+5*4]
-  else
-	movzx ebx,word ptr [ebp+4*2]
-	mov ax,[ebp+5*2]
-  endif
-	lar edx,eax
+	mov ds, cs:[__flatsel]
+	mov ah, al
+	and al, 7Fh
+	cmp al, 1Dh			; CTRL?
 	jnz @F
-	test dh,8
-	jz @F
-	mov fs,eax
-	mov dl,00				 ;typ (prot mode)
-	mov cl,FBRP_AUTO
-	call insertbrkpnt
-	call SetTheBreaks
+	test ah,80h
+	setz al
+	shl al, 2
+	and byte ptr ds:[417h], 0FBh
+	or ds:[417h], al
+	jmp done
 @@:
-	popad
-	pop es
-	pop fs
-	pop gs
+	test cs:[fKeybrd], FKB_ALTSCROLL
+	jz usesysreq
+@@:
+	cmp al,46h			; SCROLL?
+	jnz done
+	test ah,80h
+	setz al
+	shl al, 4
+	and byte ptr ds:[418h], 0EFh
+	or ds:[418h], al
+	jmp done
+usesysreq:
+	cmp al,54h			; SYSREQ?
+	jnz done
+	test ah,80h
+	setz al
+	shl al, 2
+	and byte ptr ds:[418h], 0FBh	;reset sysreq
+	or ds:[418h], al
+done:
+	pop ds
 	ret
-handlewin95sysreq endp
+setsysreqbits endp
 endif
 
 ;*** int 09 interrupt handler
 
-ife ?WINDOWS
-
 myint09 proc far public
 
-
-ife ?USERMINT09	; ?USERMINT09 is zero, usually
-	push ds
-	push eax
-	in al,64h	;???
-	in al,60h
-	push eax
- if ?32BIT
-	pushfd
- else
-	pushf
- endif
  if ?HIDEINT09
 	test cs:[fMode], FMODE_INDEBUG
-	jnz @F
-	call cs:[oldi09p]
-	jmp sm1
-@@:
- endif
-	call cs:[oldint09]
-sm1:
-if ?CATCHCTRLALTSYSREQ
- if 0
-	mov ds,cs:[__flatsel]
-	in al,60h
+	jnz indebug
+  if ?LLSYSREQ
 	push eax
-	shr al,4
-	add al,'0'
-	cmp al,'9'
-	jbe @F
-	add al,7
-@@:
-	mov byte ptr ds:[0B8000h+78*2],al
+	in al, 64h
+	in al, 60h
+	push eax
+  endif
+	@CallInt [oldi09p]	; if debuggee won't set BIOS variables, we can't detect sysreq!
+  if ?LLSYSREQ
 	pop eax
-	and al,0Fh
-	add al,'0'
-	cmp al,'9'
-	jbe @F
-	add al,7
-@@:
-	mov byte ptr ds:[0B8000h+79*2],al
+	call setsysreqbits
+	pop eax
+  endif
+	jmp sm1
+indebug:
  endif
-	mov ds,cs:[__csalias]
-	pop eax			;get value of port 60h
-	test fKeybrd, FKB_SYSREQ
-	jz done
-	test fKeybrd, FKB_ALTSCROLL
-	jz notscroll
-	mov ah,al
-	and ah,7Fh
-	cmp ah,38h				;ALT pressed?
-	jnz @F
-	test al,80h
-	sete al
-	mov bAlt,al
-	jmp done
-@@:
-	test [bAlt],1
-	jz done
-	cmp al,46h				;SCROLL key?
-	jnz done
-	mov al,54h
-notscroll:
-	cmp al,54h
-	jz issysreq
-done:
-	pop eax
-	pop ds
-	@iret
-issysreq:
-	pop eax
+
+ife ?USERMINT09
+	@CallInt [oldint09]
+else
+	pushad
 	push es
-	push gs
-	mov ds,cs:[__csalias]
-	and [fMode], not FMODE_EXEACTIVE
-	test [fMode], FMODE_INDEBUG
-	jnz intr09_2
-	@loadflat
-;	and byte ptr @flat:[418h], not 4
- if 1
+	sub esp, sizeof RMCS
+	@loadesp ebp
+	mov eax, cs:[rmint09]
+	xor ecx, ecx
+	mov [ebp].RMCS.rCSIP, eax
+	mov [ebp].RMCS.rSSSP, ecx
+	mov [ebp].RMCS.rFlags, 002h	; IF clear
+	mov edi,ebp
+	push ss
+	pop es
+	xor ebx, ebx
+	@DpmiCall 302h		; call real mode far proc with IRET frame
+	add esp, sizeof RMCS
+	pop es
+	popad
+endif
+	test cs:[fMode], FMODE_INDEBUG	; do nothing while in debugger
+	jnz @F
+sm1:
+	test cs:[fKeybrd], FKB_SYSREQ
+	jnz checksysreq
+@@:
+exit:
+	@iret
+
+checksysreq:
 	push ds
-	pop es
-	@stroutc lf,"SysReq pressed",lf
- endif
+	push eax
+	mov ds, cs:[__flatsel]
+	mov ax, ds:[KBDSTAT]
+	test cs:fKeybrd, FKB_ALTSCROLL
+	jnz check_ctrlaltscroll
+	and al, ah
+	test al, 4	;sysreq+any ctrl?
+	pop eax
+	jnz issysreq
+	pop ds
+	jmp exit
+check_ctrlaltscroll:
+	and ax, 1004h	; any ctrl + scroll?
+	cmp ax, 1004h
+	pop eax
+	jz issysreq
+	pop ds
+	jmp exit
+issysreq:
+	mov ds, cs:[__csalias]
+	and [fMode], not FMODE_EXEACTIVE
+	@tprintf <"SysReq pressed",lf>
 	or fEntry, FENTRY_SYSREQ
-	test fKeybrd,FKB_EXECINT01 or FKB_EXECINT03
+	test fKeybrd, FKB_EXECINT01 or FKB_EXECINT03
 	jz settraceflg
-	test fKeybrd,FKB_EXECINT03
-	pop gs
-	pop es
+	test fKeybrd, FKB_EXECINT03
 	pop ds
 	jnz @F
-	int 01
+	int 1
 	@iret
 @@:
-	int 03
+	int 3
 	@iret
 settraceflg:
- if ?WIN95IRQ1SUP
-	cmp byte ptr [bWinVersion],4  ;Win95 Sonderbehandlung
-	jb @F
-	call handlewin95sysreq
-@@:
- endif
 	push ebp
 	@loadesp ebp
-	or byte ptr [ebp+4*4].IRETS.rFL+1, 1
+	or byte ptr [ebp+2*4].IRETS.rFL+1, 1
 	pop ebp
-	call SwitchToDebuggeeScreen
-intr09_2:
-	pop gs
-	pop es
 	pop ds
-intr09_1:
-endif ; ?CATCHCTRLALTSYSREQ
-;	sti			; since we call previous handler, sti is superfluous
 	@iret
-
-else  ;?USERMINT09
-
-		pushad
-		push es
-		sub esp, sizeof RMCS
-		@loadesp ebp
-;		mov eax,dword ptr cs:[rmint09+0]
-;		mov [ebp.2ah],eax
-		xor ecx,ecx
-		mov [ebp].RMCS.rSSSP, ecx	; real mode SS:SP auf Null
-		mov [ebp].RMCS.rFlags, 202h
-		mov edi,ebp
-		push ss
-		pop es
-		mov bx, 9
-		mov ax, 300h
-		int 31h			;real mode int 09 aufrufen
-		add esp, sizeof RMCS
-		pop es
-		popad
-;		 sti
-		@iret
-
-endif ;?USERMINT09
 
 myint09 endp
 
-endif
+endif ;?CATCHINT09
 
 ;*** translate key ***
 
 keytranstab label byte
 ;	db __CTRL_G,__F5_MAKE
-	db __CTRL_B,__F9_MAKE		 ;breakpoint an eip
+	db __CTRL_B,__F9_MAKE		 ;breakpoint at eip
 	db __CTRL_R,__F6_MAKE		 ;register
 	db __CTRL_E,__F7_MAKE		 ;unassemble
 	db __CTRL_W,__F8_MAKE		 ;trace
@@ -435,13 +392,14 @@ geti14char:
 @@:
 	ret
 
-if ?SAVEINT09
+if ?CATCHINT09
+ if ?SAVEINT09
 CheckInt09 proc
 	cmp word ptr saveCurInt09+?SEGOFFS,0
 	jnz done
 	dec word ptr saveCurInt09+?SEGOFFS
 	pushad
-	mov bl, 09h
+	mov bl, 9
 	mov ax, 204h
 	@DpmiCall
 	mov eax, cs
@@ -450,8 +408,8 @@ CheckInt09 proc
 	cmp edx, offset myint09
 	jz no09
 @@:
-	mov dword ptr saveCurInt09,edx
-	mov word ptr saveCurInt09+?SEGOFFS,cx
+	mov dword ptr saveCurInt09, edx
+	mov word ptr saveCurInt09+?SEGOFFS, cx
 	mov ecx, cs
 	mov edx, offset myint09
 	mov ax, 205h
@@ -461,6 +419,7 @@ no09:
 done:
 	ret
 CheckInt09 endp
+ endif
 endif
 
 ;*** get kbd state
@@ -562,18 +521,18 @@ setkbdbiosvars proc
 	MOV CH,BH
 ;	and byte ptr @flat:[KBDSTAT+1],not 4 ;reset Sys-Req
 	mov ax,@flat:[KBDSTAT]
-	and ah,not 4				;reset sys-req
-	test ch,80h				;key released or pressed?
+	and ah,not 4			; reset sys-req
+	test ch,80h				; key released or pressed?
 	jz @F
 	xor bl,0FFh
-	and al,bl					;reset flag
+	and al,bl				; reset flag
 	and ah,bl
 	jmp setflags
 @@:
-	or al,bl					;set flag
-	or ah,bl					;set flag
+	or al,bl				; set flag
+	or ah,bl				; set flag
 setflags:        
-	cmp cl,4					;RSHIFT,LSHIFT,CTRL,ALT?
+	cmp cl,4				; RSHIFT,LSHIFT,CTRL,ALT?
 	jnb @F
 	mov @flat:[KBDSTAT+1],ah
 	xor @flat:[KBDSTAT],ah
@@ -711,9 +670,9 @@ getmsgdos:
 	mov ah,3eh
 	@DosCall
 	mov [__inpstream],0
-	and byte ptr [__inpmode],not _DOSINP
+	and [__inpmode], not _DOSINP
 	jnz getmsgdos1
-	mov byte ptr [__inpmode],_KBDINP
+	mov [__inpmode], _KBDINP
 getmsgdos1:
 	xor eax,eax
 exit:
@@ -724,12 +683,12 @@ GetDosChar endp
 
 GetInpStatus proc stdcall public
 
-	test byte ptr [__inpmode],_SERINP
+	test [__inpmode], _SERINP
 	jz @F
 	call GetComStatus
 	jnz exit
 @@:
-	test byte ptr [__inpmode],_KBDINP or _ALTINP
+	test [__inpmode], _KBDINP or _ALTINP
 	jz @F
 	call GetKbdStatus
 ;;	jnz exit
@@ -788,38 +747,38 @@ getcharex proc stdcall public
 	sti 					; enable interrupts
 @@:
 getchar_1:
-	test byte ptr [__inpmode],_DBGINP
+	test [__inpmode], _DBGINP
 	jz @F
 	mov ax,0001
 	int 41h
 	cmp al,1
 	ja exit
 @@:
-	test byte ptr [__inpmode],_SERINP
+	test [__inpmode], _SERINP
 	jz @F
 	call GetComChar
 	and ax,ax
 	jnz exit
 @@:
-	test byte ptr [__inpmode],_KBDINP
+	test [__inpmode], _KBDINP
 	jz @F
 	call GetKbdChar
 	and ax,ax
 	jnz exit
 @@:
-	test byte ptr [__inpmode],_DOSINP
+	test [__inpmode], _DOSINP
 	jz @F
 	call GetDosChar
 	and ax,ax
 	jnz exit
 @@:
-	test byte ptr [__inpmode],_ALTINP
+	test [__inpmode], _ALTINP
 	jz @F
 	call GetAltChar
 	and ax,ax
 	jnz exit
 @@:
-	test byte ptr [__inpmode],_I14INP
+	test [__inpmode], _I14INP
 	jz @F
 	call geti14char
 	and ax,ax
@@ -900,13 +859,13 @@ checklastkey proc stdcall
 	cmp ah,__F11_SCAN
 	jnz @F
 	mov dword ptr [ebx],"1 J"
-	inc byte ptr [fSkipLF]
+	inc [fSkipLF]
 	jmp dontsave
 @@:
 	cmp ah,__F8_MAKE
 	jnz @F
 	mov word ptr [ebx],"T"
-	inc byte ptr [fSkipLF]
+	inc [fSkipLF]
 	jmp dontsave
 @@:
 	cmp ah,__F9_MAKE
@@ -918,7 +877,7 @@ checklastkey proc stdcall
 	cmp ah,__F10_MAKE
 	jnz @F
 	mov word ptr [ebx],"P"
-	inc byte ptr [fSkipLF]
+	inc [fSkipLF]
 	jmp dontsave
 @@:
 	cmp ah,__F7_MAKE
@@ -939,8 +898,8 @@ checklastkey proc stdcall
 	cmp ah,__F4_MAKE
 	jnz @F
 	mov word ptr [ebx],"V"
-;	inc byte ptr [fSkipLF]
-	inc byte ptr [fSkipLF]
+;	inc [fSkipLF]
+	inc [fSkipLF]
 	jmp dontsave
 @@:
 	cmp ah,__F1_MAKE
@@ -1246,7 +1205,7 @@ CSRPOS ends
 
 setCursorPos proc stdcall xy:CSRPOS
 
-	test byte ptr [__outmode],_SEROUT ;TTY devices
+	test [__outmode], _SEROUT ;TTY devices
 	jz @F
 	mov al, byte ptr xy.wCol
 	mov ah, byte ptr ttycurpos
@@ -1257,11 +1216,11 @@ setCursorPos proc stdcall xy:CSRPOS
 @@:
 	mov al, byte ptr xy.wCol
 	mov ah, byte ptr xy.wRow
-	test byte ptr [__outmode],_VIOOUT
+	test [__outmode], _VIOOUT
 	jz @F
 	invoke VioSetCurPosDir, addr stdcrt, eax
 @@:
-	test byte ptr [__outmode],_ALTOUT
+	test [__outmode], _ALTOUT
 	jz @F
 	invoke VioSetCurPosDir, addr altcrt, eax
 @@:
@@ -1273,7 +1232,7 @@ setCursorPos endp
 
 getCursorPos proc
 
-	test byte ptr [__outmode],_VIOOUT
+	test [__outmode], _VIOOUT
 	jz @F
 	invoke VioGetCurPosDir, addr stdcrt
 	mov cl,al
@@ -1281,7 +1240,7 @@ getCursorPos proc
 	movzx ax,cl
 	jmp exit
 @@:
-	test byte ptr [__outmode],_ALTOUT
+	test [__outmode], _ALTOUT
 	jz @F
 	invoke VioGetCurPosDir, addr altcrt
 	mov cl,al
@@ -1289,7 +1248,7 @@ getCursorPos proc
 	movzx ax,cl
 	jmp exit
 @@:
-	test byte ptr [__outmode],_SEROUT
+	test [__outmode], _SEROUT
 	jz @F
 	mov eax,ttycurpos
 	jmp exit
@@ -1302,7 +1261,7 @@ getCursorPos endp
 
 
 GetInsertStatus proc
-	mov ah, @flat:[417h]
+	mov ah, @flat:[KBDSTAT]
 	ret
 GetInsertStatus endp
 
@@ -1521,7 +1480,7 @@ bsv:					; handle backspace
 	add dx, ax
 	invoke setCursorPos, edx
 	pop ecx
-bsv3:
+bsv3:					; <--- DEL key
 	or byte ptr flags, FL_BSOUT
 	mov esi,edi
 	dec edi
@@ -1577,6 +1536,16 @@ ins1:					; error at insert
 	retn
 GetString endp
 
+installirqkbd proc stdcall public
+	test [__inpmode], _KBDINP or _ALTINP
+	jz @F
+	or byte ptr [wPicOn], 02h   ;enable IRQ 01 (kbd)
+	or byte ptr [wPicOn+1], 10h	;enable IRQ 12 (PS/2 mouse)
+@@:
+	ret
+installirqkbd endp
+
+
 ;*** handling of interrupt vector 09 is different for dos / windows
 ;*** for DOS simply save the vector now,
 ;*** set it to our value and reset it on termination
@@ -1598,8 +1567,15 @@ if ?SAVEINT15RM
 	mov word ptr oldint15r+2, cx
 endif
 
-ife ?WINDOWS
- ife ?USERMINT09
+if ?CATCHINT09
+ if ?USERMINT09
+;--- our protected-mode int 09 will call rm int 9 by "sim rm int"
+	mov bl, 9
+	mov ax, 200h	; get rm int
+	int 31h
+	mov word ptr rmint09+0, dx
+	mov word ptr rmint09+2, cx
+ endif
 	mov bl, 9
 	mov ax, 204h	; get pm int
 	@DpmiCall
@@ -1613,34 +1589,24 @@ ife ?WINDOWS
 	mov edx, offset myint09
 	mov ax, 205h
 	@DpmiCall
- else
-	mov bl, 9
-	mov ax, 200h	; get rm int
-	int 31h
-	mov word ptr rmint09+0, dx
-	mov word ptr rmint09+2, cx
- endif  ;!?USERMINT09
 endif
 	ret
 
 kbd_init endp
 
+;--- exit debugger
 ;--- since ?HIDEINT09 may be 1,
 ;--- it's important NOT to use INT 31h directly here
 ;--- or at least check that we're called AFTER int 31h is restored
 ;--- ( usually we are NOT! )
 
 kbd_exit proc public
-ife ?WINDOWS
- ife ?USERMINT09
+if ?CATCHINT09
 	@tprintf <"restore int 09",lf>
-	mov cx, word ptr   [oldint09+?SEGOFFS]
 	mov edx, dword ptr [oldint09+0]
+	mov cx, word ptr   [oldint09+?SEGOFFS]
 	mov bl, 9
 	@DpmiCall 205h
- else
-;--- restore rm int 09?
- endif
 endif
 	ret
 kbd_exit endp
@@ -1693,22 +1659,24 @@ endif
     ret
 kbd_setdebuggeevecs endp
 
-ife ?WINDOWS
-
-;--- current int 09 is invalid, return valid vector in CX:(E)DX
+;--- after a debuggee has terminated,
+;--- check protected-mode interrupt 09
+;--- current value is in AX:(E)DX
+;--- set cx to new cs if value isn't ok.
 
 kbd_checkpmints proc public
-	mov ecx, dword ptr oldint09
-	mov dword ptr oldi09p, ecx
- if ?32BIT
-	mov cx, word ptr oldint09+4
-	mov word ptr oldi09p+4, cx
- endif                
+if ?CATCHINT09
+	push ebx
+	mov ebx, cs
+	cmp ax, bx
+	pop ebx
+	jz @F
 	mov ecx, cs
-	mov edx, myint09
+	mov edx, offset myint09
+@@:
+endif
 	ret
 kbd_checkpmints endp
-endif
 
 ;--- command .KBD
 

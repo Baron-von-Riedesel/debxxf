@@ -111,18 +111,18 @@ display1 endp
 
 _display proc c public pb:PARMBLK
 
-	mov  cl,byte ptr pb.wArgc
-	and  cl,cl
+	mov  cl, byte ptr pb.wArgc
+	and  cl, cl
 	jz	 display_ex
-	lea  esi,a1
-	lea  ebx,pb.dwOffs1
+	lea  esi, a1
+	lea  ebx, pb.dwOffs1
 @@:
 	push ecx
 	push ebx
 	call display1
 	pop  ebx
-	add  esi,size ARGDESC
-	add  ebx,3*4			;je 3 parameter pro argument
+	add  esi, sizeof ARGDESC
+	add  ebx, 3*4			;je 3 parameter pro argument
 	pop  ecx
 	dec  cl
 	jnz  @B
@@ -132,21 +132,21 @@ _display endp
 
 _myprintf proc c public pb:PARMBLK
 
-	mov 	ecx,pb.wArgc
-	mov 	esi,esp
-	lea 	ebx,pb.dwOffs2
-	dec 	ecx
-	jecxz	myprintf1
+	mov ecx, pb.wArgc
+	mov esi, esp
+	lea ebx, pb.dwOffs2
+	dec ecx
+	jecxz myprintf1
 @@:
-	mov 	eax,3*4
-	mul 	ecx
-	push	[ebx+eax-3*4]
-	loop	@B
+	mov eax, 3*4
+	mul ecx
+	push [ebx+eax-3*4]
+	loop @B
 myprintf1:
-	push	pb.dwOffs1
-	call	printf
-	mov 	esp,esi
-	invoke	_crout
+	push pb.dwOffs1
+	call printf
+	mov esp, esi
+	invoke _crout
 	ret
 _myprintf endp
 

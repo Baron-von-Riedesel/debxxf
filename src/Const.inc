@@ -6,7 +6,6 @@ _TRACE_ 		= 1			; trace on
 else
 _TRACE_ 		= 0			; trace off
 endif
-_HSTKKORR_		equ 50h
 _IDTVECS_		equ 0Fh		; no of supported IDT vectors (Trap)
 
 ?HEAPSIZE		equ 4000h	; debugger heap ( beyond 64 kB boundary! )
@@ -24,12 +23,11 @@ endif
 ?CHECKINDOS		equ 1		; check InDOS flag
 ?USESYMBOLS		equ 1		; search symbols in unassemble()
 ;?CHECKINDOSVALID equ 1		; ??? (windows problems?)
-?NOKBDIRQ		equ 0		; use keyboard port 60/64 polling
 ?FLOATREGS		equ 1		; save/restore floating point registers
 ?MMXREGS		equ 1		; support MMX registers
 ?XMMREGS		equ 1		; support XMM registers
 ?SYMTRACE		equ 1		; activate STRAC (???)
-?CHECKSEGREGS	equ 1		; ???
+?CHECKSEGREGS	equ 1		; ??? most likely unnecessary
 ife ?WINDOWS
 ?WATCHI2F		equ 1		; remember+use int 2F on entry
 else
@@ -41,7 +39,8 @@ endif
 ?RMCALLBACK		equ 0		; 1=use rm callback instead of raw mode switch for mode change
 ?EXPLENV		equ 0		; environment when loading program
 ?USEFLATR0CS	equ 1		; in ring 0 set base of CS to 0
-?USEHOSTSTACK	equ 1		; ???
+?USEHOSTSTACK	equ 1		; don't use debugger stack when debuggee is loaded
+?HSTACKCORR		equ 50h		; size of stack correction if ?USEHOSTSTACK is active
 ?RESETVIDEOONSAVESTATE = 1	; must be 1
 ?ALLOWSTI		equ 0		; 0=@cli und @sti are dummy
 ?ENTRYFROMRMPROT equ 1		; display if entry from real mode
@@ -50,7 +49,7 @@ if ?32BIT
 else
 ?SUPI4112		equ 1		; display int 41h, ax=0012h, ds:si in debugger
 endif
-?WIN32REBOOT	equ 0		; ???
+?WIN32REBOOT	equ 0		; ??? is a Win9X thing (reboot.vxd) for Int 01
 ?SUPPBRL		equ 0		; support BRL command (list HW breaks)
 ?USERMESP		equ 0		; save real-mode ESP, not SP
 ?HWBREAKS		equ 1		; make usage of hwbreaks optional
@@ -64,6 +63,9 @@ endif
 ;--- and/or interrupt vectors 08/1C.
 ;?SETEXCVECS	equ 1		; modify exc 0d/0e (+int 08/1c) while in debugger
 ?SETEXCVECS	equ 1 - ?WINDOWS; modify exc 0d/0e (+int 08/1c) while in debugger
+
+;--- todo: check if ?SAVEINT08 works flawless
+;--- particularly check if it's ok NOT to restore the vectors (see dpmixxfd.asm)
 ?SAVEINT08	equ 1			; modifies int 08+1C; active only if ?SETEXCVECS is also 1
 
 ?STOPONEXIT	equ 0			;windows: activate debugger if debuggee has terminated
@@ -80,17 +82,24 @@ else
 ?SUPPDOS4GW	equ 0
 endif
 
+;--- ?HIDEINTXX: the idea was/is to prevent the debuggee from
+;--- changing certain interrupt vectors. For this, int 21h ah=25h/35h
+;--- and int 31h ax=204h/205h are trapped and the vectors to read/write
+;--- are just read from/saved to debugger variables. This implies that
+;--- the int vectors themselves have to be trapped and the vectors set
+;--- by the debuggee be called while the debuggee is active.
+
 if ?WINDOWS
 ?HIDEINT01	equ 0
 ?HIDEINT09	equ 0
 ?HIDEINT21	equ 0
 else
 ?HIDEINT01	equ 1
-?HIDEINT09	equ 1
+?HIDEINT09	equ 1	;ensures that debxxf can detect sysreq while the debuggee is running
 ?HIDEINT21	equ 0	;todo: explain what 1 is supposed to achieve!
 endif
 
-if ?HIDEINT01 or ?HIDEINT21 or ?HIDEINT09
+if ?HIDEINT01 or ?HIDEINT09 or ?HIDEINT21
 ?WATCHI21	equ 1	;watch int 21h, ax=25xx/35xx
 ?WATCHI31	equ 1	;watch int 31h, ax=0202/0203 and ax=0204/0205
 else

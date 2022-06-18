@@ -171,10 +171,13 @@ fUnass db FUNAS_DISPLAYAX
 			; 0=FUNAS_NOSHORTDISP: dont display "short"
 			; 1=FUNAS_DISPLAYAX: display "(ax=xxxx) at int21/31
 			; 7=FUNAS_TRANSLATECS: display owner as segment
-fKeybrd db FKB_SYSREQ or FKB_EXECINT01	;handle sysreq
-			; 0=exec an INT 01 in IRQ 1 routine if SYSREQ is pressed
+fKeybrd db FKB_SYSREQ or FKB_EXECINT03
+			; 0=FKB_SYSREQ: handle SYSREQ
+			; 1=FKB_EXECINT01: exec int 01 on SYSREQ
+			; 2=FKB_EXECINT03: exec int 03 on SYSREQ
+			; 3=FKB_ALTSCROLL: use scroll instead of sysreq
 
-fSkipLF		db 0
+fSkipLF		db 0		; strange flag to skip lfs in key translations...
 fCPUMode	db 0		; CPU mode bei real mode entry (V86/real)
 fIrq		db 1		; 1=Interrupts enabled in debugger
 excentry	db 0		; count exception entry
@@ -194,7 +197,7 @@ endif
 bpCount		db 0		; number of breakpoints hit
 ifcount		db 0		; .IF count
 elsecnt		db 0		; .ELSE count
-fNotActive	db 0 		; flag bei if/else/endif: interpreter deaktiv?
+fNotActive	db 0		; flag bei if/else/endif: interpreter deaktiv?
 fEcho		db 1		; display active
 fTrace		db 0		; echo command line bei LINENOTEMPTY
 ife ?WINDOWS
@@ -258,31 +261,31 @@ endif
 ;--- 64=loaddll16
 ;--- 65=delmodule16
 notifylog label dword	; 8*32=256 bits
-;			  	           1               0
+;			               1               0
 ;			---C---8---4---0---C---8---4---0
 		dd	00000000000001000000000000000100b	;00-1F
-;		  	               3               2
+;			               3               2
 ;			---C---8---4---0---C---8---4---0
 		dd	00000000000000000000000000000000b	;20-3F
-;		  	               5               4
+;			               5               4
 ;			---C---8---4---0---C---8---4---0
 		dd	00000010000001010000000000000000b	;40-5F
-;		  	               7               6
+;			               7               6
 ;			---C---8---4---0---C---8---4---0
 		dd	00000000000000000000000000110100b	;60-7F
-		dd	4 dup (0)
+		dd 4 dup (0)
 
 notifyactive label dword	; 4*32=128 bits
-;			  	           1               0
+;			               1               0
 ;			---C---8---4---0---C---8---4---0
 		dd	00000000000000000000000000000000b	;00-1F
-;		  	               3               2
+;			               3               2
 ;			---C---8---4---0---C---8---4---0
 		dd	00000000000000000000000000000000b	;20-3F
-;		  	               5               4
+;			               5               4
 ;			---C---8---4---0---C---8---4---0
 		dd	00000000000000000000000000000000b	;40-5F
-;		  	               7               6
+;			               7               6
 ;			---C---8---4---0---C---8---4---0
 		dd	00000000000000000000000000000000b	;60-7F
 
@@ -305,7 +308,7 @@ pHeapMax	dd 0		; max heap address
 pHlpFile	dd 0
 if ?WINDOWS
 hdeb16fwh			dd 0	;hModule of deb16fwh.dll
-szListModule 		dd CCStr("ListModule")
+szListModule		dd CCStr("ListModule")
 pListModule32		dd 0
 					dd CCStr("ListProcess")
 pListProcess32		dd 0
@@ -331,25 +334,25 @@ dwBopSel	dd 0
 endif
 pMacros		dd 0		; linked list of loaded macros
 workselbase dd -1
-dwFormStr dd 0
+dwFormStr dd 0			; format string used for ???
 
 if 0
-dwLoadedLibs   dd 0 	; geladene DLLs freigeben
+dwLoadedLibs dd 0		; geladene DLLs freigeben
 libhandles label dword	; handles der geladenen 16bit DLLs
-		  dd ?MAXLIBS dup (0)
+			dd ?MAXLIBS dup (0)
 endif
 
 pKbdBuff  dd offset linebuffer
 
-idtexc	   dd 0
-idterrc    dd 0
-dstemp	   dd 0
+idtexc	dd 0
+idterrc dd 0
+dstemp	dd 0
 
 fEscapemode db 0
 pSaveState	dd 0		; start linked list of savestates
 dwLastRC	dd 0
 MyBase		dd 0		; lineare adresse speicherbereich
-dwTmp		dd 0 		; fuer diverses
+dwTmp		dd 0		; fuer diverses
 cmdline		db 00,0Dh,00,00
 
 params label dword		; fuer int 21,4Bh
@@ -375,7 +378,7 @@ fUseTH		db 1
 fToolHelp	db 0		; bit 0: FTH_REGISTERED
 endif
 
-pNearHeap	 dd startofheap  ;heap im unteren 64k bereich von DS
+pNearHeap	dd startofheap  ;heap im unteren 64k bereich von DS
 
 eTraps		dd ?ETRAPS	; what exceptions (0-1F) are trapped?
 eStops		dd ?ESTOPS	; on what exceptions the debugger will stop
@@ -415,9 +418,7 @@ MSRPI	equ 00001000100011110111101111110111b	;pentium
 
 rmtraps   dd 00000000000000000000000001001011b	;0,1,3 und 6 in RM
 
-if ?USETOOLHELP
-pmtraps   dd 00000000000000000000000000000000b
-else
+ife ?WINDOWS
 pmtraps   dd 00000000000000000000000000000010b	;trap int 1 in PM
 endif
 
@@ -431,8 +432,9 @@ oldi05r  dd 0
 oldi06r  dd 0
 oldi07r  dd 0
 
-oldpmvecs label fword
+ife ?WINDOWS
 if ?32BIT
+oldpmvecs label fword
 oldi00p  PF32 0
 oldi01p  PF32 0
 oldi02p  PF32 0
@@ -449,7 +451,9 @@ oldi0Cp  PF32 0
 oldi0Dp  PF32 0
 oldi0Ep  PF32 0
 oldi0Fp  PF32 0
+SIZEOLDPMVECS equ ($ - offset oldpmvecs) / sizeof fword
 else
+oldpmvecs label dword
 oldi00p  PF16 0
 oldi01p  PF16 0
 oldi02p  PF16 0
@@ -466,7 +470,10 @@ oldi0Cp  PF16 0
 oldi0Dp  PF16 0
 oldi0Ep  PF16 0
 oldi0Fp  PF16 0
+SIZEOLDPMVECS equ ($ - offset oldpmvecs) / sizeof dword
 endif
+endif
+
 if ?HIDEINT21
  if ?32BIT
 oldi21p  PF32 0
@@ -515,6 +522,9 @@ if _IDTVECS_ gt 8
 	dd offset int0Fidtentry
 endif
 
+;--- size of mypmvecs must match size of oldpmvecs
+
+ife ?WINDOWS
 mypmvecs label dword
 if ?CS16ALIAS
 	dd offset divbyzero_16	;00
@@ -550,6 +560,7 @@ else
 	dd offset xxxirqx		;0D
 	dd offset xxxirqx		;0E
 	dd offset xxxirqx		;0F
+endif
 endif
 
 if ?WINDOWS
@@ -770,7 +781,7 @@ argend label byte
 
 	.const
 
-deffrmstr db cr,"eax=%X,ebx=%X,ecx=%X,edx=%X,esi=%X,edi=%X,ebp=%X",cr,lf
+deffrmstr db cr,"eax=%X,ebx=%X,ecx=%X,edx=%X,esi=%X,edi=%X,ebp=%X",lf
           db "efl=%X,cs:eip=%X:%X,ss:esp=%X:%X,ds=%X,es=%X,fs=%X,gs=%X",lf
 szNull    db 00
 
@@ -1197,7 +1208,9 @@ dpmivartabend label byte
 	@symbol 'HIBYTE'	   ,_FNCALL_+_RDONLY_+__BYTE__,1,_highbyte
 	@symbol 'LOBYTE'	   ,_FNCALL_+_RDONLY_+__BYTE__,1,_lowbyte
 	@symbol 'TYPE'		   ,_FNCALL_+_RDONLY_+__BYTE__,1,gettype
+ife ?WINDOWS
 	@symbol 'TPMI'		   ,_FNCALL_+_RDONLY_+__BYTE__,2,setpmtrap
+endif
 	@symbol 'TRMI'		   ,_FNCALL_+_RDONLY_+__BYTE__,2,setrmtrap
 	@symbol 'TEXC'		   ,_FNCALL_+_RDONLY_+__BYTE__,2,setextrap
 	@symbol 'TIDT'		   ,_FNCALL_+_RDONLY_+__BYTE__,2,setidttrap
@@ -1208,7 +1221,9 @@ trapvars label byte
 	@symbol 'IDTvec'	   ,_FNCALL_+_RDONLY_+__BYTE__,1,idtuse
 	@symbol 'EXCEption (first)',_FNCALL_+_RDONLY_+__BYTE__,1,etrapsfirstout
 	@symbol 'EXCeption (last)',_FNCALL_+_RDONLY_+__BYTE__,1,etrapslastout
+ife ?WINDOWS
 	@symbol 'PMInt' 	   ,_FNCALL_+_RDONLY_+__BYTE__,1,pmtrapsout
+endif
 	@symbol 'RMInt' 	   ,_FNCALL_+_RDONLY_+__BYTE__,1,rmtrapsout
 	@symbol 'I41Visible'   ,_RDONLY_+__BYTE__, ,cVisible_i41
 	@symbol 'NOTIFY'	   ,_FNCALL_+_RDONLY_+__BYTE__,1,notifyout
@@ -1298,7 +1313,6 @@ endif
 	@symbol 'UNASSFlags'   ,__BYTE__, ,fUnass
 	@symbol 'DUMPFlags'    ,__BYTE__, ,fDump
 	@symbol 'TRACEFlags'   ,__BYTE__, ,fTMode
-	@symbol 'KEYBFlags'	   ,__BYTE__, ,fKeybrd
 	@symbol 'RMBreak'      ,__WORD__, ,wRMBreak
 	@symbol 'RMStop'       ,__WORD__, ,wRMStop
 	@symbol 'PMBreak'      ,__WORD__, ,wPMBreak
@@ -1315,13 +1329,14 @@ endif
 ;	@symbol 'SPICValue'    ,__BYTE__, ,wPicValue+1
 	@symbol 'IRQ'		   ,_FNCALL_+__BOOL__, ,getfIrq
 
+intvartabend label byte
+
 cpuvars label byte
 	@symbol 'CPUID_Family', 	_RDONLY_+__BYTE__, ,idcpu,,symcpufam
 	@symbol 'CPUID_Model_Step', _RDONLY_+__BYTE__, ,idstep,,symcpumodel
 	@symbol 'CPUID_FLags'  ,	_RDONLY_+__DWORD__, ,idflags,,symcpuflags
 	@symbol 'CPUID_MAnuf'  ,	_FNCALL_+_RDONLY_+__STRING__, ,getmanu,,symcpumanu
-
-intvartabend label byte
+cpuvarsend label byte
 
 tregister label byte
 	@symbol 'TEAX', 	__DWORD__, ,tregs.rEax
@@ -1575,7 +1590,7 @@ tModout		db ".do",0
 
 	jmp @F
 
-szDbgDll db ?MYNAME,' V2.10 - dpmi debugger (C) Andreas Grech 1993-2022',00
+szDbgDll db ?MYNAME,' V2.11 - dpmi debugger (C) Andreas Grech 1993-2022',00
 
 @@:
 	mov dword ptr es:[ebx].DEBUGPARM.Enable, offset _Enable
@@ -1663,37 +1678,20 @@ if ?WATCHI31
 myint31 proc
 
 	@switch32bit
-if 0
-	push eax
-	mov eax,es
-	test al,4
-	jnz @F
-	and ax,ax
-	jz @F
-	int 3
-@@:
-	pop  eax
-endif
 	cmp ax, 202h				;get exception vector?
 	jz dpmi02023
 	cmp ax, 203h				;set exception vector?
 	jz dpmi02023
-if ?WINDOWS
+ if ?WINDOWS
 	cmp ax, 283h				;set exception vector?
 	jz dpmi02023
-endif
-if 0
-	cmp ax, 0B00h				;dont allow HW breaks to alloc
-	jnz @F
-	mov ax, 0B23h
-@@:
-endif
-if ?WATCHI21
+ endif
+ if ?WATCHI21
 	cmp ax, 204h				;get interrupt vector?
 	jz dpmi0204
 	cmp ax, 205h				;set interrupt vector?
 	jz dpmi0205
-endif
+ endif
 default:
 	jmp cs:[oldint31]
 dpmi02023:						;get/set exception vector
@@ -1710,21 +1708,21 @@ dpmi02023:						;get/set exception vector
 	movzx ebx, bl
 	test al,1					; set or get?
 	jnz dpmi0203
-ife ?32BIT
+ ife ?32BIT
 	mov dx, word ptr cs:[ebx*8+oldexcvecs+0]
-else
+ else
 	mov edx, dword ptr cs:[ebx*8+oldexcvecs+0]
-endif
+ endif
 	mov cx, word ptr cs:[ebx*8+oldexcvecs+?SEGOFFS]
 	jmp exitexc
 dpmi0203:
 	push ds
 	mov   ds,cs:[__csalias]
-ife ?32BIT
+ ife ?32BIT
 	mov word ptr [ebx*8+oldexcvecs+0],dx
-else
+ else
 	mov dword ptr [ebx*8+oldexcvecs+0],edx
-endif
+ endif
 	mov word ptr [ebx*8+oldexcvecs+?SEGOFFS],cx
 	pop ds
 exitexc:
@@ -1735,20 +1733,21 @@ exit:
 if ?WATCHI21
 dpmi0204:
 dpmi0205:
-if ?HIDEINT01
+ if ?HIDEINT01
 	cmp bl, 1				;int 01?
 	jz dpmi020x_01
-endif        
+ endif
 if ?HIDEINT09
 	cmp bl, 9				;int 09?
 	jz dpmi020x_09
 endif        
-if ?HIDEINT21
+ if ?HIDEINT21
 	cmp bl, 21h				;int 21?
 	jz dpmi020x_21
-endif        
+ endif
 	jmp default				;jump to previous handler
-if ?HIDEINT01        
+
+ if ?HIDEINT01
 dpmi020x_01:        
 	bt cs:pmtraps,1
 	jnc default
@@ -1772,33 +1771,9 @@ dpmi205_01:
 	mov word ptr [oldi01p+?SEGOFFS],cx
 	pop ds
 	jmp exit
-endif				;?HIDEINT01
+ endif				;?HIDEINT01
 
-if ?HIDEINT21        
-dpmi020x_21:        
-	cmp al, 5
-	jz dpmi205_21
-  ife ?32BIT
-	mov dx, word ptr cs:[oldi21p+0]
-  else
-	mov edx, dword ptr cs:[oldi21p+0]
-  endif
-	mov cx, word ptr cs:[oldi21p+?SEGOFFS]
-	jmp exit
-dpmi205_21:
-	push ds
-	mov ds,cs:[__csalias]
-  ife ?32BIT
-	mov word ptr [oldi21p+0],dx
-  else
-	mov dword ptr [oldi21p+0],edx
-  endif
-	mov word ptr [oldi21p+?SEGOFFS],cx
-	pop ds
-	jmp exit
-endif		 ;?HIDEINT21
-
-if ?HIDEINT09        
+ if ?HIDEINT09        
 dpmi020x_09:        
 ;	bt cs:pmtraps,9
 ;	jnc default
@@ -1822,9 +1797,33 @@ dpmi205_09:
 	mov word ptr [oldi09p+?SEGOFFS],cx
 	pop ds
 	jmp exit
-endif		 ;?HIDEINT09
+ endif		 ;?HIDEINT09
 
-endif		 ;?WATCHI21
+ if ?HIDEINT21        
+dpmi020x_21:        
+	cmp al, 5
+	jz dpmi205_21
+  ife ?32BIT
+	mov dx, word ptr cs:[oldi21p+0]
+  else
+	mov edx, dword ptr cs:[oldi21p+0]
+  endif
+	mov cx, word ptr cs:[oldi21p+?SEGOFFS]
+	jmp exit
+dpmi205_21:
+	push ds
+	mov ds,cs:[__csalias]
+  ife ?32BIT
+	mov word ptr [oldi21p+0],dx
+  else
+	mov dword ptr [oldi21p+0],edx
+  endif
+	mov word ptr [oldi21p+?SEGOFFS],cx
+	pop ds
+	jmp exit
+ endif		;?HIDEINT21
+
+endif		;?WATCHI21
 
 myint31 endp
 
@@ -2162,7 +2161,7 @@ checkifshouldwait proc stdcall public uses eax
 	cmp al,-1					;aktuelle Zeilenanzahl verwenden
 	jnz @F
 	mov al,altcrt.rows
-	test [__outmode],_ALTOUT
+	test [__outmode], _ALTOUT
 	jnz @F
 	mov al,@flat:[484h]
 @@:
@@ -2211,6 +2210,31 @@ __strout32 proc public
 	popad
 	ret
 __strout32 endp
+
+;--- this routine copied from lib32n
+;--- and adjusted so it translates lf to cr+lf
+
+___strout@4 proc public
+	pushad
+	@loadesp ebp
+	pushfd
+	cld
+	mov esi,[ebp+32+4]
+nextchar:
+	lodsb
+	and al,al
+	jz done
+	cmp al, 10
+	jnz @F
+	@putchr 13
+@@:
+	@putchr al
+	jmp nextchar
+done:
+	popfd
+	popad
+	ret 4
+___strout@4 endp
 
 ;*** die errorout routine sollte immer aufgerufen werden koennen ***
 
@@ -2280,24 +2304,24 @@ _errorout endp
 
 errorformout proc
 
-	mov 	ah,al
-	or		al,20h
-	cmp		al,'x'
-	jz		isok
-	cmp		al,'u'
-	jz		isok
-	cmp		al,'s'
-	jnz		isnotok
+	mov ah,al
+	or al,20h
+	cmp al,'x'
+	jz isok
+	cmp al,'u'
+	jz isok
+	cmp al,'s'
+	jnz isnotok
 isok:
-	push	edx
-	mov		al,'%'
-	movzx	eax,ax
-	push	eax
+	push edx
+	mov al,'%'
+	movzx eax,ax
+	push eax
 	@loadesp ecx
 	invoke printf, ecx, dword ptr ss:[ebx]
-	add		ebx, 4
-	add		esp, 4
-	pop		edx
+	add ebx, 4
+	add esp, 4
+	pop edx
 	ret
 isnotok:
 	@putchr al
@@ -2307,35 +2331,35 @@ errorformout endp
 ;*** fehler# in [#ERRORS] gefunden ***
 
 msgout proc
-	call	errmsgout			;display error# + type
-	lea 	ebx,[ebp+12]		;zeiger auf parameter
+	call errmsgout			;display error# + type
+	lea ebx,[ebp+12]		;zeiger auf parameter
 nextchar:
-	mov 	al,@flat:[esi]
-	inc 	esi
-	and 	al,al
-	jz		exit
-	cmp 	al,cr
-	jz		exit
-	cmp 	al,'%'
-	jnz 	@F
-	mov 	al,@flat:[esi]
-	inc 	esi
-	and 	al,al
-	jz		exit
-	call	errorformout
-	jmp 	nextchar
+	mov al,@flat:[esi]
+	inc esi
+	and al,al
+	jz exit
+	cmp al,cr
+	jz exit
+	cmp al,'%'
+	jnz @F
+	mov al,@flat:[esi]
+	inc esi
+	and al,al
+	jz exit
+	call errorformout
+	jmp nextchar
 @@:
-	cmp 	al,"\"
-	jnz 	@F
-	mov 	al,@flat:[esi]
-	inc 	esi
-	and 	al,al
-	jz		exit
-	call	msgoutesc
-	jc		nextchar
+	cmp al,"\"
+	jnz @F
+	mov al,@flat:[esi]
+	inc esi
+	and al,al
+	jz exit
+	call msgoutesc
+	jc nextchar
 @@:
 	@putchr al
-	jmp 	nextchar
+	jmp nextchar
 exit:
 	ret
 msgout endp
@@ -2343,31 +2367,31 @@ msgout endp
 ;--- print excape (\) characters
 
 msgoutesc proc
-	cmp 	al,"\"			;is it '\\'?
-	jz		exit
-	cmp 	al,"n"
-	jnz 	@F
+	cmp al,"\"			;is it '\\'?
+	jz exit
+	cmp al,"n"
+	jnz @F
 	@putchr cr
-	mov 	al,lf
-	jmp 	exit
+	mov al,lf
+	jmp exit
 @@:
-	cmp		al,"b"
-	jnz		@F
-	or		dh,08h			;dont write a lf at end
-	stc						;skip this character
-	jmp		exit2
+	cmp al,"b"
+	jnz	@F
+	or dh,08h			;dont write a lf at end
+	stc					;skip this character
+	jmp	exit2
 @@:
-	cmp 	al,cr
-	jnz 	@F
-	mov 	ax,@flat:[esi]
-	cmp 	al,lf			;is it a '\' at line end?
-	jnz 	@F
-	inc 	esi				;skip CRLF
-	inc 	esi
-	mov 	al,ah
-	cmp 	al,0
-	jnz 	@F
-	dec 	esi
+	cmp al,cr
+	jnz @F
+	mov ax,@flat:[esi]
+	cmp al,lf			;is it a '\' at line end?
+	jnz @F
+	inc esi				;skip CRLF
+	inc esi
+	mov al,ah
+	cmp al,0
+	jnz @F
+	dec esi
 @@:        
 exit:
 	clc
@@ -2378,17 +2402,17 @@ msgoutesc endp
 ;--- display error # and type (error, warning, msg)
 
 errmsgout proc
-	cmp 	dh,90h				;fehler# >= 9000h? -> nur texte
-	jnc 	errmsg_ex
-	cmp 	dh,20h				;fehler# >= 2000h? -> message#
-	jnc 	errmsg_2
-	cmp 	dh,10h				;fehler# >= 1000h? -> warning#
-	jnc 	errmsg_3
+	cmp dh,90h				;fehler# >= 9000h? -> nur texte
+	jnc errmsg_ex
+	cmp dh,20h				;fehler# >= 2000h? -> message#
+	jnc errmsg_2
+	cmp dh,10h				;fehler# >= 1000h? -> warning#
+	jnc errmsg_3
 	@stroutc "error "
-	jmp 	errmsg_1
+	jmp errmsg_1
 errmsg_3:
 	@stroutc "warning "
-	jmp 	errmsg_1
+	jmp errmsg_1
 errmsg_2:
 	@stroutc "msg "
 errmsg_1:
@@ -2412,12 +2436,12 @@ chkziff:
 @@:
 	ret
 chkhex:
-	call	chkziff
-	jc		chkhex_er
-	sub 	al,'0'
-	cmp 	al,9
-	jbe 	@F
-	sub 	al,'a'-'0'-10
+	call chkziff
+	jc chkhex_er
+	sub al,'0'
+	cmp al,9
+	jbe @F
+	sub al,'a'-'0'-10
 @@:
 	clc
 chkhex_er:
@@ -2432,7 +2456,7 @@ checkcpuid proc stdcall
 	popfd
 	test eax,200000h	;is it set now?
 	mov  al,00
-	jz	 checkcpuid_ex
+	jz checkcpuid_ex
 	push 1
 	pop eax
 	@cpuid
@@ -2449,84 +2473,84 @@ getdpmiparms proc stdcall
 
 local	myrmcs:RMCS
 
-	call	checkcpuid
-	jc		@F
-	or		byte ptr fCPUID,1
-	mov 	[idcpu],ah			 ;cpu
-	mov 	[idstep],al 		 ;maske/stepping
-	mov 	[idflags],edx
+	call checkcpuid
+	jc @F
+	or byte ptr fCPUID,1
+	mov [idcpu],ah			 ;cpu
+	mov [idstep],al 		 ;maske/stepping
+	mov [idflags],edx
 @@:
 	@DpmiCall 400h
-	mov 	dpmiversion,ax
-	mov 	dpmicpu,cl
-	mov 	dpmiflags,bx
-	mov 	dpmipics,dx
+	mov dpmiversion,ax
+	mov dpmicpu,cl
+	mov dpmiflags,bx
+	mov dpmipics,dx
 
-	lea 	edi,myrmcs
-	xor 	eax,eax
-	mov		dword ptr myrmcs.rSP,eax
-	mov		myrmcs.rFlags,ax
-	mov 	myrmcs.rEAX,1687h
-	mov 	bx,002Fh
-	xor 	ecx,ecx
+	lea edi,myrmcs
+	xor eax,eax
+	mov dword ptr myrmcs.rSP,eax
+	mov myrmcs.rFlags,ax
+	mov myrmcs.rEAX,1687h
+	mov bx,002Fh
+	xor ecx,ecx
 	@DpmiCall 300h
-	jc		@F
-	mov 	eax,[edi.RMCS.rEDI]
-	mov 	word ptr dpmiPMentry+0,ax
-	mov 	ax,[edi.RMCS.rES]
-	mov 	word ptr dpmiPMentry+2,ax
-	mov 	eax,[edi.RMCS.rESI]
-	mov 	dpmitaskdat,ax
-	mov 	eax,[edi.RMCS.rEBX]
-	mov 	dpmi32bitap,ax
+	jc @F
+	mov eax,[edi.RMCS.rEDI]
+	mov word ptr dpmiPMentry+0,ax
+	mov ax,[edi.RMCS.rES]
+	mov word ptr dpmiPMentry+2,ax
+	mov eax,[edi.RMCS.rESI]
+	mov dpmitaskdat,ax
+	mov eax,[edi.RMCS.rEBX]
+	mov dpmi32bitap,ax
 	@DpmiCall 0306h 			 ; get raw mode switch addresses
-	mov 	word ptr dpmirm2pm+0,cx
-	mov 	word ptr dpmirm2pm+2,bx
+	mov word ptr dpmirm2pm+0,cx
+	mov word ptr dpmirm2pm+2,bx
 if ?32BIT
-	mov 	dword ptr dpmipm2rm+0,edi
-	mov 	word ptr dpmipm2rm+4,si
+	mov dword ptr dpmipm2rm+0,edi
+	mov word ptr dpmipm2rm+4,si
 else
-	mov 	word ptr dpmipm2rm+0,di
-	mov 	word ptr dpmipm2rm+2,si
+	mov word ptr dpmipm2rm+0,di
+	mov word ptr dpmipm2rm+2,si
 endif
 @@:
 	test [fStat], FSTAT_ISNT
-	jz		@F
-	mov		wPMStop, si
+	jz @F
+	mov wPMStop, si
 @@:
 	@DpmiCall 0604h
-	mov		word ptr dpmipagesiz+0,cx
-	mov		word ptr dpmipagesiz+2,bx
+	mov word ptr dpmipagesiz+0,cx
+	mov word ptr dpmipagesiz+2,bx
 
 if ?LDTSEL							;has problems on NT platforms
-	push	es
-	mov		esi, CCStr("MS-DOS")
-	mov		ax,168Ah
+	push es
+	mov esi, CCStr("MS-DOS")
+	mov ax,168Ah
 	@callint2F
-	cmp		al,0
-	jnz		@F
+	cmp al,0
+	jnz @F
 if ?32BIT
 	test [fStat], FSTAT_ISNT
-	jnz		@F
-	push	es
-	push	edi
-	mov		ax,100h
-	call	fword ptr [esp]   ; 32bit only
-	add		esp,8
+	jnz @F
+	push es
+	push edi
+	mov ax,100h
+	call fword ptr [esp]   ; 32bit only
+	add esp,8
 else
-	mov		eax,es
-	shl		eax,16
-	mov		ax,di
-	push	eax
-	movzx	esi,sp
-	mov		ax,100h
-	db		66h
-	call	fword ptr ss:[esi]
-	pop		edx
+	mov eax,es
+	shl eax,16
+	mov ax,di
+	push eax
+	movzx esi,sp
+	mov ax,100h
+	db 66h
+	call fword ptr ss:[esi]
+	pop edx
 endif
-	mov		ldtsel,ax
+	mov ldtsel,ax
 @@:
-	pop		es
+	pop es
 endif
 	ret
 getdpmiparms endp
@@ -2542,7 +2566,7 @@ savexregs proc stdcall public
 	mov eax,cr3
 	mov [rCR3],eax
 	test byte ptr idflags,ID_V86EXT 	  ;v86 extensions da?
-	jz	 @F
+	jz @F
 ;	mov eax,cr4
 	@moveaxcr4
 	mov [rCR4],eax
@@ -2600,25 +2624,25 @@ savexregs endp
 
 GetEflInhalt proc stdcall
 
-	push	edi
-	push	ecx
-	mov 	edi,[pNearHeap]
-	push	edi
-	mov 	ebx,[r1.rEfl]
-	shl 	ebx,10
-	mov 	ecx,22
+	push edi
+	push ecx
+	mov edi,[pNearHeap]
+	push edi
+	mov ebx,[r1.rEfl]
+	shl ebx,10
+	mov ecx,22
 @@:
-	shl 	ebx,1
-	mov 	al,'0'
-	adc 	al,0
+	shl ebx,1
+	mov al,'0'
+	adc al,0
 	stosb
-	loop	@B
-	mov 	al,00
+	loop @B
+	mov al,00
 	stosb
-	pop 	eax
-	pop 	ecx
-	pop 	edi
-	mov 	cl,__STRING__
+	pop eax
+	pop ecx
+	pop edi
+	mov cl,__STRING__
 	ret
 GetEflInhalt endp
 
@@ -2780,9 +2804,9 @@ savereg proc
 	mov [r1.rEdi], edi
 	mov [r1.rEbp], ebp
 stdregs:
-	test byte ptr [fException], FEXC_USEXREGS	; restore some regs?
+	test [fException], FEXC_USEXREGS	; restore some regs?
 	jz @F
-	and byte ptr [fException], not FEXC_USEXREGS; clear instantly
+	and [fException], not FEXC_USEXREGS	; clear instantly
 	mov eax, [rCSx]
 	mov [r1.rCS], eax
 	mov eax, [rEipx]
@@ -2792,9 +2816,9 @@ stdregs:
 if ?SWITCHSTACK
 	mov eax, [rSSx]
 	mov ecx, [rEspx]
-	test byte ptr [fException], FEXC_SAVESTACK
+	test [fException], FEXC_SAVESTACK
 	jz saver1
-	and byte ptr [fException], not FEXC_SAVESTACK
+	and [fException], not FEXC_SAVESTACK
 	mov [r1.rSS], eax
 	mov [r1.rEsp], ecx
 endif
@@ -2845,7 +2869,7 @@ endif
 	sidt [rIDTR]
 @@:
 if ?FLOATREGS
-	test byte ptr [f80x87],F80X87_FPU_PRESENT
+	test [f80x87], F80X87_FPU_PRESENT
 	jz savereg_3
 	call savedebuggeefpustate
 	jc @F
@@ -2853,7 +2877,7 @@ if ?FLOATREGS
 @@:
 	fnsave [frsave]
 	fnclex
-	or byte ptr [f80x87],F80X87_STATE_SAVED
+	or [f80x87], F80X87_STATE_SAVED
 savereg_3:
 endif
 if ?MARKPSP
@@ -2869,9 +2893,12 @@ endif
 	ret
 savereg endp
 
+if ?SETEXCVECS
+
 ;--- dont let debuggee handle exceptions while in debugger
 
-if ?SETEXCVECS
+;--- if ?SAVEINT08 is on, check if int 08 and 1C are modified
+;--- and if yes, set them as well so debuggee won't get control.
 
 if ?SAVEINT08
 myint08 proc
@@ -2953,28 +2980,34 @@ if ?SAVEINT08
 	jz no1c
 	mov  bl, 08h
 	@DpmiCall 204h
-	mov eax, cs
-	cmp ax, cx
+if ?32BIT
+	cmp edx, dword ptr [oldint08+0]
+else
+	cmp dx, word ptr [oldint08+0]
+endif
 	jnz @F
-	cmp edx, offset myint08
+	cmp cx, word ptr [oldint08+?SEGOFFS]
 	jz no08
 @@:
-	mov dword ptr saveCurInt08,edx
-	mov word ptr saveCurInt08+?SEGOFFS,cx
+	mov dword ptr saveCurInt08, edx
+	mov word ptr saveCurInt08+?SEGOFFS, cx
 	mov ecx, cs
 	mov edx, offset myint08
 	@DpmiCall 205h
 no08:
 	mov  bl, 1Ch
 	@DpmiCall 204h
-	mov eax, cs
-	cmp ax, cx
+if ?32BIT
+	cmp edx, dword ptr [oldint1C+0]
+else
+	cmp dx, word ptr [oldint1C+0]
+endif
 	jnz @F
-	cmp edx, offset myint1C
+	cmp cx, word ptr [oldint1C+?SEGOFFS]
 	jz no1c
 @@:
-	mov dword ptr saveCurInt1C,edx
-	mov word ptr saveCurInt1C+?SEGOFFS,cx
+	mov dword ptr saveCurInt1C, edx
+	mov word ptr saveCurInt1C+?SEGOFFS, cx
 	mov ecx, cs
 	mov edx, offset myint1C
 	@DpmiCall 205h
@@ -3096,11 +3129,11 @@ setmyenvironment endp
 ReadReg proc near
 
 if ?FLOATREGS
-	test byte ptr [f80x87],F80X87_STATE_SAVED
+	test [f80x87], F80X87_STATE_SAVED
 	jz readreg_1
 	frstor [frsave]
 	call restoredebuggeefpustate
-	and byte ptr [f80x87], not F80X87_STATE_SAVED
+	and [f80x87], not F80X87_STATE_SAVED
 readreg_1:
 endif
 	test [fEntry], FENTRY_REAL
@@ -3137,7 +3170,7 @@ eaxout endp
 
 FloatToStr proto stdcall :dword, :dword
 
-;*** wert (EBX=>) ausgeben
+;*** display value of a symbol (EBX=>)
 ;*** typ in cl:
 ;***  ESI=> eintrag in symboltabelle
 ;*** aufgerufen von: symtout, _regsout, _show
@@ -3442,7 +3475,7 @@ switch2hoststack proc public
 if ?USEHOSTSTACK
 	pop ecx
 	lss esp,[hoststack]
-	sub dword ptr [hoststack],_HSTKKORR_
+	sub dword ptr [hoststack], ?HSTACKCORR
 	jmp ecx
 else        
 	ret
@@ -3460,7 +3493,7 @@ if ?USEHOSTSTACK
 	mov esp,[myesp]
 	push ecx
 	pushfd
-	add dword ptr [hoststack],_HSTKKORR_
+	add dword ptr [hoststack], ?HSTACKCORR
 	popfd
 endif
 	ret
@@ -3651,6 +3684,8 @@ errorx:
 	@errorout eax
 	add esp, 1*4
 
+	mov eax, dword ptr [intval+0]
+	mov ax, word ptr [intval+4]
 ife ?WINDOWS
 	.if ([cLoad] == 0)
 		xor ecx, ecx
@@ -3688,11 +3723,11 @@ ife ?WINDOWS
  endif
  if ?SAVEINT08
 		.elseif (bl == 8h)
-			mov cx, word ptr oldint08+?SEGOFFS
 			mov edx, dword ptr oldint08+0
+			mov cx, word ptr oldint08+?SEGOFFS
 		.elseif (bl == 1Ch)
-			mov cx, word ptr oldint1C+?SEGOFFS
 			mov edx, dword ptr oldint1C+0
+			mov cx, word ptr oldint1C+?SEGOFFS
  endif
 		.elseif (bl == 9h)
 			call kbd_checkpmints
@@ -3867,7 +3902,7 @@ endif
 	call SaveState			; this should activate debuggee screen
 	jc loadpgm_er1
 if 1
-	test byte ptr [f80x87],F80X87_STATE_SAVED
+	test [f80x87], F80X87_STATE_SAVED
 	jz @F
 	frstor [frsave]
 @@:
@@ -4020,7 +4055,7 @@ loadpgm_1:
 
 if ?FLOATREGS
 ife ?WINDOWS
-	test byte ptr [f80x87],F80X87_FPU_PRESENT
+	test [f80x87], F80X87_FPU_PRESENT
 	jz @F
 	fnstsw ax
 	fnclex
@@ -4377,7 +4412,7 @@ endif
 if ?WINDOWS
 	cmp ax, DS_EXITCALL		; exit task
 	jz intr41_0062
-	test fKeybrd,FKB_SYSREQ
+	test fKeybrd, FKB_SYSREQ
 	jz @F
 	cmp ax, 63h				; Ctrl-Alt-SysReq (not toolhelp)
 	jz intr41_0063
@@ -4448,7 +4483,7 @@ intr41_0083:
 	movzx ebx,bl
 	call excout
 	@stroutc " occured - last chance",lf
-	or byte ptr [fException],FEXC_USEXREGS	;restore regs!
+	or [fException], FEXC_USEXREGS	;restore regs!
 	jmp intr41_ex
 endif
 
@@ -5131,14 +5166,14 @@ setidttrap endp
 ;---
 
 setetrapval:
-	btr 	eStops,ebx
-	or		al,1
-	call	setexception
-	jc		setetrapval_1
-	bts 	eTraps,ebx
-	test	al,2
-	jz		@F
-	bts 	eStops,ebx
+	btr eStops, ebx
+	or al, 1
+	call setexception
+	jc setetrapval_1
+	bts eTraps, ebx
+	test al, 2
+	jz @F
+	bts eStops, ebx
 @@:
 	clc
 	ret
@@ -5250,6 +5285,7 @@ exit:
 	ret
 setextrap endp
 
+ife ?WINDOWS
 ;--- function PMInt()
 
 pmtrapsout proc c index:dword
@@ -5257,7 +5293,7 @@ pmtrapsout proc c index:dword
 	mov ebx, index
 	cmp al, 0
 	jnz @F
-	cmp ebx, 10h
+	cmp ebx, SIZEOLDPMVECS
 	jnc pmtrapsout_2
 	xor eax, eax
 	bt pmtraps, ebx
@@ -5295,7 +5331,7 @@ pmtrapsout endp
 setpmtrap proc c value:dword,index:dword
 
 	mov ebx, index
-	cmp ebx, 10h
+	cmp ebx, SIZEOLDPMVECS
 	jnc setpmtraps_er
 	mov eax, value
 	and eax, eax
@@ -5315,6 +5351,8 @@ setpmtraps_er:
 exit:
 	ret
 setpmtrap endp
+
+endif
 
 ;--- function RMI()
 
@@ -5494,50 +5532,50 @@ GetCurrentDirectory proc stdcall uses esi edi maxlen:dword,buffer:dword
 
 local	tmpbuf[MAXPATH]:byte
 
-	mov 	eax,maxlen
-	cmp 	eax,4
-	jb		getcwd_er
-	mov 	ah,19h			   ;get drive
+	mov eax,maxlen
+	cmp eax,4
+	jb getcwd_er
+	mov ah,19h			   ;get drive
 	@DosCall
-	mov 	dl,al
-	inc 	dl
-	add 	al,'A'
-	mov 	edi,buffer
-	mov 	ah,':'
+	mov dl,al
+	inc dl
+	add al,'A'
+	mov edi,buffer
+	mov ah,':'
 	stosw
-	mov 	ax,'\'
+	mov ax,'\'
 	stosw
-	dec		edi
+	dec edi
 
-	lea 	esi,tmpbuf
+	lea esi,tmpbuf
 ;	mov		byte ptr [esi],0FFh	;OS should change this byte or function failed!!
-	mov 	ax,7147h
+	mov ax,7147h
 	stc
 	@DosCall
-	jc		getcwd_1
-;	cmp		byte ptr [esi],0FFh
-;	jz		getcwd_1
-	cmp 	ax,7100h			;function supported?
-	jnz 	getcwd_2
+	jc getcwd_1
+;	cmp	byte ptr [esi],0FFh
+;	jz getcwd_1
+	cmp ax,7100h			;function supported?
+	jnz getcwd_2
 getcwd_1:
-	mov 	ah,47h
+	mov ah,47h
 	@DosCall
-	jc		getcwd_er
+	jc getcwd_er
 getcwd_2:
-	mov 	ecx,maxlen
-	sub 	ecx,3
-	cmp 	byte ptr [esi],'\'
-	jnz 	@F
-	inc 	esi
+	mov ecx,maxlen
+	sub ecx,3
+	cmp byte ptr [esi],'\'
+	jnz @F
+	inc esi
 @@:
 	lodsb
 	stosb
-	and 	al,al
-	loopnz	@B
-	mov 	eax,buffer
-	jmp 	getcwd_ex
+	and al,al
+	loopnz @B
+	mov eax,buffer
+	jmp getcwd_ex
 getcwd_er:
-	xor 	eax,eax
+	xor eax,eax
 getcwd_ex:
 	ret
 GetCurrentDirectory endp
@@ -5767,30 +5805,30 @@ getindosflag proc
 ;	les bx,[dwIndos]
 	mov ebx, [dwIndos]
 if 0;?CHECKINDOSVALID
-	movzx	ebx,bx
-	mov 	eax,es
-	lsl 	eax,eax
-	cmp 	eax,ebx
-	jnb 	@F
+	movzx ebx,bx
+	mov eax,es
+	lsl eax,eax
+	cmp eax,ebx
+	jnb @F
 	@errorout ERR_INVALID_INDOS_ADDR
-	mov 	al,0
-	jmp 	getindosflag_1
+	mov al,0
+	jmp getindosflag_1
 @@:
 endif
 	mov al, @flat:[ebx]
-;	movzx	ebx, bx
-;	mov 	al,es:[ebx]
+;	movzx ebx, bx
+;	mov al,es:[ebx]
 getindosflag_1:
-	pop 	ebx
-	pop 	es
+	pop ebx
+	pop es
 	ret
 getindosflag endp
 
 getvmid proc
-	mov   bx,0000h
-	mov   ax,1683h				;VM id holen
+	mov bx,0000h
+	mov ax,1683h				;VM id holen
 	@callint2F
-	mov   eax,ebx
+	mov eax,ebx
 	ret
 getvmid endp
 
@@ -6009,27 +6047,27 @@ getldtaddr endp
 ;*** accrights von ebx holen ***
 
 getaccr proc stdcall public
-	lar 	eax,ebx
-	jz		getaccr3
-	test	bl,4
-	jnz 	getaccr4
-	and 	ebx,0000FFF8h
-	jz		getaccr_er
-	cmp 	bx,word ptr [rGDTR]
-	jnc 	getaccr_er
-	add 	ebx,dword ptr [rGDTR+2]
+	lar eax,ebx
+	jz getaccr3
+	test bl,4
+	jnz getaccr4
+	and ebx,0000FFF8h
+	jz getaccr_er
+	cmp bx,word ptr [rGDTR]
+	jnc getaccr_er
+	add ebx,dword ptr [rGDTR+2]
 getaccr2:
-	test	[fMode], FMODE_STRICT
-	jnz 	getaccr_er
-	mov 	eax,@flat:[ebx+4]
+	test [fMode], FMODE_STRICT
+	jnz getaccr_er
+	mov eax,@flat:[ebx+4]
 getaccr3:
-	and 	eax,00F0FFFFh
+	and eax,00F0FFFFh
 	ret
 getaccr4:
-	test	[fMode], FMODE_LDTDIRECT
-	jz		getaccr_er
-	call	getldtaddr
-	jnc 	getaccr2
+	test [fMode], FMODE_LDTDIRECT
+	jz getaccr_er
+	call getldtaddr
+	jnc getaccr2
 getaccr_er:
 	stc
 	ret
@@ -6038,27 +6076,27 @@ getaccr endp
 ;*** limit von ebx -> eax holen ***
 
 getlimitr proc stdcall public
-	lsl 	eax,ebx
-	jz		getlimit2
-	test	bl,4
-	jnz 	getlimit3
-	and 	ebx,0000FFF8h
-	jz		getlimit_er
-	cmp 	bx,word ptr [rGDTR]
-	jnc 	getlimit_er
-	add 	ebx,dword ptr [rGDTR+2]
+	lsl eax,ebx
+	jz getlimit2
+	test bl,4
+	jnz getlimit3
+	and ebx,0000FFF8h
+	jz getlimit_er
+	cmp bx,word ptr [rGDTR]
+	jnc getlimit_er
+	add ebx,dword ptr [rGDTR+2]
 getlimit5:
-	test	[fMode], FMODE_STRICT
-	jnz 	getlimit_er
-	mov 	al,@flat:[ebx+6]
-	mov 	cl,al
-	and 	ax,0fh
-	shl 	eax,16
-	mov 	ax,@flat:[ebx+0]
-	test	cl,80h
-	jz		@F
-	shl 	eax,12
-	or		eax,00000FFFh
+	test [fMode], FMODE_STRICT
+	jnz getlimit_er
+	mov al,@flat:[ebx+6]
+	mov cl,al
+	and ax,0fh
+	shl eax,16
+	mov ax,@flat:[ebx+0]
+	test cl,80h
+	jz @F
+	shl eax,12
+	or eax,00000FFFh
 @@:
 getlimit2:
 	clc
@@ -6122,9 +6160,9 @@ getbase proc c sel:dword
 
 	push ecx
 	invoke getbaser,sel
-	pop  ecx
-	jnc  @F
-	mov  cl,__VOID__
+	pop ecx
+	jnc @F
+	mov cl,__VOID__
 	clc
 @@:
 	ret
@@ -6132,24 +6170,24 @@ getbase endp
 
 getbasex:
 	lodsd
-	mov  cl,__DWORD__
+	mov cl,__DWORD__
 	push [eax]
 	call getbase
-	pop  ebx
+	pop ebx
 	ret
 
 setbase proc c wert:dword,msel:dword
 
 	push ecx
-	mov  cx,word ptr wert+2
-	mov  dx,word ptr wert+0
-	mov  ebx,msel
-	mov  ax,7
-	int  31h
-	mov  eax,wert
-	pop  ecx
-	jnc  @F
-	mov  cl,__VOID__
+	mov cx,word ptr wert+2
+	mov dx,word ptr wert+0
+	mov ebx,msel
+	mov ax,7
+	int 31h
+	mov eax,wert
+	pop ecx
+	jnc @F
+	mov cl,__VOID__
 	clc
 @@:
 	ret
@@ -6179,15 +6217,15 @@ getlimx:
 setlimit proc c wert:dword,sel:dword
 
 	push ecx
-	mov  ebx,sel
-	mov  cx,word ptr wert+2
-	mov  dx,word ptr wert+0
-	mov  ax,8
-	int  31h
-	mov  eax,wert
-	pop  ecx
-	jnc  @F
-	mov  cl,__VOID__
+	mov ebx,sel
+	mov cx,word ptr wert+2
+	mov dx,word ptr wert+0
+	mov ax,8
+	int 31h
+	mov eax,wert
+	pop ecx
+	jnc @F
+	mov cl,__VOID__
 	clc
 @@:
 	ret
@@ -6221,14 +6259,14 @@ getattrx:
 setattr proc c wert:dword,sel:dword
 
 	push ecx
-	mov  ebx,sel
-	mov  cx,word ptr wert+0
-	mov  ax,9
-	int  31h
-	mov  eax,wert
-	pop  ecx
-	jnc  @F
-	mov  cl,__VOID__
+	mov ebx,sel
+	mov cx,word ptr wert+0
+	mov ax,9
+	int 31h
+	mov eax,wert
+	pop ecx
+	jnc @F
+	mov cl,__VOID__
 	clc
 @@:
 	ret
@@ -6238,11 +6276,11 @@ getseg proc c value2:dword,value1:dword
 
 	movzx  eax,word ptr value1
 	cmp ch,__FPTR__
-	jz	@F
+	jz @F
 	cmp ch,__LPTR__
-	jz	@F
+	jz @F
 	cmp ch,__RMLPTR__
-	jz	@F
+	jz @F
 	stc
 @@:
 	ret
@@ -6258,13 +6296,13 @@ if 0
 	popad
 endif
 	cmp ch,__FPTR__
-	jz	@F
+	jz @F
 	cmp ch,__LPTR__
-	jz	getlptr_2
+	jz getlptr_2
 	cmp ch,__RMLPTR__
-	jz	getlptr_2
+	jz getlptr_2
 	cmp ch,__DWORD__
-	jz	getlptr_1
+	jz getlptr_1
 	stc
 	jmp getlptr_ex
 getlptr_2:
@@ -6298,32 +6336,32 @@ getcompl endp
 inportb proc c port:dword
 
 	mov  edx,port
-	in	 al,dx
+	in al,dx
 	movzx eax,al
 	ret
 inportb endp
 
 outportb proc c wert:dword,port:dword
 
-	mov  edx,port
-	mov  al,byte ptr wert
-	out  dx,ax
+	mov edx,port
+	mov al,byte ptr wert
+	out dx,ax
 	ret
 outportb endp
 
 inportw proc c mport:dword
 
-	mov  edx,mport
-	in	 ax,dx
+	mov edx,mport
+	in ax,dx
 	movzx eax,ax
 	ret
 inportw endp
 
 outportw proc c wert:dword,port:dword
 
-	mov  edx,port
-	mov  eax,wert
-	out  dx,ax
+	mov edx,port
+	mov eax,wert
+	out dx,ax
 	ret
 outportw endp
 
@@ -6354,7 +6392,7 @@ _lowbyte endp
 gettype proc c
 
 	movzx eax,ch		   ;in ch ist typ des letzten funktionsarguments
-	and   al,0Fh
+	and al,0Fh
 	ret
 gettype endp
 
@@ -6364,110 +6402,110 @@ gettype endp
 
 searchkap proc stdcall uses ds esi edi sbereich:dword,searchstr:near ptr byte
 
-	mov    edi,sbereich
-	and    edi,edi
-	jz	   searchkap1
+	mov edi,sbereich
+	and edi,edi
+	jz  searchkap1
 searchkap3:
-	mov    al,@flat:[edi]
-	and    al,al
-	jz	   searchkap1
-	cmp    al,'['
-	jz	   searchkap2
+	mov al,@flat:[edi]
+	and al,al
+	jz  searchkap1
+	cmp al,'['
+	jz   searchkap2
 searchkap4:
-	mov    al,@flat:[edi]
-	inc    edi
-	and    al,al
-	jz	   searchkap1	 ;fertig
-	cmp    al,lf
-	jnz    searchkap4
-	jmp    searchkap3
+	mov al,@flat:[edi]
+	inc edi
+	and al,al
+	jz  searchkap1	 ;fertig
+	cmp al,lf
+	jnz searchkap4
+	jmp searchkap3
 searchkap2:
-	mov    esi,searchstr
-	inc    edi
+	mov esi,searchstr
+	inc edi
 @@:
-	mov    al,@flat:[edi]
-	inc    edi
-	call   kl2gr
-	mov    ah,al
+	mov al,@flat:[edi]
+	inc edi
+	call kl2gr
+	mov ah,al
 	lodsb
-	cmp    al,ah
-	jz	   @B
-	and    al,al
-	jz	   searchkap5
-	cmp    al,' '		 ;ist parameter zuende?
-	jz	   searchkap5
-	jmp    searchkap4
+	cmp al,ah
+	jz @B
+	and al,al
+	jz searchkap5
+	cmp al,' '		 ;ist parameter zuende?
+	jz searchkap5
+	jmp searchkap4
 searchkap5: 				 ;eingegebener parameter ist zuende
-	cmp    ah,']'		 ;wie siehts mit fileparameter aus?
-	jz	   searchkap6
-	mov    al,@flat:[edi-1]
-	call   tstkl		 ;nur noch kleinbuchstaben?
-	jnc    searchkap4
+	cmp ah,']'		 ;wie siehts mit fileparameter aus?
+	jz searchkap6
+	mov al,@flat:[edi-1]
+	call tstkl		 ;nur noch kleinbuchstaben?
+	jnc searchkap4
 searchkap6:
-	mov    al,@flat:[edi]
-	inc    edi
-	and    al,al
-	jz	   @F
-	cmp    al,lf
-	jnz    searchkap6
+	mov al,@flat:[edi]
+	inc edi
+	and al,al
+	jz @F
+	cmp al,lf
+	jnz searchkap6
 @@:
-	mov    eax,edi
-	jmp    searchkapex
+	mov eax,edi
+	jmp searchkapex
 searchkap1:
-	xor    eax,eax
+	xor eax,eax
 searchkapex:
 	ret
 searchkap endp
 
 ;*** unterroutine fuer help; kapitel ausgeben ***
 
-TABEXPAND	equ 0
+TABEXPAND equ 0
 
 kapout proc stdcall uses esi kbereich:dword
 
-	mov    esi,kbereich
-	mov    ebx,esi
-	mov    al,lf
+	mov esi,kbereich
+	mov ebx,esi
+	mov al,lf
 kapout1:
-	mov    ah,al
-	mov    al,@flat:[esi]
-	inc    esi
-	and    al,al
-	jz	   kapout2
-	cmp    al,'['
-	jnz    kapout1
-	cmp    ah,lf
-	jnz    kapout1
-	dec    esi
+	mov ah,al
+	mov al,@flat:[esi]
+	inc esi
+	and al,al
+	jz kapout2
+	cmp al,'['
+	jnz kapout1
+	cmp ah,lf
+	jnz kapout1
+	dec esi
 kapout2:
-	mov    ecx,esi
-	sub    ecx,ebx
-	dec    ecx
-	mov    esi,ebx
-	xor		edx,edx
+	mov ecx, esi
+	sub ecx, ebx
+	dec ecx
+	mov esi, ebx
+	xor edx, edx
 	.while (ecx)
 if TABEXPAND
 		mov		al,@flat:[esi]
-		.if (al == 9)				;expand TABS!
+		.if (al == 9)			;expand TABS!
 			.repeat
 				@putchr ' '
-				inc		edx
-				test	dl,03		;expand tab to max 4 spaces
+				inc edx
+				test dl,03		;expand tab to max 4 spaces
 			.until (ZERO?)
 		.else
-			push	eax
+			push eax
 			@putchr al
-			pop		eax
-			inc		edx				;inc tab counter
+			pop eax
+			inc edx				;inc tab counter
 			.if (al == cr)
-				xor		edx,edx
+				xor edx,edx
 			.endif
 		.endif
 else
 		@putchr @flat:[esi]
 endif
-		inc 	esi
-		dec		ecx
+		inc esi
+		dec ecx
 	.endw
 	invoke	_crout
 	ret
@@ -6666,56 +6704,56 @@ _readfile proc c pb:PARMBLK
 
 local	xhandle:dword
 
-	call	MarkDOSused
-	mov 	edx,pb.dwOffs1
-	mov		ax,3d20h			;r/o, deny write
+	call MarkDOSused
+	mov edx,pb.dwOffs1
+	mov ax,3d20h			;r/o, deny write
 	@DosCall
-	jnc 	readfile1
-	movzx	eax,ax
-	push	eax
-	push	edx
+	jnc readfile1
+	movzx eax,ax
+	push eax
+	push edx
 	@errorout ERR_FILE_OPEN
-	add 	esp,2*4
-	jmp 	exit
+	add esp,2*4
+	jmp exit
 readfile1:
-	mov 	xhandle,eax
+	mov xhandle,eax
 
-	mov 	ebx,pb.p3.dwOffs
-	cmp 	pb.p3.bType, __VOID__
-	jnz		@F
-	call	GetFileSize					;handle in eax
-	mov 	ebx,eax						;max. laenge
+	mov ebx,pb.p3.dwOffs
+	cmp pb.p3.bType, __VOID__
+	jnz @F
+	call GetFileSize					;handle in eax
+	mov ebx,eax						;max. laenge
 @@:
-	mov		esi, pb.wSeg2
-	mov 	eax,pb.dwOffs2
-	cmp 	pb.p2.bType,__RMLPTR__
-	jnz		@F
-	shl		esi,4
-	add		eax, esi
-	mov		esi, @flat
+	mov esi, pb.wSeg2
+	mov eax,pb.dwOffs2
+	cmp pb.p2.bType,__RMLPTR__
+	jnz @F
+	shl esi,4
+	add eax, esi
+	mov esi, @flat
 @@:
-	cmp 	pb.p2.bType, __VOID__		; adresse angegeben?
-	jnz 	@F
-	mov 	eax, ebx					; kB allokieren
-	call	allocdpmimem				; returns flat address in EBX
-	jc		exit
-	mov		esi, @flat
+	cmp pb.p2.bType, __VOID__		; adresse angegeben?
+	jnz @F
+	mov eax, ebx					; kB allokieren
+	call allocdpmimem				; returns flat address in EBX
+	jc	exit
+	mov esi, @flat
 @@:
-	xor 	ecx, ecx
-	cmp 	pb.p4.bType, __CONST__
-	jnz 	@F
-	mov 	ecx,pb.p4.dwOffs
+	xor ecx, ecx
+	cmp pb.p4.bType, __CONST__
+	jnz @F
+	mov ecx,pb.p4.dwOffs
 @@:
-	verw	si
-	jz		@F
-	push	esi
+	verw si
+	jz @F
+	push esi
 	@errorout ERR_INVALID_POINTER
-	pop		esi
-	jmp		exit
+	pop esi
+	jmp exit
 @@:
 	invoke	_fileread, xhandle, esi::eax, ebx, ecx
 
-	push	eax
+	push eax
 	@close xhandle
 	pop eax
 	cmp eax,-1
@@ -6727,38 +6765,38 @@ _readfile endp
 
 _filewrite proc stdcall uses ebx handle:dword,buffer:qword,laenge:dword,addrinfile:dword
 
-	call	MarkDOSused
-	mov 	cx,word ptr addrinfile+2
-	mov 	dx,word ptr addrinfile+0
-	mov 	ebx,handle
-	mov 	ax,4200h
+	call MarkDOSused
+	mov cx,word ptr addrinfile+2
+	mov dx,word ptr addrinfile+0
+	mov ebx,handle
+	mov ax,4200h
 	@DosCall
-	jc		err1
+	jc err1
 ife ?32BIT
-	invoke	__write, ebx, buffer, laenge
-	jc		err2
+	invoke __write, ebx, buffer, laenge
+	jc err2
 else
-	push	ds
-	lds 	edx,fword ptr buffer
-	mov 	ecx,laenge
-	mov 	ah,40h
+	push ds
+	lds edx,fword ptr buffer
+	mov ecx,laenge
+	mov ah,40h
 	@DosCall
-	pop		ds
-	jc		err2
+	pop ds
+	jc err2
 endif
-	jmp		done
+	jmp done
 err1:
-	mov 	ecx,ERR_FILE_LSEEK
-	jmp 	@F
+	mov ecx,ERR_FILE_LSEEK
+	jmp @F
 err2:
-	mov 	ecx,ERR_FILE_WRITE
+	mov ecx,ERR_FILE_WRITE
 @@:
-	push	handle
-	movzx	eax,ax
-	push	eax
+	push handle
+	movzx eax,ax
+	push eax
 	@errorout ecx
-	add 	esp,2*4
-	mov 	eax,-1
+	add esp,2*4
+	mov eax,-1
 done:
 	ret
 _filewrite endp
@@ -6769,68 +6807,68 @@ _writefile proc c pb:PARMBLK
 
 local	xhandle:dword
 
-	call	MarkDOSused
-	mov		esi, pb.wSeg2
-	mov 	cl, pb.p2.bType
-	cmp 	cl,__FPTR__						;memory adresse ok?
-	jz		parm2ok
-	cmp 	cl,__RMLPTR__			
-	jz		isrm
-	cmp 	cl,__CONST__
-	jnz 	writefile_err
-	mov 	esi,[r1.rDS]
-	test	[fEntry],FENTRY_REAL
-	jz		parm2ok
-	movzx	esi,[r1r.rDS]
+	call MarkDOSused
+	mov	esi, pb.wSeg2
+	mov cl, pb.p2.bType
+	cmp cl,__FPTR__						;memory adresse ok?
+	jz	parm2ok
+	cmp cl,__RMLPTR__			
+	jz	isrm
+	cmp cl,__CONST__
+	jnz writefile_err
+	mov esi,[r1.rDS]
+	test [fEntry],FENTRY_REAL
+	jz	parm2ok
+	movzx esi,[r1r.rDS]
 isrm:
-	shl		esi, 4
-	add		pb.dwOffs2, esi
+	shl	esi, 4
+	add	pb.dwOffs2, esi
 useflat:
-	mov		esi, @flat
+	mov	esi, @flat
 parm2ok:
-	cmp 	pb.p3.bType, __CONST__	;laenge ok?
-	jz		@F
+	cmp pb.p3.bType, __CONST__	;laenge ok?
+	jz	@F
 writefile_err:
 	@errorout ERR_WRONG_PARAM
-	jmp 	exit
+	jmp exit
 @@:
-	mov		edx,pb.dwOffs1
-	cmp 	pb.p4.bType, __CONST__
-	jnz		@F
-	mov		ax,3D01h	;open file for writing
+	mov	edx,pb.dwOffs1
+	cmp pb.p4.bType, __CONST__
+	jnz	@F
+	mov	ax,3D01h	;open file for writing
 	@DosCall
-	jnc		writefile1
+	jnc	writefile1
 @@:
-	mov		ah,3ch		;create file?
-	xor		ecx,ecx
+	mov	ah,3ch		;create file?
+	xor	ecx,ecx
 	@DosCall
-	jnc 	writefile1
+	jnc writefile1
 	movzx	eax,ax	
-	push	eax
-	push	pb.dwOffs1
+	push eax
+	push pb.dwOffs1
 	@errorout ERR_FILE_CREATE
-	add 	esp,2*4
-	jmp 	exit
+	add esp,2*4
+	jmp exit
 writefile1:
-	mov		xhandle,eax
-	xor 	ecx,ecx						;offset in file
-	cmp 	pb.p4.bType, __CONST__
-	jnz 	@F
-	mov 	ecx,pb.p4.dwOffs
+	mov	xhandle,eax
+	xor ecx,ecx						;offset in file
+	cmp pb.p4.bType, __CONST__
+	jnz @F
+	mov ecx,pb.p4.dwOffs
 @@:
-	verr	si
-	jz		@F
-	push	esi
+	verr si
+	jz	@F
+	push esi
 	@errorout ERR_INVALID_POINTER
-	pop		esi
-	jmp		exit
+	pop	esi
+	jmp	 exit
 @@:
-	mov		edi, pb.dwOffs2
+	mov	edi, pb.dwOffs2
 	invoke	_filewrite, xhandle, esi::edi, pb.p3.dwOffs, ecx
 
-	push	eax
+	push eax
 	@close	xhandle
-	pop 	eax
+	pop eax
 	invoke printf, CStr("%X Bytes written from %X:%X",lf), eax, esi, edi
 exit:
 	ret
@@ -6842,59 +6880,59 @@ searchentry proc stdcall kapitel:dword,entry:dword
 
 local	entrylen:dword
 
-	push	esi
-	push	edi
-	xor 	eax,eax
-	mov 	esi,kapitel
-	mov 	edi,entry
-	mov 	ecx,-1
-	mov 	al,0
-	repnz	scasb
-	not 	ecx
-	dec 	ecx
-	mov 	entrylen,ecx
+	push esi
+	push edi
+	xor eax, eax
+	mov esi, kapitel
+	mov edi, entry
+	mov ecx, -1
+	mov al, 0
+	repnz scasb
+	not ecx
+	dec ecx
+	mov entrylen, ecx
 searchentry_1:
-	mov 	ecx,entrylen
-	mov 	edi,entry
+	mov ecx, entrylen
+	mov edi, entry
 
 if ?WINDOWS eq 0
-	cmp 	byte ptr [esi],'-'
-	jnz 	@F
-	inc 	esi
+	cmp byte ptr [esi],'-'
+	jnz @F
+	inc esi
 @@:
 else
-	cmp 	byte ptr [esi],'+'
-	jnz 	@F
-	inc 	esi
+	cmp byte ptr [esi],'+'
+	jnz @F
+	inc esi
 @@:
 endif
 
 searchentry_2:
 	lodsb
-	mov 	ah,es:[edi]
-	or		al,20h
-	or		ah,20h
-	cmp 	al,ah
-	jnz 	@F
-	inc 	edi
-	loop	searchentry_2
-	cmp 	byte ptr [esi],'='
-	jnz 	@F
-	mov 	eax,esi
-	inc 	eax
-	jmp 	searchentry_ex
+	mov ah, es:[edi]
+	or al, 20h
+	or ah, 20h
+	cmp al, ah
+	jnz @F
+	inc edi
+	loop searchentry_2
+	cmp byte ptr [esi], '='
+	jnz @F
+	mov eax, esi
+	inc eax
+	jmp searchentry_ex
 @@:
 	lodsb
-	and 	al,al
-	jz		searchentry_ex
-	cmp 	al,lf
-	jnz 	@B
-	cmp 	byte ptr [esi],'['
-	jnz 	searchentry_1
-	xor 	eax,eax
+	and al, al
+	jz searchentry_ex
+	cmp al, lf
+	jnz @B
+	cmp byte ptr [esi],'['
+	jnz searchentry_1
+	xor eax, eax
 searchentry_ex:
-	pop 	edi
-	pop 	esi
+	pop edi
+	pop esi
 	ret
 searchentry endp
 
@@ -7035,119 +7073,119 @@ local	key:dword
 local	tvalue:dword
 local	fIgnore:byte
 
-	invoke	_createfilename,CStr("debxxf.mac")
-	mov		edx, eax
-	mov		ax,3d00h			;r/o
+	invoke _createfilename,CStr("debxxf.mac")
+	mov edx, eax
+	mov ax, 3d00h			;r/o
 	@DosCall
-	jnc 	@F
-	movzx	eax,ax
-	push	eax
-	push	edx
+	jnc @F
+	movzx eax,ax
+	push eax
+	push edx
 	@errorout ERR_FILE_OPEN
-	add 	esp,2*4
-	jmp		exit
+	add esp,2*4
+	jmp exit
 @@:
-	mov		ebx, eax
-	mov		edx, @flat
-	mov		ecx, flatheap
-	invoke	_fileread, ebx, edx::ecx, 4000h, 0
-	push	eax
+	mov ebx, eax
+	mov edx, @flat
+	mov ecx, flatheap
+	invoke _fileread, ebx, edx::ecx, 4000h, 0
+	push eax
 	@close ebx
-	pop		eax
-	cmp 	eax,-1
-	jz		error
-	mov 	esi,flatheap
-	mov		byte ptr @flat:[esi+eax],0
+	pop eax
+	cmp eax,-1
+	jz error
+	mov esi,flatheap
+	mov byte ptr @flat:[esi+eax],0
 addmacro_00:
-	mov 	al,@flat:[esi]
-	and		al,al
-	jz		exit
+	mov al,@flat:[esi]
+	and al,al
+	jz exit
 
-	mov 	fIgnore,0
-	cmp		al,'#'
-	jnz		@F
-	mov		fIgnore,1
+	mov fIgnore, 0
+	cmp al, '#'
+	jnz @F
+	mov fIgnore, 1
 @@:        
-	cmp 	al,MYMAC
-	jnz 	@F
-	inc 	esi
-	jmp 	addmacro_01
+	cmp al,MYMAC
+	jnz @F
+	inc esi
+	jmp addmacro_01
 @@:
-	cmp 	al,IGNMAC
-	jnz 	addmacro_01
-	mov 	fIgnore,1		;macro will be ignored!
+	cmp al,IGNMAC
+	jnz addmacro_01
+	mov fIgnore,1		;macro will be ignored!
 addmacro_01:
-	mov 	edi,[pNearHeap]
-	mov 	key,edi
+	mov edi,[pNearHeap]
+	mov key,edi
 nextchar1:
-	mov 	al,@flat:[esi]
-	inc 	esi
-	cmp 	al,'='
-	jz		addmacro_1		;now comes value
-	cmp 	al,cr
-	jz		nextchar1		;skip CRs
-	cmp 	al,lf
-	jz		addmacro_00		;no value, ignore this line
-	and 	al,al
-	jz		addmacro_2		;file end
+	mov al,@flat:[esi]
+	inc esi
+	cmp al,'='
+	jz addmacro_1		;now comes value
+	cmp al,cr
+	jz nextchar1		;skip CRs
+	cmp al,lf
+	jz addmacro_00		;no value, ignore this line
+	and al,al
+	jz addmacro_2		;file end
 	stosb
-	jmp 	nextchar1
+	jmp nextchar1
 addmacro_1:
-	xor 	al,al			;finish macro name
+	xor al,al			;finish macro name
 	stosb
-	mov 	tvalue,edi
+	mov tvalue,edi
 nextchar2:
-	mov 	al,@flat:[esi]
-	inc 	esi
-	cmp 	al,cr
-	jz		nextchar2		;skip CRs
-	cmp 	al,lf
-	jz		islf
-	dec		esi
-	and 	al,al
-	jz		@F
-	inc		esi
+	mov al,@flat:[esi]
+	inc esi
+	cmp al,cr
+	jz nextchar2		;skip CRs
+	cmp al,lf
+	jz islf
+	dec esi
+	and al,al
+	jz @F
+	inc esi
 	stosb
-	mov		ah,al
-	jmp 	nextchar2
+	mov ah,al
+	jmp nextchar2
 islf:
-	cmp		ah,'\'			;continuation character?
-	jnz		@F
-	dec		edi				;skip the '\'
-	jmp		nextchar2
+	cmp ah,'\'			;continuation character?
+	jnz @F
+	dec edi				;skip the '\'
+	jmp nextchar2
 @@:
-	mov 	al,0
+	mov al, 0
 	stosb
 
-	cmp 	fIgnore,0
-	jnz 	addmacro_00		;skip this macro
+	cmp fIgnore, 0
+	jnz addmacro_00		;skip this macro
 
-	invoke	PutStringInHeap, key
-	mov 	key,eax
-	invoke	PutStringInHeap, tvalue
-	mov 	tvalue,eax
-	invoke	malloc, size SYMBOL+4
-	and		eax, eax
-	jz		addmacro_00
-	mov		ebx, eax
-	mov		eax, tvalue
-	mov 	[ebx+4].SYMBOL.dwProc,eax
-	mov 	eax, key
-	mov 	[ebx+4].SYMBOL.pText,eax
-	mov 	byte ptr [ebx+4].SYMBOL.bType,0C0h  ;als textmacro kennzeichnen
-	mov 	eax,pMacros
-	mov 	[ebx+0],eax
-	mov 	pMacros,ebx
+	invoke PutStringInHeap, key
+	mov key, eax
+	invoke PutStringInHeap, tvalue
+	mov tvalue, eax
+	invoke malloc, sizeof SYMBOL+4
+	and eax, eax
+	jz addmacro_00
+	mov ebx, eax
+	mov eax, tvalue
+	mov [ebx+4].SYMBOL.dwProc, eax
+	mov eax, key
+	mov [ebx+4].SYMBOL.pText, eax
+	mov byte ptr [ebx+4].SYMBOL.bType,0C0h  ;als textmacro kennzeichnen
+	mov eax,pMacros
+	mov [ebx+0], eax
+	mov pMacros, ebx
 if 0
 	@stroutc "macro added: "
-	mov 	ebx,key
+	mov ebx, key
 	@strout ebx
 	@stroutc "  "
-	mov 	ebx,tvalue
+	mov ebx, tvalue
 	@strout ebx
-	invoke	_crout
+	invoke _crout
 endif
-	jmp 	addmacro_00
+	jmp addmacro_00
 addmacro_2:
 error:
 exit:
@@ -7304,7 +7342,7 @@ _skip proc c pb:PARMBLK
 
 	xor [fMode], FMODE_SKIP
 	test [fMode], FMODE_SKIP
-	jnz  @F
+	jnz @F
 	@errorout MSG_SKIPNOTACTIV
 	ret
 @@:
@@ -7347,7 +7385,7 @@ ring0 proc stdcall public routine:dword
 	test [fMode], FMODE_STRICT
 	jnz ring02
 	cmp ring0sel,0
-	jz ring02				  ;wir haben kein call gate
+	jz ring02				;wir haben kein call gate
 if ?USEFLATR0CS
 	mov eax,MyBase
 	add [ring0proc],eax
@@ -7387,23 +7425,23 @@ ring0rou endp
 
 DisplaySymbolLine proc stdcall public      
 	@strout [esi.SYMBOL.pText]
-	test	byte ptr [esi.SYMBOL.bType],_RDONLY_
-	jz		@F
-	test	ch,_RDONLY_
-	jnz 	@F
+	test byte ptr [esi.SYMBOL.bType],_RDONLY_
+	jz @F
+	test ch,_RDONLY_
+	jnz @F
 	@stroutc " (r/o)"
 @@:
 	@stroutc ": "
-	mov 	cl,[esi.SYMBOL.bType]
-	mov 	al,cl
-	and 	al,1fh
-	jz		@F
-	mov 	ebx,[esi.SYMBOL.dwProc]  ;addr holen
+	mov cl,[esi.SYMBOL.bType]
+	mov al,cl
+	and al,1fh
+	jz @F
+	mov ebx,[esi.SYMBOL.dwProc]  ;addr holen
 	pushad
-	call	symout
+	call symout
 	popad
 @@:
-	invoke	_crout
+	invoke _crout
 	ret
 DisplaySymbolLine endp        
 
@@ -7413,18 +7451,18 @@ DisplaySymbolLine endp
 ;*** ch=flags
 
 symtout proc public uses esi
-	mov 	esi,ebx
+	mov esi,ebx
 nextitem:
-	cmp 	esi,eax
-	jnb 	exit
-	cmp 	byte ptr [esi.SYMBOL.pNext],00
-	jz		exit
-	push	eax
-	invoke	DisplaySymbolLine
-	movzx	eax,byte ptr [esi.SYMBOL.pNext]
-	add 	esi,eax
-	pop 	eax
-	jmp 	nextitem
+	cmp esi,eax
+	jnb exit
+	cmp byte ptr [esi.SYMBOL.pNext],00
+	jz exit
+	push eax
+	invoke DisplaySymbolLine
+	movzx eax,byte ptr [esi.SYMBOL.pNext]
+	add esi,eax
+	pop eax
+	jmp nextitem
 exit:
 	ret
 symtout endp
@@ -7435,7 +7473,7 @@ symtout endp
 
 singlprot proc uses esi
 
-	inc byte ptr fSkipLF			 ;kein LF am ende
+	inc [fSkipLF]			; kein LF am ende
 	push dword ptr [unasarg+0]
 
 	push __CONST__			;Type2
@@ -7469,8 +7507,8 @@ singlprot proc uses esi
 	movzx eax, ax
 	invoke printf, CStr(9,9,"'ax=%04X'"), eax
 sp_1:        
-	add  esp,7*4
-	pop  dword ptr [unasarg+0]
+	add esp,7*4
+	pop dword ptr [unasarg+0]
 	call croutx
 	ret
 singlprot endp
@@ -7480,11 +7518,11 @@ singlprot endp
 calcopsize proc uses esi
 	or [fMode], FMODE_NODISP
 	call getactcseip					 ;CS:EIP -> AX:EBX
-	mov  cl,__FPTR__
+	mov cl,__FPTR__
 	test dl,1
 	jz @F
-	mov  [a1.ARGDESC.dwSeg],eax
-	mov  cl,__RMLPTR__
+	mov [a1.ARGDESC.dwSeg],eax
+	mov cl,__RMLPTR__
 @@:
 	push __CONST__
 	push 0
@@ -7496,9 +7534,9 @@ calcopsize proc uses esi
 
 	push 2
 	call _unass
-	add  esp,7*4
-	sub  eax,ebx
-	and  [fMode], not FMODE_NODISP
+	add esp,7*4
+	sub eax,ebx
+	and [fMode], not FMODE_NODISP
 	ret
 calcopsize endp
 
@@ -7507,7 +7545,7 @@ calcopsize endp
 _xregsout proc c
 
 ;	mov esi,offset xtstab		  ;gdtr,idtr,ldtr,tr ausgeben
-;	call  regsout_2
+;	call regsout_2
 ;	invoke _crout
 
 	@ring0call savexregs			 ;protected register ausgeben
@@ -7523,8 +7561,8 @@ regsout_tss endp
 
 if ?MMXREGS
 _mmxregsout:
-	test   idflags,800000h			;MMX implemented?
-	jnz    @F
+	test idflags,800000h			;MMX implemented?
+	jnz @F
 	ret
 @@:
 	xor ecx, ecx
@@ -7534,16 +7572,16 @@ nextmmxreg:
 	invoke printf, CStr("mm%u="),ecx
 	lodsd
 	push esi
-	mov  esi, eax
-	mov  ebx, [esi].SYMBOL.dwProc
-	mov  cl, [esi].SYMBOL.bType
+	mov esi, eax
+	mov ebx, [esi].SYMBOL.dwProc
+	mov cl, [esi].SYMBOL.bType
 	call symout
 	call _crout
-	pop  esi
-	pop  ecx
-	inc  ecx
-	cmp  ecx, 8
-	jnz  nextmmxreg
+	pop esi
+	pop ecx
+	inc ecx
+	cmp ecx, 8
+	jnz nextmmxreg
 	ret
 endif
 
@@ -7574,23 +7612,23 @@ nextxmmreg:
 	mov ebx,eax
 	lodsd
 	invoke printf, CStr("xmm%u=%08X-%08X-%08X-%08X",10), ecx, eax, ebx, edx, edi
-	pop  ecx
-	inc  ecx
-	cmp  ecx, 8
-	jnz  nextxmmreg
+	pop ecx
+	inc ecx
+	cmp ecx, 8
+	jnz nextxmmreg
 	mov esp,ebp
 	pop ebp
 	ret
 endif
 
 _fpregsout:								; display FP regs
-	test   byte ptr [f80x87],F80X87_STATE_SAVED
-	jnz    @F
+	test [f80x87], F80X87_STATE_SAVED
+	jnz @F
 	@errorout ERR_NO_FPUREGS_SAVED
 	ret
 @@:
-	mov    esi,offset ftstab
-	call   regsout_2
+	mov esi,offset ftstab
+	call regsout_2
 
 	mov edi,ftw
 	mov ecx,fsw
@@ -7605,37 +7643,37 @@ nextfreg:
 	invoke printf, CStr("st%u="),ecx
 	lodsd
 	push esi
-	mov  esi,eax
-	mov  eax, edi
-	mov  ebx,[esi].SYMBOL.dwProc
-	ror  di,2
-	and  al,3
-	mov  ecx, CStr("<empty>")
-	cmp  al,3
-	jz	 isEmpty
-	mov  ecx, CStr("<NaN>")
-	cmp  al,2
-	jz	 isNaN
-	mov  cl,[esi].SYMBOL.bType
+	mov esi,eax
+	mov eax, edi
+	mov ebx,[esi].SYMBOL.dwProc
+	ror di,2
+	and al,3
+	mov ecx, CStr("<empty>")
+	cmp al,3
+	jz isEmpty
+	mov ecx, CStr("<NaN>")
+	cmp al,2
+	jz isNaN
+	mov cl,[esi].SYMBOL.bType
 	call symout
-	jmp  fregdone
+	jmp fregdone
 isNaN:
 	test byte ptr [ebx+9],80h
-	jz	 isEmpty
+	jz isEmpty
 	invoke printf, CStr("-%-21s"), ecx
 	jmp  fregdone
 isEmpty:
 	invoke printf, CStr("%-22s"), ecx
 fregdone:
-	pop  esi
-	pop  ecx
+	pop esi
+	pop ecx
 	test cl,1
-	jz	 @F
+	jz @F
 	invoke _crout
 @@:
-	inc  ecx
-	cmp  ecx, 8
-	jnz  nextfreg
+	inc ecx
+	cmp ecx, 8
+	jnz nextfreg
 	ret
 
 _regsout proc c 					; current register
@@ -7647,7 +7685,7 @@ _regsoutr:: 						; real mode register
 _regsoutp:: 						; protected mode register
 	mov esi,offset tstab
 regsout_2::
-	xor    edi,edi
+	xor edi,edi
 regsout_3::
 	call symbolout
 	jnc regsout_3
@@ -7657,30 +7695,30 @@ _regsout endp
 
 symbolout:							; esi -> symbol descriptor
 	lodsd							; edi = offset (normal = 0)
-	cmp  eax,-1
-	jz	 symbolout_ex
-	and  eax,eax
-	jz	 @F
+	cmp eax,-1
+	jz symbolout_ex
+	and eax,eax
+	jz @F
 	@strout eax
 @@:
 	lodsd
-	and  eax,eax
-	jz	 @F
+	and eax,eax
+	jz @F
 	push esi
-	mov  esi,eax
-	mov  cl,[esi.SYMBOL.bType]
-	mov  ebx,[esi.SYMBOL.dwProc]
-	add  ebx,edi
+	mov esi,eax
+	mov cl,[esi.SYMBOL.bType]
+	mov ebx,[esi.SYMBOL.dwProc]
+	add ebx,edi
 	call symout
-	pop  esi
+	pop esi
 	clc
 	ret
 @@:
 	lodsd
 	call eax
-	mov  ebx,offset tmpvar
-	mov  [ebx+0],eax
-	mov  [ebx+4],edx
+	mov ebx,offset tmpvar
+	mov [ebx+0],eax
+	mov [ebx+4],edx
 	call symout
 	clc
 	ret
@@ -7709,7 +7747,7 @@ symtrace_1:
 	@putchr ' '
 	@dwordout [esi.SYMBOL.dwProc]
 	@putchr ' '
-	cmp  byte ptr [esi.SYMBOL.bType],-1
+	cmp byte ptr [esi.SYMBOL.bType],-1
 	jz @F
 	@strout [esi.SYMBOL.pText]
 @@:
@@ -7975,7 +8013,7 @@ ife ?32BIT
 		@savewinsegregs
 		mov		eax, dword ptr qwAddress+4
 		push	ax
-		mov		eax, dword ptr qwAddress
+		mov		eax, dword ptr qwAddress+0
 		push	ax
 		mov		eax, ds
 		push	ax
@@ -7999,7 +8037,7 @@ else
   endif
 		mov		eax, dword ptr qwAddress+4
 		push	ax
-		mov		eax, dword ptr qwAddress
+		mov		eax, dword ptr qwAddress+0
 		push	ax
 		push	ecx
 		push	word ptr 40h
@@ -8028,34 +8066,34 @@ SearchSymbol endp
 ;--- get debuggee CS in AX, type in DL
 
 GetCurrentCS proc stdcall public
-	test	[fEntry], FENTRY_REAL
-	jz		@F
-	mov 	ax,[r1r.rCS]
-	mov 	dl,01
+	test [fEntry], FENTRY_REAL
+	jz @F
+	mov ax,[r1r.rCS]
+	mov dl,01
 	ret
 @@:
-	mov 	eax,[r1.rCS]
-	mov 	dl,00
+	mov eax,[r1.rCS]
+	mov dl,00
 	ret
 GetCurrentCS endp
 
 ;--- get current CS:EIP in AX:EBX, in real-mode AX will be a segment
 
 getactcseip proc stdcall public
-	call	GetCurrentCS
+	call GetCurrentCS
 GetCurrentEIP::
-	test	[fEntry], FENTRY_REAL
-	jnz 	getacteip_1
-	mov 	ebx,[r1.rCS]
-	lar 	ebx,ebx
-	test	ebx,400000h
-	mov 	ebx,[r1.rEip]
-	jnz 	@F
-	movzx	ebx,bx
+	test [fEntry], FENTRY_REAL
+	jnz getacteip_1
+	mov ebx,[r1.rCS]
+	lar ebx,ebx
+	test ebx,400000h
+	mov ebx,[r1.rEip]
+	jnz @F
+	movzx ebx,bx
 @@:
 	ret
 getacteip_1:
-	movzx	ebx,[r1r.rIP]
+	movzx ebx,[r1r.rIP]
 	ret
 getactcseip	endp
 
@@ -8063,13 +8101,13 @@ getactcseip	endp
 ;--- in real-mode a flat address will be returned
 
 getactcseipx proc
-	call	getactcseip
-	test	dl,1			;real mode?
-	jz		@F
-	movzx	eax,ax
-	shl 	eax,4
-	add 	ebx,eax
-	mov 	eax,@flat
+	call getactcseip
+	test dl,1			;real mode?
+	jz @F
+	movzx eax,ax
+	shl eax,4
+	add ebx,eax
+	mov eax,@flat
 @@:
 	ret
 getactcseipx endp
@@ -8081,51 +8119,51 @@ checknextinstruction proc stdcall
 
 local eipinh:dword
 
-	test	[fMode], FMODE_SKIP	;dont skip int1/3 if skip is active
-	jnz		exit
-	call	getactcseipx
-	mov 	esi,ebx
-	lea 	edi,eipinh
+	test [fMode], FMODE_SKIP	;dont skip int1/3 if skip is active
+	jnz exit
+	call getactcseipx
+	mov esi,ebx
+	lea edi,eipinh
 
-	call	getmemory			;get AX:ESI to ES:EDI
-	cmp 	bl,1
-	jb		eiperror
+	call getmemory			;get AX:ESI to ES:EDI
+	cmp bl,1
+	jb eiperror
 
-	mov 	al,byte ptr eipinh
+	mov al,byte ptr eipinh
 
-	xor 	ecx,ecx
-	cmp 	al,0CCh 	  ;INT 3?
-	jz		cni_1
-	cmp 	al,0CDh
-	jz		@F
+	xor ecx,ecx
+	cmp al,0CCh 	  ;INT 3?
+	jz cni_1
+	cmp al,0CDh
+	jz @F
 	clc
-	jmp 	exit
+	jmp exit
 @@:
-	cmp 	bl,2
-	jb		eiperror
-	mov 	al,byte ptr eipinh+1
-	cmp 	al,3		  ;INT 3?
-	jz		cni_2
-	cmp 	al,1		  ;INT 1?
-	jz		cni_2
+	cmp bl,2
+	jb eiperror
+	mov al,byte ptr eipinh+1
+	cmp al,3		  ;INT 3?
+	jz cni_2
+	cmp al,1		  ;INT 1?
+	jz cni_2
 	clc
-	jmp 	exit
+	jmp exit
 eiperror:
 	@errorout ERR_CSEIP_INVALID
-	jmp 	mains
+	jmp mains
 cni_2:
-	inc 	ecx
+	inc ecx
 cni_1:
-	inc 	ecx
-	test	[fEntry], FENTRY_REAL
-	jnz 	@F
-	add 	[r1.rEip],ecx
-	jmp 	cni_3
+	inc ecx
+	test [fEntry], FENTRY_REAL
+	jnz @F
+	add [r1.rEip],ecx
+	jmp cni_3
 @@:
-	add 	[r1r.rIP],cx
+	add [r1r.rIP],cx
 cni_3:
-	call	gettracemode  ;im tracemodus dann gleich in debugger gehen
-	jz		exit
+	call gettracemode  ;im tracemodus dann gleich in debugger gehen
+	jz exit
 	stc
 exit:
 	ret
@@ -8137,74 +8175,74 @@ checknextinstruction endp
 
 MarkDOSused proc stdcall public
 
-	push	es
-	push	ds
+	push es
+	push ds
 	pushad
-	mov 	ds,cs:[__csalias]
+	mov ds,cs:[__csalias]
 	@tprintf <"enter MarkDOSused",lf>
-	test	[fDOSused], FDU_SAVED
-	jnz 	MarkDOSused_1
+	test [fDOSused], FDU_SAVED
+	jnz MarkDOSused_1
 if ?CHECKINDOS
-	push	ds
-;	lds 	bx,dwIndos
-;	movzx	ebx,bx
+	push ds
+;	lds bx,dwIndos
+;	movzx ebx,bx
 	mov ebx, [dwIndos]
 ife ?FLAT
 	mov ds, cs:[__flatsel]
 endif
 if 0;?CHECKINDOSVALID
-	mov 	eax,ds
-	lsl 	eax,eax
-	cmp 	eax,ebx
-	jb		@F
+	mov eax,ds
+	lsl eax,eax
+	cmp eax,ebx
+	jb @F
 endif
 	cmp byte ptr [ebx],0
-;	cmp 	byte ptr [ebx],0		;are we in DOS currently?
+;	cmp byte ptr [ebx],0		;are we in DOS currently?
 @@:
-	pop 	ds
-	jz		MarkDOSused_1
+	pop ds
+	jz MarkDOSused_1
 endif
-	mov 	ecx,[sdalen1]
-	mov 	edi,[pSdaSave]
-	and 	edi,edi
-	jz		@F
-	mov 	es,[__flatsel]
-	push	ds					  ;in SDA ist PSP und DTA enthalten!
-	movzx	esi,word ptr [sdaadr+0]
-	movzx	eax,word ptr [sdaadr+2]
-	shl 	eax,4
-	add 	esi,eax
-	push	es
-	pop 	ds
-	mov 	dl,cl
-	shr 	ecx,2
-	rep 	movsd
-	mov 	cl,dl
-	and 	cl,3
-	rep 	movsb
-	pop 	ds
+	mov ecx,[sdalen1]
+	mov edi,[pSdaSave]
+	and edi,edi
+	jz @F
+	mov es,[__flatsel]
+	push ds					  ;in SDA ist PSP und DTA enthalten!
+	movzx esi,word ptr [sdaadr+0]
+	movzx eax,word ptr [sdaadr+2]
+	shl eax,4
+	add esi,eax
+	push es
+	pop ds
+	mov dl,cl
+	shr ecx,2
+	rep movsd
+	mov cl,dl
+	and cl,3
+	rep movsb
+	pop ds
 	@tprintf <"MarkDOSused: SDA saved",lf>
 @@:
-	or		[fDOSused], FDU_SAVED
+	or [fDOSused], FDU_SAVED
 MarkDOSused_1:
-	test	[fDOSused], FDU_PSPSWITCHED
-	jnz 	MarkDOSused_2
-	or		[fDOSused], FDU_PSPSWITCHED
-	call	getpsp
-	call	getdta
-	mov 	ebx,[_psp]			;debugger PSP
+	test [fDOSused], FDU_PSPSWITCHED
+	jnz MarkDOSused_2
+	or [fDOSused], FDU_PSPSWITCHED
+	call getpsp
+	call getdta
+	mov ebx,[_psp]			;debugger PSP
 	@DosCall 50h
-	push	ds
-	mov 	edx,0080h
-	mov 	ds,[_psp]
+	push ds
+	mov edx,0080h
+	mov ds,[_psp]
 	@DosCall 1Ah				;reset DTA
-	pop 	ds
+	pop ds
 	@tprintf <"MarkDOSused: PSP switched to debugger",lf>
 MarkDOSused_2:
 	@tprintf <"exit MarkDOSused",lf>
 	popad
-	pop 	ds
-	pop 	es
+	pop ds
+	pop es
 	ret
 MarkDOSused endp
 
@@ -8267,58 +8305,58 @@ MarkDOSnotused endp
 
 _if proc c
 
-	lea		esi,fNotActive
-	inc 	byte ptr [ifcount]
-	cmp 	byte ptr [esi],0
-	jnz 	@F
-	and 	ebx,ebx
-	jnz 	@F
-	mov 	al,[ifcount]
-	mov 	[esi],al
+	lea esi,fNotActive
+	inc byte ptr [ifcount]
+	cmp byte ptr [esi],0
+	jnz @F
+	and ebx,ebx
+	jnz @F
+	mov al,[ifcount]
+	mov [esi],al
 @@:
 	ret
 _if endp
 
 _else proc c
-	mov 	al,[ifcount]
-	cmp 	al,[elsecnt]
-	mov 	[elsecnt],al
-	jnz 	else_1
-	cmp 	al,2
-	jnb 	@F
+	mov al,[ifcount]
+	cmp al,[elsecnt]
+	mov [elsecnt],al
+	jnz else_1
+	cmp al,2
+	jnb @F
 	@errorout ERR_ELSE_WITHOUT_IF
 	ret
 @@:
-	call	_endif
-	jmp 	_else
+	call _endif
+	jmp _else
 else_1:
-	lea		esi,fNotActive
-	cmp 	byte ptr [esi],0		;augenblicklich deaktiv?
-	jnz 	@F						;dann sprung
-	mov 	[esi],al				;ansonsten deaktivieren
-	jmp 	else_ex
+	lea esi,fNotActive
+	cmp byte ptr [esi],0		;augenblicklich deaktiv?
+	jnz @F						;dann sprung
+	mov [esi],al				;ansonsten deaktivieren
+	jmp else_ex
 @@:
-	cmp 	al,[esi]				;aktueller level?
-	jnz 	else_ex
-	mov 	byte ptr [esi],0		;aktivieren
+	cmp al,[esi]				;aktueller level?
+	jnz else_ex
+	mov byte ptr [esi],0		;aktivieren
 else_ex:
 	ret
 _else endp
 
 _endif proc c
-	mov 	byte ptr [elsecnt],0
-	mov 	al,[ifcount]
-	cmp 	al,0
-	jnz 	@F
+	mov byte ptr [elsecnt],0
+	mov al,[ifcount]
+	cmp al,0
+	jnz @F
 	@errorout ERR_ENDIF_WITHOUT_IF
 	ret
 @@:
-	cmp 	al,[fNotActive]
-	jnz 	@F
-	mov 	byte ptr [fNotActive],0
+	cmp al,[fNotActive]
+	jnz @F
+	mov byte ptr [fNotActive],0
 @@:
-	dec 	al
-	mov 	[ifcount],al
+	dec al
+	mov [ifcount],al
 	ret
 _endif endp
 
@@ -8326,7 +8364,7 @@ _endif endp
 
 _breakremove proc C
 
-	mov   [excexit], offset error
+	mov [excexit], offset error
 	call getlinearcseip
 	mov ebx,eax
 	cmp byte ptr @flat:[ebx],0CCh
@@ -8348,22 +8386,22 @@ error:
 _breakremove endp
 
 checkifactive proc stdcall
-	cmp 	byte ptr [fNotActive],0
-	jz		checkifactive_ex
-	mov 	eax,[esi.SYMBOL.dwProc]
-	cmp 	eax,offset _endif
-	jnz 	@F
-	call	_endif
-	jmp 	checkifactive_er
+	cmp byte ptr [fNotActive],0
+	jz checkifactive_ex
+	mov eax,[esi.SYMBOL.dwProc]
+	cmp eax,offset _endif
+	jnz @F
+	call _endif
+	jmp checkifactive_er
 @@:
-	cmp 	eax,offset _if
-	jnz 	@F
-	call	_if
-	jmp 	checkifactive_er
+	cmp eax,offset _if
+	jnz @F
+	call _if
+	jmp checkifactive_er
 @@:
-	cmp 	eax,offset _else
-	jnz 	@F
-	call	_else
+	cmp eax,offset _else
+	jnz @F
+	call _else
 checkifactive_er:
 @@:
 	stc
@@ -8395,83 +8433,83 @@ ljmpopctab2 equ $ - jmpopctab2
 
 
 setdl2rmpm:
-	mov 	dl,00			  ;typ des breakpoints
-	test	[fEntry], FENTRY_REAL
-	jz		@F
-	inc 	dl
+	mov dl,00			  ;typ des breakpoints
+	test [fEntry], FENTRY_REAL
+	jz @F
+	inc dl
 @@:
 	ret
 
 ;--- CS:EIP -> INT 21, check if app terminates
 
 checkterminate proc stdcall
-	mov  cl,byte ptr [r1.rEax+1]
-	cmp  cl,4Ch
-	jz	 isterm
-	cmp  cl,31h
-	jz	 isterm
+	mov cl,byte ptr [r1.rEax+1]
+	cmp cl,4Ch
+	jz isterm
+	cmp cl,31h
+	jz isterm
 exit:
 	ret
 isterm:
-	cmp  tracesteps,0
-	jz	 exit
-	invoke	_crout
+	cmp tracesteps,0
+	jz exit
+	invoke _crout
 	@errorout WRN_PROGRAM_WILL_TERMINATE
-	jmp  mains
+	jmp mains
         
 checkterminate endp
 
 ;--- set a break at CS:E/IP on [ss:e/sp]
 
 setbrkforsssp proc        
-	test	dl,1
-	jz		@F
-	movzx	ebx,[r1r.rSS]	 		;in real mode break an
-	shl		ebx,4					;rueckkehradresse
-	movzx	ecx,[r1r.rSP]
-	add		ebx,ecx
-	mov		ax,word ptr @flat:[ebx+2]	;real mode CS into AX
-	mov		bx,word ptr @flat:[ebx+0]	;real mode IP into BX
-	and		byte ptr [r1r.rFlags+1],not FL_TRACE
+	test dl,1
+	jz @F
+	movzx ebx,[r1r.rSS]	 		;in real mode break an
+	shl ebx,4					;rueckkehradresse
+	movzx ecx,[r1r.rSP]
+	add ebx,ecx
+	mov ax,word ptr @flat:[ebx+2]	;real mode CS into AX
+	mov bx,word ptr @flat:[ebx+0]	;real mode IP into BX
+	and byte ptr [r1r.rFlags+1],not FL_TRACE
 	ret
 @@:
-	mov		eax, r1.rSS
-	mov		fs, eax
-	mov		ebx, r1.rEsp
-	lar		ecx, eax
-	test	ecx,400000h
-	jnz		@F
-	movzx	ebx,bx
+	mov eax, r1.rSS
+	mov fs, eax
+	mov ebx, r1.rEsp
+	lar ecx, eax
+	test ecx,400000h
+	jnz @F
+	movzx ebx,bx
 @@:
-	lsl		ecx, eax
+	lsl ecx, eax
 if ?32BIT
-	lea		eax,[ebx+5]
-	cmp		ecx, eax
-	jc		exit
-	mov		ax, fs:[ebx+4] 
-	mov		ebx, fs:[ebx+0] 
+	lea eax,[ebx+5]
+	cmp ecx, eax
+	jc exit
+	mov ax, fs:[ebx+4] 
+	mov ebx, fs:[ebx+0] 
 else
-	lea		eax,[ebx+3]
-	cmp		ecx, eax
-	jc		exit
-	mov		ax, fs:[ebx+2] 
-	movzx	ebx, word ptr fs:[ebx+0] 
+	lea eax,[ebx+3]
+	cmp ecx, eax
+	jc exit
+	mov ax, fs:[ebx+2] 
+	movzx ebx, word ptr fs:[ebx+0] 
 endif
-	verr	ax
-	jnz		error
-	and		byte ptr [r1.rEfl+1],not FL_TRACE
+	verr ax
+	jnz error
+	and byte ptr [r1.rEfl+1],not FL_TRACE
 exit:
 	ret
 error:
 	test [fTMode], FTMODE_STOPIFCTRLLOST
-	jz		exit2				;silent exit, continue trace mode
+	jz exit2				;silent exit, continue trace mode
 	pushad
-	mov		eax, MSG_UNKNOWN_PM_CONTINUE
-	call	askuser
+	mov eax, MSG_UNKNOWN_PM_CONTINUE
+	call askuser
 	popad
-	jnc		exit2
+	jnc exit2
 	@errorout ERR_PMBREAK_UNKNOWN
-	jmp		mains
+	jmp mains
 exit2:
 	stc
 	ret
@@ -8480,38 +8518,38 @@ setbrkforsssp endp
 ;--- check if CS:EIP = dpmi raw switch address
 
 checkrawswitch proc        
-	test	dl,1
-	jz		isprotmode
-	cmp		bx,word ptr dpmirm2pm+0	;check for raw switch to prot mode
-	jnz		norawswitch
-	cmp		ax,word ptr dpmirm2pm+2
-	jnz		norawswitch
-	and		byte ptr [r1r.rFlags+1],not FL_TRACE
-	movzx	eax,word ptr [r1.rEsi]	;SI=prot mode CS
+	test dl,1
+	jz isprotmode
+	cmp bx,word ptr dpmirm2pm+0	;check for raw switch to prot mode
+	jnz norawswitch
+	cmp ax,word ptr dpmirm2pm+2
+	jnz norawswitch
+	and byte ptr [r1r.rFlags+1],not FL_TRACE
+	movzx eax,word ptr [r1.rEsi]	;SI=prot mode CS
 if ?32BIT
-	mov		ebx,[r1.rEdi]
+	mov ebx,[r1.rEdi]
 else
-	movzx	ebx,word ptr [r1.rEdi]	;E/DI=prot mode E/IP
+	movzx ebx,word ptr [r1.rEdi]	;E/DI=prot mode E/IP
 endif
-	mov		dl,0					;is a protected mode address
+	mov dl,0					;is a protected mode address
 	clc
 	ret
 isprotmode:								;check for raw switch to real mode
 if ?32BIT
-	cmp		ebx,dword ptr dpmipm2rm+0
-	jnz		norawswitch
-	cmp		ax,word ptr dpmipm2rm+4
-	jnz		norawswitch
+	cmp ebx,dword ptr dpmipm2rm+0
+	jnz norawswitch
+	cmp ax,word ptr dpmipm2rm+4
+	jnz norawswitch
 else
-	cmp		bx,word ptr dpmipm2rm+0
-	jnz		norawswitch
-	cmp		ax,word ptr dpmipm2rm+2
-	jnz		norawswitch
+	cmp bx,word ptr dpmipm2rm+0
+	jnz norawswitch
+	cmp ax,word ptr dpmipm2rm+2
+	jnz norawswitch
 endif
-	and		byte ptr [r1.rEfl+1],not FL_TRACE
-	mov		ax,word ptr [r1.rEsi]	;SI=real mode CS
-	mov		bx,word ptr [r1.rEdi]	;DI=real mode IP
-	mov		dl,1					;is a real-mode address
+	and byte ptr [r1.rEfl+1],not FL_TRACE
+	mov ax,word ptr [r1.rEsi]	;SI=real mode CS
+	mov bx,word ptr [r1.rEdi]	;DI=real mode IP
+	mov dl,1					;is a real-mode address
 	clc
 	ret
 norawswitch:
@@ -8522,26 +8560,26 @@ checkrawswitch endp
 ;--- check if CS:EIP = dpmi save/restore task state address
 
 checksaverestore proc        
-	test	dl,1				;make it a valid address
-	jz		pmsrts
-	cmp		bx, word ptr dpmisrtsRM+0
-	jnz		@F
-	cmp		ax, word ptr dpmisrtsRM+2
-	jz		issrts
+	test dl,1				;make it a valid address
+	jz pmsrts
+	cmp bx, word ptr dpmisrtsRM+0
+	jnz @F
+	cmp ax, word ptr dpmisrtsRM+2
+	jz issrts
 @@:
 	stc
 	ret
 pmsrts:        
 if ?32BIT
-	cmp		ebx,dword ptr dpmisrtsPM+0
-	jnz		@F
-	cmp		ax,word ptr dpmisrtsPM+4
-	jz		issrts
+	cmp ebx,dword ptr dpmisrtsPM+0
+	jnz @F
+	cmp ax,word ptr dpmisrtsPM+4
+	jz issrts
 else
-	cmp		bx,word ptr dpmisrtsPM+0
-	jnz		@F
-	cmp		ax,word ptr dpmisrtsPM+2
-	jz		issrts
+	cmp bx,word ptr dpmisrtsPM+0
+	jnz @F
+	cmp ax,word ptr dpmisrtsPM+2
+	jz issrts
 endif
 @@:
 	stc
@@ -8558,51 +8596,51 @@ endif
 ;--- out AX:EBX = CS:EIP
 
 checkint proc        
-	cmp		byte ptr fs:[ebx],0CDh		;INT XX?
-	jnz		notint
-	cmp		byte ptr fs:[ebx+1],21h		;INT 21h?
-	jnz		notint21
-	call	checkterminate
+	cmp byte ptr fs:[ebx],0CDh		;INT XX?
+	jnz notint
+	cmp byte ptr fs:[ebx+1],21h		;INT 21h?
+	jnz notint21
+	call checkterminate
 if ?SUPPDOS4GW
-	test	dl,1
-	jnz		notint21
+	test dl,1
+	jnz notint21
 	test [fTMode], FTMODE_ISDOS4GW
-	jz		notint21
-	cmp		byte ptr r1.rEax+1, 0FFh	;DOS4/GW function?
-	jnz		notint21
-	cmp		byte ptr r1.rEdx+1, 10h		;DOS4/GW program exec?
-	jnz		notint21
+	jz notint21
+	cmp byte ptr r1.rEax+1, 0FFh	;DOS4/GW function?
+	jnz notint21
+	cmp byte ptr r1.rEdx+1, 10h		;DOS4/GW program exec?
+	jnz notint21
 @@:
-	mov		ax,word ptr r1.rEbx
-	movzx	ebx,word ptr r1.rEcx
-	jmp		done
+	mov ax,word ptr r1.rEbx
+	movzx ebx,word ptr r1.rEcx
+	jmp done
 endif
 notint21:
 if ?SUPP32RTM
-	cmp		byte ptr fs:[ebx+1],2Fh		;INT 2Fh?
-	jnz		notint2F
-	test	dl,1
-	jz		notint2F
-	cmp		word ptr r1.rEax, 0FB42h	;32RTM call?
-	jnz		notint2F
-	cmp		word ptr r1.rEbx, 03233h	;???
-	jnz		notint2F
-	mov		bl,2Fh
+	cmp byte ptr fs:[ebx+1],2Fh		;INT 2Fh?
+	jnz notint2F
+	test dl,1
+	jz notint2F
+	cmp word ptr r1.rEax, 0FB42h	;32RTM call?
+	jnz notint2F
+	cmp word ptr r1.rEbx, 03233h	;???
+	jnz notint2F
+	mov bl,2Fh
 	@DpmiCall 200h
-	movzx	ebx,cx
-	shl		ebx,4
-	movzx	edx,dx
-	add		ebx,edx
-	mov 	eax,@flat
-	mov 	dl,00
-	jmp		done
+	movzx ebx,cx
+	shl ebx,4
+	movzx edx,dx
+	add ebx,edx
+	mov eax,@flat
+	mov dl,00
+	jmp done
 notint2F:
 endif
-	inc		ebx
-	inc		ebx
+	inc ebx
+	inc ebx
 	test [fTMode], FTMODE_NOTRACEFORINT
-	jz		done
-	call	resettracemode
+	jz done
+	call resettracemode
 done:
 	clc
 	ret
@@ -8612,21 +8650,21 @@ notint:
 checkint endp        
 
 checkrep proc
-	mov		cl,fs:[ebx]
-	and		cl,0FEh
-	cmp		cl,0F2h
-	jnz		norep
-	mov		cl,fs:[ebx+1]
-	cmp		cl,0A4h
-	jb		norep
-	and		cl,0FEh
-	cmp		cl,0A8h
-	jz		norep
-	cmp		cl,0B0h
-	jnb		norep
-	call	resettracemode
-	inc		ebx				;is opcode size always 2?
-	inc		ebx
+	mov cl,fs:[ebx]
+	and cl,0FEh
+	cmp cl,0F2h
+	jnz norep
+	mov cl,fs:[ebx+1]
+	cmp cl,0A4h
+	jb norep
+	and cl,0FEh
+	cmp cl,0A8h
+	jz norep
+	cmp cl,0B0h
+	jnb norep
+	call resettracemode
+	inc ebx				;is opcode size always 2?
+	inc ebx
 	clc
 	ret
 norep:
@@ -8644,93 +8682,93 @@ checkrep endp
 settracemode proc
 
 	test [fEntry], FENTRY_REAL
-	jz	 @F
-	or	 byte ptr [r1r.rFlags+1],FL_TRACE
-	jmp  settracemode_0
+	jz @F
+	or byte ptr [r1r.rFlags+1],FL_TRACE
+	jmp settracemode_0
 @@:
-	or	 byte ptr [r1.rEfl+1],FL_TRACE
+	or byte ptr [r1.rEfl+1],FL_TRACE
 settracemode_0:
 	pushad
-	call	getactcseip			;CS:E/IP to AX:E/BX
+	call getactcseip			;CS:E/IP to AX:E/BX
 
-	call	checkrawswitch		;is a raw switch?
-	jnc		setbreak
+	call checkrawswitch		;is a raw switch?
+	jnc setbreak
 
-;	call	checksaverestore	;is a save/restore task state?
-;	jnc		setstacktrace
+;	call checksaverestore	;is a save/restore task state?
+;	jnc setstacktrace
 
-	test	dl,1
-	jz		isprotmode
-	cmp		wRMStop,0
-	jz		@F
-	cmp		ax, wRMStop
-	jz		setstacktrace
+	test dl,1
+	jz isprotmode
+	cmp wRMStop,0
+	jz @F
+	cmp ax, wRMStop
+	jz setstacktrace
 @@:
-	cmp		bx, word ptr dpmiPMentry+0
-	jnz		@F
-	cmp		ax, word ptr dpmiPMentry+2
-	jz		setstacktrace
+	cmp bx, word ptr dpmiPMentry+0
+	jnz @F
+	cmp ax, word ptr dpmiPMentry+2
+	jz setstacktrace
 @@:
-	movzx	eax,ax				;convert AX:BX to a protected mode addr
-	shl 	eax,4
-	add 	ebx,eax
-	mov 	eax,@flat
-	mov		fs,eax
-	mov		cx,wRMBreak
-	and		cl,cl
-	jz		protandreal
-	cmp		cl, fs:[ebx]		;RM-Breakpoint?
-	jnz		protandreal
-	and		ch,ch
-	jz		setstacktrace
-	cmp		ch, fs:[ebx+1]
-	jz		setstacktrace
-	jmp		protandreal
+	movzx eax, ax				;convert AX:BX to a protected mode addr
+	shl eax, 4
+	add ebx, eax
+	mov eax, @flat
+	mov fs, eax
+	mov cx,wRMBreak
+	and cl, cl
+	jz protandreal
+	cmp cl, fs:[ebx]		;RM-Breakpoint?
+	jnz protandreal
+	and ch, ch
+	jz setstacktrace
+	cmp ch, fs:[ebx+1]
+	jz setstacktrace
+	jmp protandreal
 isprotmode:
 if ?CS16ALIAS
-	cmp		ax,word ptr __cs16alias
-	jz		setstacktrace
+	cmp ax, word ptr __cs16alias
+	jz setstacktrace
 endif
-	cmp		ax, wPMStop
-	jz		setstacktrace
-	mov		fs,eax
-	mov		cx,wPMBreak
-	and		cl,cl
-	jz		@F
-	cmp		cl, fs:[ebx]		;RM-Breakpoint?
-	jnz		@F
-	and		ch,ch
-	jz		setstacktrace
-	cmp		ch, fs:[ebx+1]
-	jz		setstacktrace
+	cmp ax, wPMStop
+	jz setstacktrace
+	mov fs, eax
+	mov cx, wPMBreak
+	and cl, cl
+	jz @F
+	cmp cl, fs:[ebx]		;RM-Breakpoint?
+	jnz @F
+	and ch, ch
+	jz setstacktrace
+	cmp ch, fs:[ebx+1]
+	jz setstacktrace
 @@:        
-	test	al,4 				;CS in LDT?
-	jnz		@F
+	test al, 4				;CS in LDT?
+	jnz @F
 	test [fTMode], FTMODE_NOTRACEIFCSINGDT
-	jnz		setstacktrace		;this may not work in all cases
-	jmp	 	exit		 		;don't set auto break
+	jnz setstacktrace		;this may not work in all cases
+	jmp exit		 		;don't set auto break
 @@:        
 protandreal:
 	test [fTMode], FTMODE_CHECKINT
-	jz		@F
-	call	checkint
-	jnc		setbreakEx
+	jz @F
+	call checkint
+	jnc setbreakEx
 @@:
 	test [fTMode], FTMODE_CHECKREP
-	jz		@F
-	call	checkrep
-	jnc		setbreakEx
+	jz @F
+	call checkrep
+	jnc setbreakEx
 @@:
-	jmp		exit
+	jmp exit
 setstacktrace:
-	call	setbrkforsssp
-	jc		exit
-	jmp		setbreak
+	call setbrkforsssp
+	jc exit
+	jmp setbreak
 setbreakEx:
-	mov		dl,00
+	mov dl,00
 setbreak:
-	mov		cl,FBRP_AUTO or FBRP_SILENT
-	call	insertbrkpnt
+	mov cl, FBRP_AUTO or FBRP_SILENT
+	call insertbrkpnt
 	and [fExit], not FEXIT_NOSWITCH
 exit:
 	popad
@@ -8739,7 +8777,7 @@ settracemode endp
 
 gettracemode proc
 	test [fEntry], FENTRY_REAL
-	jz	 @F
+	jz @F
 	test byte ptr [r1r.rFlags+1],FL_TRACE
 	ret
 @@:
@@ -8749,11 +8787,11 @@ gettracemode endp
 
 resettracemode proc
 	test [fEntry], FENTRY_REAL
-	jz	 @F
-	and  byte ptr [r1r.rFlags+1],not FL_TRACE
+	jz @F
+	and byte ptr [r1r.rFlags+1],not FL_TRACE
 	ret
 @@:
-	and  byte ptr [r1.rEfl+1],not FL_TRACE
+	and byte ptr [r1.rEfl+1],not FL_TRACE
 	ret
 resettracemode endp
 
@@ -8774,122 +8812,122 @@ checkifappactive:
 
 settracevars proc stdcall public
 	or [fExit], FEXIT_TRACE
-	call	settracemode
-	cmp 	al,-1
-	jnz 	@F
-	mov 	al,[bTraceFlags]
+	call settracemode
+	cmp al,-1
+	jnz @F
+	mov al,[bTraceFlags]
 @@:
-	and 	al,FTRAC_LOG
-	cmp		al,1
-	sbb		al,al			;0->FF,1->0
-	and 	[fMode], not FMODE_NODISP
-	and 	al, FMODE_NODISP
-	or		[fMode], al
+	and al,FTRAC_LOG
+	cmp al,1
+	sbb al,al			;0->FF,1->0
+	and [fMode], not FMODE_NODISP
+	and al, FMODE_NODISP
+	or [fMode], al
 	ret
 settracevars endp
 
 ;--- command Trace
 
 _traceproc proc c pb:PARMBLK
-	call	checkifappactive
-trace1::								 ;<--- entry von perform und jump
-	mov 	tracesteps,0
-	mov 	al,1
-	cmp 	pb.p2.bType, __CONST__
-	jnz 	@F
-	mov 	al,byte ptr pb.dwOffs2
+	call checkifappactive
+trace1::							 ;<--- entry von perform und jump
+	mov tracesteps,0
+	mov al,1
+	cmp pb.p2.bType, __CONST__
+	jnz @F
+	mov al,byte ptr pb.dwOffs2
 @@:
-	mov 	bTraceFlags,al
+	mov bTraceFlags,al
 	test [fTMode], FTMODE_SWAPALWAYS
-	jnz		@F
-	or		[fExit], FEXIT_NOSWITCH
-@@:        
-	mov 	al,-1
-	call	settracevars
-	cmp 	pb.p1.bType, __DWORD__
-	jnz 	_reset
-	mov 	eax,pb.dwOffs1
-	mov 	[tracesteps],eax
-	or		[fMode], FMODE_EXEACTIVE
-	mov 	[exitproc],offset nexttrace
-	jmp 	_reset
-nexttrace:
-	test	[fEntry], FENTRY_INT01 or FENTRY_SILENTBRK
-	jz		exit
-	dec 	[tracesteps]
-	jz		exit
-	test [fTMode], FTMODE_SWAPALWAYS
-	jnz		@F
+	jnz @F
 	or [fExit], FEXIT_NOSWITCH
 @@:        
-	mov 	al,-1
-	call	settracevars
+	mov al,-1
+	call settracevars
+	cmp pb.p1.bType, __DWORD__
+	jnz _reset
+	mov eax,pb.dwOffs1
+	mov [tracesteps],eax
+	or [fMode], FMODE_EXEACTIVE
+	mov [exitproc],offset nexttrace
+	jmp _reset
+nexttrace:
+	test [fEntry], FENTRY_INT01 or FENTRY_SILENTBRK
+	jz exit
+	dec [tracesteps]
+	jz exit
+	test [fTMode], FTMODE_SWAPALWAYS
+	jnz @F
+	or [fExit], FEXIT_NOSWITCH
+@@:        
+	mov al, -1
+	call settracevars
 if 1
-	cmp		fIrq,0					;interrupts enabled?
-	jnz		nt_1
-	call	GetInpStatus			;is a key pressed?
-	jz		nt_1
-	call	getcharex
-	cmp		al,4					;Ctrl-D?
-	jz		mains
+	cmp fIrq,0					;interrupts enabled?
+	jnz nt_1
+	call GetInpStatus			;is a key pressed?
+	jz nt_1
+	call getcharex
+	cmp al,4					;Ctrl-D?
+	jz mains
 endif        
 nt_1:
-	or		[fMode], FMODE_EXEACTIVE
-	jmp 	_reset
+	or [fMode], FMODE_EXEACTIVE
+	jmp _reset
 exit:
 	retn
 _traceproc endp
 
-dpmimodechange	proc
-	cmp 	al,3
-	jb		dpmimodechange_ok
+dpmimodechange proc
+	cmp al,3
+	jb dpmimodechange_ok
 	stc
 	ret
 dpmimodechange_ok:
-	cmp 	al,0
-	jnz 	@F
-	mov 	bl,byte ptr [r1.rEbx]
+	cmp al,0
+	jnz @F
+	mov bl,byte ptr [r1.rEbx]
 	@DpmiCall 0200h
-	mov 	ax,cx
-	movzx	ebx,dx
-	jmp 	dpmimodechange_1
+	mov ax,cx
+	movzx ebx,dx
+	jmp dpmimodechange_1
 @@:
-	mov 	ebx,[r1.rEdi]
+	mov ebx,[r1.rEdi]
 if ?32BIT eq 0
-	movzx	ebx,bx
+	movzx ebx,bx
 endif
-	mov 	fs,[r1.rES]
-	mov 	ax,fs:[ebx.RMCS.rCS]
-	movzx	ebx,word ptr fs:[ebx.RMCS.rIP]
+	mov fs,[r1.rES]
+	mov ax,fs:[ebx.RMCS.rCS]
+	movzx ebx,word ptr fs:[ebx.RMCS.rIP]
 dpmimodechange_1:
-	mov 	dl,1
-	mov 	cl,FBRP_AUTO
-	call	insertbrkpnt
+	mov dl,1
+	mov cl,FBRP_AUTO
+	call insertbrkpnt
 	clc
 	ret
-dpmimodechange	endp
+dpmimodechange endp
 
 ;--- IRB command ???
 
 _setrmbreak proc c pb:PARMBLK
 
-	mov 	bl,byte ptr pb.dwOffs1
-	cmp 	pb.p1.bType, __CONST__
-	jz		@F
-	call	getactcseipx				;CS:EIP->AX:EBX
-	mov 	fs,eax
-	mov 	al,fs:[ebx]
-	cmp 	al,0CDh
-	jnz 	exit
-	mov 	bl,fs:[ebx+1]
+	mov bl,byte ptr pb.dwOffs1
+	cmp pb.p1.bType, __CONST__
+	jz @F
+	call getactcseipx		;CS:EIP->AX:EBX
+	mov fs, eax
+	mov al, fs:[ebx]
+	cmp al, 0CDh
+	jnz exit
+	mov bl, fs:[ebx+1]
 @@:
-										;get real mode int
+							;get real mode int
 	@DpmiCall 0200h
-	movzx	ebx,dx
-	mov 	eax,ecx
-	mov 	dl,1
-	mov 	cl,FBRP_AUTO
-	call	insertbrkpnt
+	movzx ebx,dx
+	mov eax,ecx
+	mov dl,1
+	mov cl,FBRP_AUTO
+	call insertbrkpnt
 	@stroutc "RM breakpoint set",lf
 exit:
 	ret
@@ -8899,120 +8937,120 @@ _setrmbreak endp
 
 _jump proc c public pb:PARMBLK
 
-	call	checkifappactive
-	call	getactcseipx	;get linear address of cs:eip	
-	mov 	fs,eax
-	mov 	al,fs:[ebx]
-	cmp 	al,0CDh
-	jnz 	trace1			;no INT xx, do normal trace
-	mov 	bl,fs:[ebx+1]
-	test	dl,1			;debuggee in real mode?
-	jnz 	jump_1
+	call checkifappactive
+	call getactcseipx		;get linear address of cs:eip	
+	mov fs, eax
+	mov al, fs:[ebx]
+	cmp al, 0CDh
+	jnz trace1				;no INT xx, do normal trace
+	mov bl,fs:[ebx+1]
+	test dl, 1				;debuggee in real mode?
+	jnz jump_1
 							;debuggee in protected mode
-	cmp 	bl,31h			;dpmi int int 31h?
-	jnz 	@F
-	mov 	eax,[r1.rEax]
-	cmp 	ah,03			;int 31h, ax=03xxh?
-	jnz 	@F
-	call	dpmimodechange
-	jmp 	jump_3			;trace flag immer setzen
+	cmp bl, 31h				;dpmi int 31h?
+	jnz @F
+	mov eax,[r1.rEax]
+	cmp ah, 03				;int 31h, ax=03xxh?
+	jnz @F
+	call dpmimodechange
+	jmp jump_3				;trace flag immer setzen
 @@:
-	movzx	edx,dx
-	cmp		pb.dwOffs1,1	;Jump with argument '1'?
-	jz		jump_11			;then forget any protmode int handlers
+	movzx edx,dx
+	cmp pb.dwOffs1,1		;Jump with argument '1'?
+	jz jump_11				;then forget any protmode int handlers
 							;get pm int
 	@DpmiCall 204h
-	test	cl,4			;is CS in GDT?
-	jz		jump_11
-	mov 	ebx,edx
-	mov 	eax,ecx
-	mov 	dl,00
-	jmp 	jump_2
+	test cl,4				;is CS in GDT?
+	jz jump_11
+	mov ebx,edx
+	mov eax,ecx
+	mov dl,00
+	jmp jump_2
 jump_1: 					;debuggee is in real mode
-	cmp 	bl,21h			;Int 21 im real mode?
-	jnz 	jump_11
-	cmp 	byte ptr [r1.rEax+1],4Ch	;int 21,AH=4C?
-	jnz 	jump_11
-	call	getpsp
-	invoke	getbaser,eax
-	mov 	bx,word ptr @flat:[eax+0Ah]
-	mov 	ax,word ptr @flat:[eax+0Ch]	;int 22 vektor holen
-	mov 	dl,1
-	jmp 	jump_2
-jump_11:						;get real mode int vektor
+	cmp bl, 21h				;Int 21 in real mode?
+	jnz jump_11
+	cmp byte ptr [r1.rEax+1], 4Ch	;int 21,AH=4C?
+	jnz jump_11
+	call getpsp
+	invoke getbaser,eax
+	mov bx, word ptr @flat:[eax+0Ah]
+	mov ax, word ptr @flat:[eax+0Ch]	;get int 22 vector
+	mov dl, 1
+	jmp jump_2
+jump_11:					;get real mode int vector
 	@DpmiCall 200h
-	movzx	ebx,dx
-	mov 	eax,ecx
-	mov 	dl,1
+	movzx ebx,dx
+	mov eax,ecx
+	mov dl,1
 jump_2:
-	mov 	cl,FBRP_AUTO	;set breakpoint at ax:ebx
-	call	insertbrkpnt
+	mov cl,FBRP_AUTO		;set breakpoint at ax:ebx
+	call insertbrkpnt
 jump_3:
-	jmp 	trace1
+	jmp trace1
 _jump endp
 
 ;--- Perform command
 
 _perform proc c public pb:PARMBLK
 
-	call	checkifappactive
-	call	calcopsize
-	and 	eax,eax
-	jnz 	@F
+	call checkifappactive
+	call calcopsize
+	and eax,eax
+	jnz @F
 	ret
 @@:
-	mov 	esi,eax
-	call	GetCurrentEIP
-	call	GetCurrentCS
-	test	dl,1
-	jz		@F
-	movzx	eax,ax
-	shl 	eax,4
-	movzx	ebx,word ptr [r1r.rIP]
-	add 	ebx,eax
-	mov 	eax,[__flatsel]
+	mov esi,eax
+	call GetCurrentEIP
+	call GetCurrentCS
+	test dl,1
+	jz @F
+	movzx eax,ax
+	shl eax,4
+	movzx ebx,word ptr [r1r.rIP]
+	add ebx,eax
+	mov eax,[__flatsel]
 @@:
-	mov 	fs,eax
+	mov fs,eax
 @@:
-	mov 	edi,offset prefixopctab
-	mov 	ecx,lprefixopctab
-	mov 	al,fs:[ebx]
-	repnz	scasb
-	jnz 	@F
-	inc 	ebx
-	dec 	esi
-	jmp 	@B
+	mov edi,offset prefixopctab
+	mov ecx,lprefixopctab
+	mov al,fs:[ebx]
+	repnz scasb
+	jnz @F
+	inc ebx
+	dec esi
+	jmp @B
 @@:
-	cmp 	al,0FFh
-	jnz 	@F
-	mov 	al,fs:[ebx+1]	;indirekter sprung?
-	and 	al,30h
-	cmp 	al,20h
-	jz		perform_1
+	cmp al,0FFh
+	jnz @F
+	mov al,fs:[ebx+1]	;indirekter sprung?
+	and al,30h
+	cmp al,20h
+	jz perform_1
 @@:
-	mov 	edi,offset jmpopctab
-	mov 	ecx,ljmpopctab
-	cmp 	al,0Fh
-	jnz 	@F
-	mov 	edi,offset jmpopctab2
-	mov 	ecx,ljmpopctab2
-	mov 	al,fs:[ebx+1]
+	mov edi,offset jmpopctab
+	mov ecx,ljmpopctab
+	cmp al,0Fh
+	jnz @F
+	mov edi,offset jmpopctab2
+	mov ecx,ljmpopctab2
+	mov al,fs:[ebx+1]
 @@:
-	repnz	scasb
-	jz		perform_1
-	add 	ebx,esi
-	call	GetCurrentCS	  ;CS-> AX, Typ -> DL
-	test	dl,1
-	jz		@F
-	movzx	esi,ax			  ;im real mode eip wieder korrigieren
-	shl 	esi,4
-	sub 	ebx,esi
+	repnz scasb
+	jz perform_1
+	add ebx,esi
+	call GetCurrentCS	  ;CS-> AX, Typ -> DL
+	test dl,1
+	jz @F
+	movzx esi,ax			  ;im real mode eip wieder korrigieren
+	shl esi,4
+	sub ebx,esi
 @@:
-	mov 	cl,FBRP_AUTO
-	call	insertbrkpnt
-	jmp 	_reset
+	mov cl,FBRP_AUTO
+	call insertbrkpnt
+	jmp _reset
 perform_1:
-	jmp 	trace1
+	jmp trace1
 _perform endp
 
 ;--- Go command
@@ -9412,9 +9450,9 @@ _resident proc c pb:PARMBLK
 	jmp _reset
 resident1:
  ife ?LDRDISABLE
-	call	enableloader
+	call enableloader
  endif
-	mov 	ax,3100h				; DPMI loader should care for the rest...
+	mov ax, 3100h				; DPMI loader should care for the rest...
 	@DosCall
 resident2:
 	@errorout ERR_DBGPSP_NOT_ACTIVE
@@ -10232,7 +10270,7 @@ else
 @@:
   endif
 endif
-	or byte ptr [fException],FEXC_USEXREGS or FEXC_SAVESTACK	;restore regs!
+	or [fException], FEXC_USEXREGS or FEXC_SAVESTACK	;restore regs!
 done:
 	popad
 	pop es
@@ -10651,7 +10689,7 @@ endif
 	and eax,eax
 	jnz getmysymaddr_ex
 getmysymaddr_1:
-	add esi,size NRNT
+	add esi,sizeof NRNT
 	loop nextitem
 getmysymaddr_ex:
 	mov cl,__FPTR__
@@ -10696,7 +10734,7 @@ setargdefaults proc
 @@:
 	mov byte ptr [edi.ARGDESC.dwType],__VOID__
 	mov [edi.ARGDESC.dwOfs],eax
-	add edi,size ARGDESC
+	add edi,sizeof ARGDESC
 	cmp edi,offset argend
 	jb @B
 	pop edi
@@ -10732,10 +10770,12 @@ strcat proc pascal string1:dword,string2:dword
 strcat endp
 endif
 
+;--- display a linefeed if fSkipLF is 0
+
 croutx proc stdcall public
-	cmp byte ptr fSkipLF,0
+	cmp [fSkipLF], 0
 	jz @F
-	dec byte ptr fSkipLF
+	dec [fSkipLF]
 	stc
 	ret
 @@:
@@ -10823,7 +10863,7 @@ endif
 @@:
 	@tprintf <"mains first milestone reached",lf>
 
-	and byte ptr [fException],not (FEXC_USEXREGS or FEXC_SAVESTACK)
+	and [fException], not (FEXC_USEXREGS or FEXC_SAVESTACK)
 	mov [fExit], 0
 	test [fMode], FMODE_EXEACTIVE
 	jz @F
@@ -10909,7 +10949,7 @@ mains_1:
 mains_11:
 	@tprintf <"mains milestone mains_11 reached",lf>
 
-	add edi, size ARGDESC
+	add edi, sizeof ARGDESC
 	call setargdefaults
 	mov cl, [esi.SYMBOL.bType]
 	and cl, 7Fh
@@ -10934,7 +10974,7 @@ mains_31:
 	cmp eax, -1				;syntaxfehler?
 	jz merr31
 	add byte ptr arganz, al
-	add edi, size ARGDESC
+	add edi, sizeof ARGDESC
 	and edx, edx
 	jnz nextitem
 
@@ -10961,7 +11001,7 @@ mains_5:
 	dec al
 	push edx
 	push eax
-	mov esi, size ARGDESC
+	mov esi, sizeof ARGDESC
 	mul esi
 	mov esi, offset a1
 	add esi, eax
@@ -10980,7 +11020,7 @@ else
 endif
 	push dword ptr [esi.ARGDESC.dwSeg]	;wSegX
 	push dword ptr [esi.ARGDESC.dwOfs]	;dwOffsX
-	sub esi,size ARGDESC
+	sub esi,sizeof ARGDESC
 	dec al
 	jmp @B
 mains_8:
@@ -11445,7 +11485,9 @@ setexcvec_2:
 	ret
 setexception endp
 
+ife ?WINDOWS
 ;--- in: bl=interrupt number
+;--- oldpmvecs is room for ints 00-0F
 
 setpmvec proc stdcall
 	pushad
@@ -11482,7 +11524,7 @@ setpmvecs_1:
 	call setpmvec
 @@:
 	inc ebx
-	cmp bl,20h
+	cmp bl, SIZEOLDPMVECS
 	jnz setpmvecs_1
 setpmvecs_2:
 	ret
@@ -11520,10 +11562,12 @@ nextitem:
 	call resetpmvec
 @@:
 	inc ebx
-	cmp bl,20h
+	cmp bl, SIZEOLDPMVECS
 	jnz nextitem
 	ret
 resetpmvecs endp
+
+endif
 
 getmyrmvecaddr:
 	mov cx, __RmSeg
@@ -12097,41 +12141,41 @@ _trapsout endp
 
 _myregsout proc c
 
-		invoke	myregsout,[dwFormStr], addr r1
-		ret
+	invoke myregsout,[dwFormStr], addr r1
+	ret
 _myregsout endp
 
 ;*** register anhand frmstr und frmval aufbereiten ***
 
 myregsout proc stdcall lfrmstr:dword,lregs:dword
 
-		mov 	esi,lregs
-		movzx	eax,word ptr [esi.MYREGSTR.rGS]
-		push	eax
-		movzx	eax,word ptr [esi.MYREGSTR.rFS]
-		push	eax
-		movzx	eax,word ptr [esi.MYREGSTR.rES]
-		push	eax
-		movzx	eax,word ptr [esi.MYREGSTR.rDS]
-		push	eax
-		push	[esi.MYREGSTR.rEsp]
-		movzx	eax,word ptr [esi.MYREGSTR.rSS]
-		push	eax
-		push	[esi.MYREGSTR.rEip]
-		movzx	eax,word ptr [esi.MYREGSTR.rCS]
-		push	eax
-		push	[esi.MYREGSTR.rEfl]
-		push	[esi.MYREGSTR.rEbp]
-		push	[esi.MYREGSTR.rEdi]
-		push	[esi.MYREGSTR.rEsi]
-		push	[esi.MYREGSTR.rEdx]
-		push	[esi.MYREGSTR.rEcx]
-		push	[esi.MYREGSTR.rEbx]
-		push	[esi.MYREGSTR.rEax]
-		push	lfrmstr
-		call	printf
-		add 	esp,16*4+4
-		ret
+	mov 	esi,lregs
+	movzx	eax,word ptr [esi.MYREGSTR.rGS]
+	push	eax
+	movzx	eax,word ptr [esi.MYREGSTR.rFS]
+	push	eax
+	movzx	eax,word ptr [esi.MYREGSTR.rES]
+	push	eax
+	movzx	eax,word ptr [esi.MYREGSTR.rDS]
+	push	eax
+	push	[esi.MYREGSTR.rEsp]
+	movzx	eax,word ptr [esi.MYREGSTR.rSS]
+	push	eax
+	push	[esi.MYREGSTR.rEip]
+	movzx	eax,word ptr [esi.MYREGSTR.rCS]
+	push	eax
+	push	[esi.MYREGSTR.rEfl]
+	push	[esi.MYREGSTR.rEbp]
+	push	[esi.MYREGSTR.rEdi]
+	push	[esi.MYREGSTR.rEsi]
+	push	[esi.MYREGSTR.rEdx]
+	push	[esi.MYREGSTR.rEcx]
+	push	[esi.MYREGSTR.rEbx]
+	push	[esi.MYREGSTR.rEax]
+	push	lfrmstr
+	call	printf
+	add 	esp,16*4+4
+	ret
 myregsout endp
 
 if ?WINDOWS
@@ -12141,51 +12185,51 @@ if ?WINDOWS
 
 CheckUnregister proc far stdcall uses ds esi
 
-		xor 	eax,eax
-		mov 	ds,cs:[__csalias]
-		push	ds
-		pop 	es
-		mov 	ecx,20h
-		mov 	esi,offset exc00h
-		mov 	ebx,eTraps
+	xor 	eax,eax
+	mov 	ds,cs:[__csalias]
+	push	ds
+	pop 	es
+	mov 	ecx,20h
+	mov 	esi,offset exc00h
+	mov 	ebx,eTraps
 nextitem:
-		test	bl,01
-		jz		skipitem
-		push	eax
-		push	ebx
-		push	ecx
-		mov bl,al
-		mov ax,0202h	;get exc vec
-		int 31h
+	test	bl,01
+	jz		skipitem
+	push	eax
+	push	ebx
+	push	ecx
+	mov bl,al
+	mov ax,0202h	;get exc vec
+	int 31h
 if ?32BIT eq 0
-		movzx	edx,dx
+	movzx	edx,dx
 endif
 ife ?32BIT
-		mov 	eax,[__cs16alias]
+	mov 	eax,[__cs16alias]
 else
-		mov 	eax,cs
+	mov 	eax,cs
 endif
-		cmp 	cx,ax
-		jnz 	error
-		cmp 	edx,esi
-		jnz 	error
-		pop 	ecx
-		pop 	ebx
-		pop 	eax
+	cmp 	cx,ax
+	jnz 	error
+	cmp 	edx,esi
+	jnz 	error
+	pop 	ecx
+	pop 	ebx
+	pop 	eax
 skipitem:
-		shr 	ebx,1
-		add 	esi,4
-		inc 	al
-		loop	nextitem
-		@mov 	eax,1
-		jmp 	exit
+	shr 	ebx,1
+	add 	esi,4
+	inc 	al
+	loop	nextitem
+	@mov 	eax,1
+	jmp 	exit
 error:
-		pop 	ecx
-		pop 	ebx
-		pop 	eax
-		xor 	eax,eax
+	pop 	ecx
+	pop 	ebx
+	pop 	eax
+	xor 	eax,eax
 exit:
-		ret
+	ret
 CheckUnregister endp
 
 endif
@@ -12586,7 +12630,7 @@ endif
 	mov eax, offset top_of_stack
 	mov [myesp], eax
 
-	test byte ptr [f80x87], F80X87_IGNORE
+	test [f80x87], F80X87_IGNORE
 	jnz @F
 	int 11h
 	shr al,1
@@ -12834,8 +12878,10 @@ fentry1x:
 
 	dec bRC
 
+ife ?WINDOWS
 	@tprintf <"install int handlers",lf>
 	call setpmvecs
+endif
 
 	dec bRC
         
@@ -13039,23 +13085,10 @@ exit2:
 	ret
 set_reset_idtvec endp
 
-installirqkbd proc stdcall public
-	test byte ptr [__inpmode], _KBDINP or _ALTINP
-	jz @F
-if ?NOKBDIRQ
-	or byte ptr [wPicOff], 02h
-else
-	or byte ptr [wPicOn], 02h   ;enable IRQ 01 (kbd)
-	or byte ptr [wPicOn+1], 10h	;enable IRQ 12 (PS/2 mouse)
-endif
-@@:
-	ret
-installirqkbd endp
-
 installirqmou proc stdcall public
 
 if ?WINDOWS
-	test byte ptr [__outmode],_VIOOUT
+	test [__outmode], _VIOOUT
 	jnz installirqmou_ex
 	@savewinsegregs
 	call _MouseGetIntVect
@@ -13118,9 +13151,11 @@ endif
 	dd offset rmtraps
 	db 0
 
+ife ?WINDOWS
 	dd CCStr("TrappedPMVecs")
 	dd offset pmtraps
 	db 0
+endif
 if ?WATCHINT23
 	dd CCStr("Ctrl-C")
 	dd offset bCtrlC
@@ -13382,7 +13417,9 @@ endif
 	@tprintf <"unregister: unload rmdbghlp.bin",lf>
 	call ExitRMDbgHlp		; free RM CBs
 
+ife ?WINDOWS
 	call resetpmvecs 		; restore protected mode int vecs that were trapped
+endif
 
 	call deinstallirqcom 	; restore irq for comx
 							; that must be done before interrupt unregister
@@ -13414,14 +13451,19 @@ if ?WATCHI2F
 	mov bl, 2Fh
 	@DpmiCall
 endif
-if 0;	these entries are saved, but not modified ?SAVEINT08
-	mov cx, word ptr oldint08+?SEGOFFS
-	mov edx, dword ptr oldint08+0
-	mov bl,08h
-	@DpmiCall
-	mov cx, word ptr oldint1C+?SEGOFFS
+
+;--- ?SAVEINT08 ensures that while the debugger
+;--- is active, the debuggee cannot gain control by
+;--- chaining into int 08/1Ch.
+;--- todo: check if it is really ok NOT to restore the vectors
+if 0;?SAVEINT08	; it's deactive at least since v2.10
 	mov edx, dword ptr oldint1C+0
-	mov bl,1Ch
+	mov cx, word ptr oldint1C+?SEGOFFS
+	mov bl, 1Ch
+	@DpmiCall
+	mov edx, dword ptr oldint08+0
+	mov cx, word ptr oldint08+?SEGOFFS
+	mov bl, 08h
 	@DpmiCall
 endif
 
@@ -13590,24 +13632,24 @@ parsecmdline1:				   ;"/" options
 @@:
 	cmp al,'n'
 	jnz @F
-	mov byte ptr [__outmode], 0
+	mov [__outmode], 0
 	jmp nextchar
 @@:
 	cmp al,'?'
 	jnz @F
 usageout:
-	mov byte ptr [__outmode],_DOSOUT
+	mov [__outmode], _DOSOUT
 	@stroutc "Usage: ",?MYNAME," [/2 | /Cn (1",3Ch,"=n",3Ch,"=4) | /D] [/Ecommand][/Q] [/S] [/F]",lf
 	xor eax, eax
 	jmp exit
 @@:
 	cmp al, 's'
 	jnz @F
-	or	[fMode], FMODE_STRICT
+	or [fMode], FMODE_STRICT
 @@:
 	cmp al, 'f'
 	jnz @F
-	or	byte ptr [f80x87], F80X87_IGNORE
+	or [f80x87], F80X87_IGNORE
 @@:
 	jmp nextchar
 noparm:
@@ -13624,8 +13666,8 @@ parsecmdline endp
 
 _SetIOMode proc stdcall
 
-	mov [__outmode],al
-	mov [__inpmode],ah
+	mov [__outmode], al
+	mov [__inpmode], ah
 	ret
 _SetIOMode endp
 

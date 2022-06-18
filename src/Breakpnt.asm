@@ -26,7 +26,7 @@ pNext		dd ?
 bFlags1		db ?	;FBRP Flags
 bFlags2		db ?	;FBRP2 Flags
 brpByte		db ?	;saved byte at breakpoint address
-CondTyp		db ?	;condition Typ (0=inaktiv)
+bCondTyp	db ?	;condition Typ (0=inaktiv)
 brpAddr		df ?	;address breakpoint (ausser FBRP_NOADDR)
 res			dw ?
 brpDefCmd	dd ?	;default cmd falls FBRP_CMDSET
@@ -319,16 +319,16 @@ checkbpcondition proc stdcall
 
 	@tprintf <"checkpbcondition enter",lf>
         
-	cmp byte ptr [esi.BREAK.CondTyp], __STRING__
+	cmp [esi.BREAK.bCondTyp], __STRING__
 	jz checkbpcondition_3
 	mov ebx, [esi.BREAK.brpCAdr]
 	mov ebx, [ebx.SYMBOL.dwProc]
 	mov eax, [ebx]
 	mov ebx, [esi.BREAK.brpCVa1]
 	mov ecx, [esi.BREAK.brpCVa2]
-	cmp byte ptr [esi.BREAK.CondTyp], __BYTE__
+	cmp [esi.BREAK.bCondTyp], __BYTE__
 	jz checkbpcondition_1
-	test byte ptr [esi.BREAK.CondTyp], __WORD__
+	test [esi.BREAK.bCondTyp], __WORD__
 	jz checkbpcondition_2
 	cmp eax, ebx
 	jb falsecond
@@ -443,7 +443,7 @@ resetthebreaks_3:
 	jz rtb_31
 	mov dword ptr [korreip], 1
 rtb_31:
-	cmp byte ptr [esi.BREAK.CondTyp],0
+	cmp [esi.BREAK.bCondTyp], 0
 	jz @F
 	call checkbpcondition
 	jc doneitem					; next bp
@@ -599,13 +599,13 @@ setbreakpnt_1:
 	jnz @F
 	invoke transform, pb.p4.dwOffs		; in grossbuchstaben
 	invoke PutStringInHeap, pb.p4.dwOffs
-	mov byte ptr [ebx.BREAK.CondTyp], __STRING__
+	mov [ebx.BREAK.bCondTyp], __STRING__
 	jmp setbreakpnt_2
 @@:
 	push esi
 	mov esi, [a4.ARGDESC.dwPtr]
 	mov al, [esi.SYMBOL.bType]
-	mov [ebx.BREAK.CondTyp], al
+	mov [ebx.BREAK.bCondTyp], al
 	mov eax, esi
 	pop esi
 setbreakpnt_2:
@@ -696,10 +696,10 @@ bo_1:
 	jz @F
 	invoke printf, CStr("'%s'"),[esi.BREAK.brpDefCmd]
 @@:
-	cmp byte ptr [esi.BREAK.CondTyp],0
+	cmp [esi.BREAK.bCondTyp], 0
 	jz breaksout_2
 	@stroutc " ("
-	mov cl, [esi.BREAK.CondTyp]
+	mov cl, [esi.BREAK.bCondTyp]
 	mov al, cl
 	invoke	_hexout
 	@putchr ' '
@@ -712,11 +712,11 @@ bo_1:
 	@strout [ebx.SYMBOL.pText]
 	@stroutc " min="
 	lea ebx, [esi.BREAK.brpCVa1]
-	mov cl, [esi.BREAK.CondTyp]
+	mov cl, [esi.BREAK.bCondTyp]
 	call symout
 	@stroutc " max="
 	lea ebx, [esi.BREAK.brpCVa2]
-	mov cl, [esi.BREAK.CondTyp]
+	mov cl, [esi.BREAK.bCondTyp]
 	call symout
 breaksout_3:
 	@putchr ')'
@@ -811,7 +811,7 @@ endofitems:
 	mov esi, eax
 unuseditem:
 	mov [esi].BREAK.count, 0
-	mov [esi].BREAK.CondTyp, 0
+	mov [esi].BREAK.bCondTyp, 0
 	mov [esi].BREAK.brpDefCmd, edi
 	mov dword ptr [esi].BREAK.brpAddr+0, ebx
 	mov eax, bpsel
@@ -857,7 +857,7 @@ clearbreakpnt1 proc stdcall
 	xor eax,eax
 	mov [esi].BREAK.bFlags2, al
 	xchg [esi].BREAK.bFlags1, al
-	xchg [esi.BREAK.CondTyp], ah
+	xchg [esi.BREAK.bCondTyp], ah
 	test al,FBRP_ACTIVE
 	jz error
 	test al,FBRP_USEHW
@@ -967,7 +967,7 @@ savedebughandle proc stdcall uses ecx esi edi
 @@:
 	cmp [esi.HWBP.hwbpTyp], -1
 	jz savedebughandle_1
-	add esi,size HWBP
+	add esi, sizeof HWBP
 	loop @B
 error:
 	stc
@@ -1082,7 +1082,7 @@ listhwbreaks_1:
 listhwbreaks_2:
 	@putchr lf
 listhwbreaks_3:
-	add esi,size HWBP
+	add esi, sizeof HWBP
 	dec ecx
 	jnz listhwbreaks_1
 	ret
@@ -1127,7 +1127,7 @@ nohwbreak:
 @@:
 	mov [esi.HWBP.hwbpHandle],bx
 skipitem:
-	add esi,size HWBP
+	add esi, sizeof HWBP
 	loop nextitem
 	ret
 ActAllHWBreaks endp
@@ -1168,7 +1168,7 @@ nextitem:
 	add esp,4
 @@:        
 skipitem:
-	add esi,size HWBP
+	add esi, sizeof HWBP
 	loop nextitem
 	popad
 	ret
@@ -1191,7 +1191,7 @@ nextitem:
 	stc
 	jnz found
 skipitem:
-	add esi,size HWBP
+	add esi, sizeof HWBP
 	loop nextitem
 	clc
 found:  

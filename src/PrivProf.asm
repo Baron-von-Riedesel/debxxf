@@ -270,7 +270,7 @@ GetPrivateProfileStringA proc stdcall public uses esi edi ebx lpAppName:ptr byte
 local	rc:dword
 local	pMem:dword
 
-ifdef _DEBUG
+if _TRACE_
 	mov  ecx, lpAppName
 	.if (!ecx)
 		mov ecx, CStr("NULL")
@@ -420,7 +420,7 @@ local   rc:dword
 local   sel:dword
 local   pMem:dword
 
-ifdef _DEBUG
+if _TRACE_
 	mov ecx, lpAppName
 	.if (!ecx)
 		mov ecx, CStr("NULL")

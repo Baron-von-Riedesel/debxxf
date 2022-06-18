@@ -5,6 +5,10 @@
  
  þ fixed symbhdlw.dll: was linked incorrectly ( flags in the binary
    indicated a "dgroup" segment, but it actually has none ).
+ þ deb16fw: .pmi and .tpmi deactivated
+ þ deb16f/deb32f: fixed ?RMINT09 branch ( isn't active, usually )
+ þ deb16f/deb32f keyboard handling: reading of port 60h for sysreq
+   detection now optional and disabled as default.
  
  2022/06/15: version 2.10
 

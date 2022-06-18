@@ -226,7 +226,7 @@ endif
 
 checkifnewvar proc stdcall pText:dword
 
-local	newvar[4+size SYMBOL]:byte
+local	newvar[4+sizeof SYMBOL]:byte
 local	value[3]:dword
 
 	mov 	ax,[esi]
@@ -272,7 +272,7 @@ local	value[3]:dword
 	sub 	ebx,4
 	mov 	[ebx],eax
 
-	invoke	PutBytes2Heap,ebx,size SYMBOL+4
+	invoke	PutBytes2Heap,ebx,sizeof SYMBOL+4
 
 	mov 	[dwUserSymbols],eax
 	push	esi

@@ -254,90 +254,90 @@ local	delaenge:dword
 local	dedrive:dword
 local	packetv[12]:byte
 
-		call SaveState
-		jc		writesecs_erx
+	call SaveState
+	jc		writesecs_erx
 
-		lea 	edi,packetv
-		mov 	eax,pb.dwOffs1			; drive
-		cmp 	eax,100h
-		jb		@F
-		@errorout ERR_INVALID_DRIVE_SPEC
-		jmp 	writesecs_er
+	lea 	edi,packetv
+	mov 	eax,pb.dwOffs1			; drive
+	cmp 	eax,100h
+	jb		@F
+	@errorout ERR_INVALID_DRIVE_SPEC
+	jmp 	writesecs_er
 @@:
-		mov 	dedrive,eax
-		mov 	eax,pb.p2.dwOffs		; sector
-		mov 	[edi.DISKIO.startsec],eax
-		mov 	eax,pb.p3.dwOffs		; sectors
-		cmp 	eax,10000h
-		jb		@F
-		@errorout ERR_INVALID_SECTORS
-		jmp 	writesecs_er
+	mov 	dedrive,eax
+	mov 	eax,pb.p2.dwOffs		; sector
+	mov 	[edi.DISKIO.startsec],eax
+	mov 	eax,pb.p3.dwOffs		; sectors
+	cmp 	eax,10000h
+	jb		@F
+	@errorout ERR_INVALID_SECTORS
+	jmp 	writesecs_er
 @@:
-		mov 	[edi.DISKIO.sectors],ax
-		shl 	eax,9				   ;sectors -> bytes
-		mov 	delaenge,eax
-		and 	eax,eax
-		jnz 	@F
-		@errorout ERR_INVALID_SECTORS
-		jmp 	writesecs_er
+	mov 	[edi.DISKIO.sectors],ax
+	shl 	eax,9				   ;sectors -> bytes
+	mov 	delaenge,eax
+	and 	eax,eax
+	jnz 	@F
+	@errorout ERR_INVALID_SECTORS
+	jmp 	writesecs_er
 @@:
-		mov 	eax,pb.p4.dwOffs
-		mov 	deaddr,eax
-		mov 	eax,pb.p4.dwSeg
-		mov 	deaddrs,eax
+	mov 	eax,pb.p4.dwOffs
+	mov 	deaddr,eax
+	mov 	eax,pb.p4.dwSeg
+	mov 	deaddrs,eax
 
-		invoke	getbaser,deaddrs
-		add 	eax,deaddr
+	invoke	getbaser,deaddrs
+	add 	eax,deaddr
 if ?32BIT
-		mov 	deaddr,eax
+	mov 	deaddr,eax
 else
-		invoke	setworkselbase,eax
-		mov 	eax,delaenge
-		dec 	eax
-		invoke	setworksellimit,eax
+	invoke	setworkselbase,eax
+	mov 	eax,delaenge
+	dec 	eax
+	invoke	setworksellimit,eax
 endif
-;		invoke	lockdrive,dedrive
+;	invoke	lockdrive,dedrive
 
-		lea 	ebx,packetv
+	lea 	ebx,packetv
 if ?32BIT
-		mov 	eax,deaddr
-		mov 	[ebx.DISKIO.buffofs],eax
-		mov 	eax,[__flatsel]
+	mov 	eax,deaddr
+	mov 	[ebx.DISKIO.buffofs],eax
+	mov 	eax,[__flatsel]
 else
-		xor 	eax,eax
-		mov 	[ebx.DISKIO.buffofs],ax
-		mov 	eax,[worksel]
+	xor 	eax,eax
+	mov 	[ebx.DISKIO.buffofs],ax
+	mov 	eax,[worksel]
 endif
-		mov 	[ebx.DISKIO.buffseg],ax
+	mov 	[ebx.DISKIO.buffseg],ax
 
-		mov 	al,byte ptr dedrive
-		mov 	ecx,-1
-		int 	26h
-		@adjint25sp
-		jnc 	@F
+	mov 	al,byte ptr dedrive
+	mov 	ecx,-1
+	int 	26h
+	@adjint25sp
+	jnc 	@F
 
-		mov 	ax,7305h					;may be a FAT32 drive?
-		lea 	ebx,packetv
-		mov 	dl,byte ptr dedrive
-		inc 	dl							;hier wird ab 1 gezaehlt
-		mov 	si,6001h					;write sectors
-		mov 	ecx,-1
-		@DosCall
-		jnc 	@F
+	mov 	ax,7305h					;may be a FAT32 drive?
+	lea 	ebx,packetv
+	mov 	dl,byte ptr dedrive
+	inc 	dl							;hier wird ab 1 gezaehlt
+	mov 	si,6001h					;write sectors
+	mov 	ecx,-1
+	@DosCall
+	jnc 	@F
 
-		push	eax
-		@errorout ERR_DISK_WRITE
-		pop		ecx							;adjust esp
-		jmp 	writesecs_er
+	push	eax
+	@errorout ERR_DISK_WRITE
+	pop		ecx							;adjust esp
+	jmp 	writesecs_er
 @@:
-		push	pb.p3.dwOffs
-		@errorout MSG_SECTORS_WRITE
-		pop		ecx							;adjust esp
-		invoke	unlockdrive,dedrive
+	push	pb.p3.dwOffs
+	@errorout MSG_SECTORS_WRITE
+	pop		ecx							;adjust esp
+	invoke	unlockdrive,dedrive
 writesecs_er:
-		call	LoadState
+	call	LoadState
 writesecs_erx:
-		ret
+	ret
 _writesecs endp
 
 ?LOCKPARM = 4	;lock level (win98 only permits 0 and 4)
@@ -427,37 +427,37 @@ _iop proc c pb:PARMBLK
 
 local	ebxmax:dword
 
-		call	getiopbitmap
-		jc		iop_ex
-		mov 	ebxmax,eax
-		mov 	edx,pb.dwOffs1	;now ebx has flat addr of io bitmap
-		movzx	ecx,dl
-		and 	cl,07h
-		shr 	edx,3
-		add 	ebx,edx
-		cmp		ebx, ebxmax
-		ja		iop_er
-		cmp 	byte ptr pb.wArgc,2
-		jnb 	iop_2
-		bt		@flat:[ebx],ecx
-		setc	al
-		movzx	eax,al
-		invoke printf, CStr("permission bit for port %X=%X",lf), pb.dwOffs1, eax
-		jmp 	iop_ex
+	call	getiopbitmap
+	jc		iop_ex
+	mov 	ebxmax,eax
+	mov 	edx,pb.dwOffs1	;now ebx has flat addr of io bitmap
+	movzx	ecx,dl
+	and 	cl,07h
+	shr 	edx,3
+	add 	ebx,edx
+	cmp		ebx, ebxmax
+	ja		iop_er
+	cmp 	byte ptr pb.wArgc,2
+	jnb 	iop_2
+	bt		@flat:[ebx],ecx
+	setc	al
+	movzx	eax,al
+	invoke printf, CStr("permission bit for port %X=%X",lf), pb.dwOffs1, eax
+	jmp 	iop_ex
 iop_2:
-		mov 	eax,pb.dwOffs2
-		cmp 	eax,1
-		ja		iop_er
-		jz		iop_3
-		btr 	@flat:[ebx],ecx
-		jmp 	iop_ex
+	mov 	eax,pb.dwOffs2
+	cmp 	eax,1
+	ja		iop_er
+	jz		iop_3
+	btr 	@flat:[ebx],ecx
+	jmp 	iop_ex
 iop_3:
-		bts 	@flat:[ebx],ecx
-		jmp 	iop_ex
+	bts 	@flat:[ebx],ecx
+	jmp 	iop_ex
 iop_er:
-		@errorout ERR_VALUE_EXCEEDS_TSS_LIMIT
+	@errorout ERR_VALUE_EXCEEDS_TSS_LIMIT
 iop_ex:
-		ret
+	ret
 _iop endp
 
 ;--- display IO-bitmap
@@ -466,48 +466,48 @@ _iorestr proc c pb:PARMBLK
 
 local	ebxmax:dword
 
-		call	getiopbitmap
-		jc		iorestr_ex
-		mov 	ebxmax,eax
-		mov 	edx,pb.dwOffs1
-		shr 	edx,5
-		add 	ebx,edx
-		shl 	edx,5
-		push	edx
-		invoke printf, CStr("lin. Addr  Port   01234567 89ABCDEF 01234567 89ABCDEF",lf)
-		invoke printchars, '-', eax, 1
-		pop		edx
+	call	getiopbitmap
+	jc		iorestr_ex
+	mov 	ebxmax,eax
+	mov 	edx,pb.dwOffs1
+	shr 	edx,5
+	add 	ebx,edx
+	shl 	edx,5
+	push	edx
+	invoke printf, CStr("lin. Addr  Port   01234567 89ABCDEF 01234567 89ABCDEF",lf)
+	invoke printchars, '-', eax, 1
+	pop		edx
 iorestr1:
-		cmp 	ebx,ebxmax
-		ja		iorestr_ex
+	cmp 	ebx,ebxmax
+	ja		iorestr_ex
 
-		mov 	eax,@flat:[ebx]
-		pushad
-		invoke printf, CStr("[%08X] %04X: "), ebx, edx
-		popad
-		@mov 	ecx,32
-		add 	edx,ecx
-		add 	ebx,4
-		pushad
+	mov 	eax,@flat:[ebx]
+	pushad
+	invoke printf, CStr("[%08X] %04X: "), ebx, edx
+	popad
+	@mov 	ecx,32
+	add 	edx,ecx
+	add 	ebx,4
+	pushad
 iorestr2:
-		test	cl,07
-		jnz 	@F
-		@putchr ' '
+	test	cl,07
+	jnz 	@F
+	@putchr ' '
 @@:
-		shr 	eax,1
-		jnc 	@F
-		@putchr '*'
-		jmp 	iorestr3
+	shr 	eax,1
+	jnc 	@F
+	@putchr '*'
+	jmp 	iorestr3
 @@:
-		@putchr '.'
+	@putchr '.'
 iorestr3:
-		loop	iorestr2
-		invoke	_crout
-		popad
-		and 	dx,dx
-		jnz 	iorestr1
+	loop	iorestr2
+	invoke	_crout
+	popad
+	and 	dx,dx
+	jnz 	iorestr1
 iorestr_ex:
-		ret
+	ret
 _iorestr endp
 
 ;--- TSS and DT cmds
@@ -916,53 +916,53 @@ if 0; handled by function _fpregsout now
 
 _floatregs proc c pb:PARMBLK
 
-		test byte ptr [f80x87],1
-		jnz @F
-		@errorout ERR_NO_NUMBER_CRUNCHER
-		jmp floatregs_ex
+	test byte ptr [f80x87],1
+	jnz @F
+	@errorout ERR_NO_NUMBER_CRUNCHER
+	jmp floatregs_ex
 @@:
-		mov esi,offset frsave
-		lodsd
-		mov ecx, eax
-		lodsd
-		mov edx, eax
-		lodsd
-		invoke printf, CStr("control word=%X status word=%X tag word=%X",lf), ecx, edx, eax
-		lodsd
-		mov ecx, eax
-		lodsw
-		movzx ebx, ax
-		lodsw
-		movzx edx, ax
-		lodsd
-		mov edi, eax
-		lodsd
-		invoke printf, CStr("fip=%X fcs=%X opcode=%X foo=%X fos=%X",lf), ecx, ebx, edx, edi, eax
+	mov esi,offset frsave
+	lodsd
+	mov ecx, eax
+	lodsd
+	mov edx, eax
+	lodsd
+	invoke printf, CStr("control word=%X status word=%X tag word=%X",lf), ecx, edx, eax
+	lodsd
+	mov ecx, eax
+	lodsw
+	movzx ebx, ax
+	lodsw
+	movzx edx, ax
+	lodsd
+	mov edi, eax
+	lodsd
+	invoke printf, CStr("fip=%X fcs=%X opcode=%X foo=%X fos=%X",lf), ecx, ebx, edx, edi, eax
 
-		@mov ecx, 8
-		mov dl,0
+	@mov ecx, 8
+	mov dl,0
 floatregs1:
-		push ecx
-		push edx
-		movzx ebx, dl
-		add bl, '0'
-		lodsd
-		mov ecx, eax
-		lodsd
-		mov edx, eax
-		lodsw
-		movzx eax, ax
-		invoke printf, CStr("st(%u)=%X.%08X.%08X "), ebx, eax, edx, ecx
-		pop edx
-		pop ecx
-		inc dl
-		test dl,1
-		jnz @F
-		call _crout
+	push ecx
+	push edx
+	movzx ebx, dl
+	add bl, '0'
+	lodsd
+	mov ecx, eax
+	lodsd
+	mov edx, eax
+	lodsw
+	movzx eax, ax
+	invoke printf, CStr("st(%u)=%X.%08X.%08X "), ebx, eax, edx, ecx
+	pop edx
+	pop ecx
+	inc dl
+	test dl,1
+	jnz @F
+	call _crout
 @@:
-		loop floatregs1
+	loop floatregs1
 floatregs_ex:
-		ret
+	ret
 _floatregs endp
 endif
 

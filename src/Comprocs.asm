@@ -35,7 +35,7 @@ oldiereg  db 0			; original inhalt interrupt enable register
 
 installirqcom proc stdcall
 
-	test byte ptr [__inpmode],_SERINP
+	test [__inpmode],_SERINP
 	jz installirqcom_ex
 	cmp word ptr [oldint0B+?SEGOFFS],0
 	jnz installirqcom_ex
@@ -109,7 +109,7 @@ resetctrlctrap proc stdcall
 resetctrlctrap endp
 
 setiereg:
-	test byte ptr [__inpmode],_SERINP
+	test [__inpmode], _SERINP
 	jz @F
 	push edx
 	mov edx,[comport]
@@ -353,7 +353,6 @@ GetComChar proc stdcall
 	ret
 GetComChar endp
 
-
 if ?SUPPVCD
 
 xfstr	db "COM%u autoassign=%d",cr,lf,0
@@ -370,7 +369,7 @@ if ?WINDOWS 						 ;folgendes geht nur unter windows
 	mov ax,1684h
 	mov bx,VCD_DEVICE_ID
 	push es
-	@callint2f
+	@callint2F
 	mov eax,es
 	pop es
 	mov cx,ax

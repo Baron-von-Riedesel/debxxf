@@ -98,13 +98,13 @@ if ?32BIT
 externdef _FatalExit:PF32
 externdef oldint31:PF32
 externdef oldint2f:PF32 
-externdef oldi09p:PF32 
+externdef oldi09p:PF32
 else
 externdef _FatalExit:PF16
 externdef oldint31:PF16
 externdef oldint16:PF16
 externdef oldint2f:PF16 
-externdef oldi09p:PF16 
+externdef oldi09p:PF16
 endif
 externdef outmodefn:dword
 externdef pKbdBuff:dword
