@@ -32,7 +32,6 @@ VioSetCurPosDir    proto stdcall crtport:ptr CRTPARMS, pos:dword
 VioSetTextPage     proto stdcall pCrt:ptr CRTPARMS
 VioShowCursor      proto stdcall
 WriteConsoleString proto stdcall pStr:ptr byte
-_checkforwait      proto stdcall
 
 ;------------------------------------------------------------------------
 
@@ -1196,7 +1195,11 @@ local   zeilen:dword
 	mov al,cr
 	test [fVideo], FVIDEO_NOSWITCH
 	jnz ppch3
-	call _checkforwait
+	call checkifshouldwait	; schauen ob waitl erreicht
+	call GetInpStatus
+	jz ppch3				; kein zeichen da
+	call getcharex			; get key (ohne translate)
+	call ctrlccheck
 	jmp ppch3
 ppch21:
 	cmp al,lf

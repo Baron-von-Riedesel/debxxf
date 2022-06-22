@@ -2147,8 +2147,21 @@ endif
 _Stosb endp
 endif
 
+ctrlccheck proc stdcall public
+
+	test [fMode], FMODE_INDEBUG
+	jz @F
+	cmp al,03
+	jnz @F
+	and [fMode], not FMODE_EXEACTIVE
+	@stroutc "^C"
+	jmp mains
+@@:
+	ret
+ctrlccheck endp
+
 ;*** allgemein: anhalten nach xLines zeilen
-;*** is called by XonXoffCheck/_checkforwait if a CR is written
+;*** is called by XonXoffCheck/VioPutCharDir whenever a CR is written
 
 checkifshouldwait proc stdcall public uses eax
 
@@ -2168,12 +2181,8 @@ checkifshouldwait proc stdcall public uses eax
 	mov [cLines], 1
 	pushad
 	call getcharex
-	cmp al,03					;ctrl-c pressed?
+	call ctrlccheck
 	popad
-	jnz @F
-	and [fMode], not FMODE_EXEACTIVE
-	call _crout
-	jmp mains
 @@:
 exit:
 	ret

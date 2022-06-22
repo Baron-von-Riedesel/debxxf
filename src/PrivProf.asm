@@ -448,8 +448,8 @@ endif
 	mov ax, 3D22h		;r/w, deny write
 	@DosCall
 	jnc @F
-	mov ah, 3Ch
-	mov cx, 0
+	mov ah, 3Ch			;create
+	xor ecx, ecx
 	@DosCall
 	mov ebx, -1
 	jc exit
@@ -494,7 +494,7 @@ endif
 
 	mov esi,lpKeyName
 	.if (esi)
-		call searchentry
+		call searchentry	; search key
 		jc insertnewkey
 	.else
 ;-------------------------------- delete this section
@@ -507,11 +507,13 @@ endif
 	.endif
 
 replacevalue:
-	inc edi
-	invoke strlen, esi
+	inc edi				; edi now -> behind '='
+	invoke strlen, esi	; get size of value
 	lea eax, [edi+eax]
 	push edi
 	push eax
+
+;--- compare old value @flat:[edi] with new value [esi]
 	xor cl,cl
 	.while (1)
 		mov al, @flat:[edi]
@@ -525,8 +527,8 @@ replacevalue:
 		.endif
 		inc edi
 	.endw
-;---------------------------------------- value hasnt changed, do nothing
 	.if ((cl == 0) && (byte ptr [esi] == 0))
+;--- value hasnt changed, do nothing
 		pop eax
 		pop eax
 		sub eax, pMem
@@ -534,14 +536,40 @@ replacevalue:
 		jmp done
 	.endif
 	pop esi
+	mov ecx, edi
+	.while byte ptr @flat:[ecx]
+		inc ecx
+	.endw
 
+	sub ecx, edi
+	jz mvdone
 	xchg esi, edi
+
+;--- copy gs:[esi] to gs:[edi]
+;--- if esi > edi ( value size shrinks ), copy from start to end
+;--- if esi < edi ( value size increases ), copy from end to start
+
+	cmp esi, edi
+	jnc @F
+	add edi, ecx
+	add esi, ecx
+	std
+@@:
+	inc ecx
+ife ?32BIT
+	push es		; set es, so stosb can be used, @flatstosb won't work here
+	push @flat
+	pop es
+endif
 @@:
 	@flatlodsb
-	@flatstosb
-	cmp al,0
-	jnz @B
-
+	stosb
+	loop @B
+	cld
+ife ?32BIT
+	pop es
+endif
+mvdone:
 	pop eax
 	mov edi, eax
 	sub eax, pMem
@@ -574,7 +602,7 @@ insertnewsection:
 	@flatstosb
 	mov ax,0A0Dh
 	@flatstosw
-	mov byte ptr @flat:[edi],0
+	mov byte ptr @flat:[edi], 0
 insertnewkey:
 
 	mov eax, edi
@@ -596,7 +624,7 @@ insertnewkey:
 	.endw
 	mov ax,0A0Dh
 	@flatstosw
-	mov byte ptr @flat:[edi],0
+	mov byte ptr @flat:[edi], 0
 
 rewritefile:
 ;---------------------- rewrite the whole file here
@@ -622,6 +650,9 @@ ife ?FLAT
 	xor edx, edx
  endif
 endif
+	mov ah, 40h
+	@DosCall
+	xor ecx, ecx	;truncate file in case it has become smaller
 	mov ah, 40h
 	@DosCall
 ife ?FLAT

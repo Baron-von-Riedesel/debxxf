@@ -10,6 +10,7 @@
  þ deb16f/deb32f keyboard handling: reading of port 60h for sysreq
    detection now optional and disabled as default.
  þ use escape sequences for cursor positioning also for Int 14h output.
+ þ fixed: replacing a value in debxxf.inc may have caused a page fault.
  
  2022/06/15: version 2.10
 

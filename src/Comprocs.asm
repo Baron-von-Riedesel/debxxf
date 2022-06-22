@@ -196,27 +196,8 @@ exit:
 	@iret
 intr0B0C endp
 
-ctrlccheck proc stdcall
-
-	test [fMode], FMODE_INDEBUG
-	jz @F
-	cmp al,03
-	jnz @F
-	@stroutc "^C"
-	jmp mains
-@@:
-	ret
-ctrlccheck endp
-
-
-
-;*** XonXoffCheck: aufgerufen aus comwrite
-;*** _checkforwait: aufgerufen aus __vioputchardir
-;*** vorsicht: wird u.U. bei jeder einzelnen Zeichenausgabe aufgerufen
+;*** XonXoffCheck: called by comwrite
 ;*** inp: AL=char to output
-
-_checkforwait proc stdcall public
-_checkforwait endp
 
 XonXoffCheck proc stdcall uses ds
 
@@ -224,7 +205,7 @@ XonXoffCheck proc stdcall uses ds
 	mov ds, cs:[__csalias]	; DS evtl. undefiniert!
 	test fEscapemode, 1		; nicht wenn wir escapes an terminal
 	jnz exit				; senden
-	inc ttycurpos
+	inc [ttycurpos]
 	cmp al, cr
 	jnz @F
 	call checkifshouldwait	; schauen ob waitl erreicht
@@ -251,8 +232,7 @@ exit:
 	ret
 XonXoffCheck endp
 
-;*** ctsCheck: aufgerufen aus comwrite ***
-;*** wir benoetigen kein hardware protokoll ***
+;*** ctsCheck: Check CTS before writing byte to UART
 
 ctsCheck proc stdcall
 	ret
@@ -335,6 +315,9 @@ ComWrite proc stdcall uses ebx port:dword,zeichen:dword
 	mov bx,@flat:[ebx+400h]
 	and ebx,ebx
 	jz error
+
+;--- check if LSR.TEMT is ok ( last byte sent )
+
 	mov edx, ebx
 	add edx, 5			;LSR - Leitungs Status Register
 	xor ecx, ecx
@@ -348,7 +331,7 @@ ComWrite proc stdcall uses ebx port:dword,zeichen:dword
 	mov al,byte ptr zeichen
 	call XonXoffCheck
 @@:
-	test cs:bComFlags,1
+	test cs:bComFlags, CF_CTS
 	jz sm2
 	call ctsCheck
 	jnc sm2
@@ -472,10 +455,10 @@ _I14GetChar endp
 _I14PutChar proc stdcall public zeichen:dword
 
 	push edx
-	mov edx,[_comno]
+	mov edx, [_comno]
 	dec edx
-	mov al,byte ptr zeichen
-	mov ah,01h
+	mov al, byte ptr zeichen
+	mov ah, 01h
 	int 14h
 	call XonXoffCheck
 	pop edx
