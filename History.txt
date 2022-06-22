@@ -9,6 +9,7 @@
  þ deb16f/deb32f: fixed ?RMINT09 branch ( isn't active, usually )
  þ deb16f/deb32f keyboard handling: reading of port 60h for sysreq
    detection now optional and disabled as default.
+ þ use escape sequences for cursor positioning also for Int 14h output.
  
  2022/06/15: version 2.10
 

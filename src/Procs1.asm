@@ -1,9 +1,12 @@
 
+;--- cmds: ??, e, s
+;--- functions: allocdos, freedos, reallocdos, allocmem, allocmx,...
+
 	.386
 if ?FLAT
 	.MODEL FLAT
 else
-	.MODEL SMALL
+	.MODEL TINY
 endif
 	option proc:private
 	option casemap:none
@@ -113,7 +116,7 @@ _display proc c public pb:PARMBLK
 
 	mov  cl, byte ptr pb.wArgc
 	and  cl, cl
-	jz	 display_ex
+	jz display_ex
 	lea  esi, a1
 	lea  ebx, pb.dwOffs1
 @@:
@@ -168,7 +171,7 @@ wrinp_er2:
 wrinp proc stdcall public
 
 	test cl,_FNCALL_
-	jz	 @F
+	jz @F
 	dec  ch 				 ;variablenadresse weg
 	cmp  ch,cs:[esi.SYMBOL.bType2] ;braucht funktion ein argument?
 	jbe  wrinp_er
@@ -177,43 +180,43 @@ wrinp proc stdcall public
 	push ebx
 	push edx
 	call dword ptr cs:[esi.SYMBOL.dwProc]
-	jc	 wrinp_er2
+	jc wrinp_er2
 	add  esp,8
 	ret
 @@:
 	and  esi,esi
-	jz	 @F
+	jz @F
 	mov  ebx,[esi.SYMBOL.dwProc]
 @@:
 	cmp  cl,__BYTE__
-	jz	 wrinp_b
+	jz wrinp_b
 	cmp  cl,__WORD__
-	jz	 wrinp_w
+	jz wrinp_w
 	cmp  cl,__DWORD__
-	jz	 wrinp_dw
+	jz wrinp_dw
 ;	cmp  cl,__CONST__
-;	jz   wrinp_dw
+;	jz wrinp_dw
 	cmp  cl,__CHAR__
-	jz	 wrinp_b
+	jz wrinp_b
 	cmp  cl,__BOOL__
-	jz	 wrinp_bool
+	jz wrinp_bool
 	cmp  cl,__STRING__
-	jz	 wrinp_dw
+	jz wrinp_dw
 	cmp  cl,__LPTR__
-	jz	 wrinp_lptr
+	jz wrinp_lptr
 	cmp  cl,__RMLPTR__
-	jz	 wrinp_lptr
+	jz wrinp_lptr
 	cmp  cl,__FPTR__
-	jz	 wrinp_fw
+	jz wrinp_fw
 	cmp  cl,__FWORD__
-	jz	 wrinp_fw
+	jz wrinp_fw
 	cmp  cl,__QWORD__
-	jz	 wrinp_qw
+	jz wrinp_qw
 	cmp  cl,__TBYTE__
-	jz	 wrinp_tb
+	jz wrinp_tb
 if 0
 	cmp  cl,__OWORD__
-	jz	 wrinp_ow
+	jz wrinp_ow
 endif  
 	ret
 wrinp_b:
@@ -256,7 +259,7 @@ wrinp endp
 
 	@cmdproc
         
-_editb	proc c public pb:PARMBLK
+_editb proc c public pb:PARMBLK
 	mov [edittype],__BYTE__
 	jmp _edit
 _editb endp
@@ -264,7 +267,7 @@ _editb endp
 _editw proc c public pb:PARMBLK
 	mov [edittype],__WORD__
 	jmp _edit
-_editw	endp
+_editw endp
 
 _editd proc c public pb:PARMBLK
 	mov [edittype],__DWORD__
@@ -276,8 +279,8 @@ _editd endp
 _edit proc c public pb:PARMBLK
 
 	mov  esi, [a1.dwPtr]
-	and  esi, esi		  ;variable?
-	jz	 @F
+	and  esi, esi		;variable?
+	jz @F
 	mov  cl, [esi.SYMBOL.bType] ;muá hier restauriert werden, da flag
 @@: 						;funktionsaufruf nicht mehr aktuell
 	cmp  cl, __VOID__
@@ -341,7 +344,7 @@ edit_328:					;string
 @@:
 	mov  al, [esi+ecx]
 	and  al, al
-	jz	 edit_32x
+	jz edit_32x
 	inc  ecx
 	jmp  @B
 edit_32x:
@@ -529,6 +532,8 @@ search_ex:
 	ret
 _search endp
 
+;--- function ALLOCDOS
+
 _allocdos proc c public pb:PARMBLK
 
 ;local handle:dword
@@ -547,6 +552,8 @@ allocdos1:
 exit:
 	ret
 _allocdos endp
+
+;--- function FREEDOS
 
 _freedos proc c public pb:PARMBLK
 
@@ -588,7 +595,7 @@ exit:
 	ret
 _reallocdos endp
 
-;*** eax bytes ueber dpmi allokieren ***
+;*** eax bytes ueber dpmi allokieren
 
 allocdpmimem proc stdcall public uses ebx esi edi
 	push eax
@@ -614,7 +621,8 @@ exit:
 	ret
 allocdpmimem endp
 
-;*** memory allokieren DPMI 0501 ***
+;*** function ALLOCMem
+;--- alloc mem with dpmi func 0501h
 
 _allocmem proc c public pb:PARMBLK
 
@@ -630,7 +638,8 @@ exit:
 	ret
 _allocmem endp
 
-;*** memory allokieren DPMI 0504 ***
+;--- function ALLOCMX
+;*** memory allokieren DPMI 0504
 
 _allocmemx proc c public pb:PARMBLK
 
@@ -882,7 +891,7 @@ _lockunlockmem proc c uses esi edi pb:PARMBLK
 	ret
 _lockunlockmem endp
 
-;*** selectoren aus GDT und LDT ausgeben ***
+;*** cmds DG/GDT
 
 _gdtout proc c public pb:PARMBLK
 
@@ -890,6 +899,8 @@ _gdtout proc c public pb:PARMBLK
 	mov dl, 0
 	jmp ldtout1
 _gdtout endp
+
+;*** cmds DL/LDT
 
 _ldtout proc c public pb:PARMBLK
 
@@ -911,27 +922,28 @@ ldtout1::
 	or bl, dl
 	mov ecx, 10h
 	cmp byte ptr [a2.dwType],__CONST__
-	jnz selector2
+	jnz @F
 	mov ecx, [a2.dwOfs]
-	jecxz selectorex
-selector2:
+	jecxz exit
+@@:
+nextitem:
 	push ebx
 	push ecx
-	invoke selectorout, ebx
+	invoke print_descriptor, ebx
 	pop ecx
 	pop ebx
 	add ebx, 8
-	loop selector2
+	loop nextitem
 	mov dlarg, ebx
-selectorex:
+exit:
 	ret
 _ldtout endp
 
-;*** gate ausgeben ***
-;*** bereich: lineare adresse gdt/ldt ***
+;*** display gate descriptor
+;*** bereich: lineare address gdt/ldt
 ;*** maxlen:  limit von gdt/ldt ***
 
-gateout proc stdcall public ngate:dword,bereich:dword,maxlen:dword
+print_gate proc stdcall ngate:dword, bereich:dword, maxlen:dword
 
 local	tempvar1:dword
 local	tempvar2:dword
@@ -939,9 +951,9 @@ local	selattr:dword
 local	gateoffs:dword
 local	gatesel:dword
 
-	movzx ebx, word ptr ngate
+	mov ebx, ngate
 	mov tempvar1, ebx
-	mov dword ptr selattr, 0
+	mov selattr, 0
 	cmp ebx, maxlen
 	jnc novalgate
 	and bl, 0F8h
@@ -971,54 +983,54 @@ novalgate:
 	invoke printf, CStr("Selector=%04X Offset=%08X Attr=%04X "), gatesel, gateoffs, selattr
 	mov ax, word ptr selattr
 	shr ax, 8
-	call getstype
+	call print_descattr
 	invoke _crout
 exit:
 	ret
-gateout endp
+print_gate endp
 
-selectorout proc stdcall public sel:dword
+;--- display a descriptor 
 
-local   tempvar1:dword
+print_descriptor proc stdcall public dwSelector:dword
+
 local   selattr:dword
 local   sellimit:dword
 
-	movzx ebx, word ptr sel
-	mov tempvar1, ebx
-	mov dword ptr selattr,0
-	call getaccr
+	mov word ptr dwSelector+2, 0
+	mov ebx, dwSelector
+	mov selattr, 0
+	call getaccr		; get acc rights of BX in EAX ( may modify ebx )
 	jc nogatesel1
-	shr eax,8
-	mov selattr,eax 	 ;ACCRIGHTS
-	test al,10h			 ;normale selectoren?
+	shr eax, 8
+	mov selattr, eax
+	test al,10h			; system descriptor?
 	jnz nogatesel
 	test al,4
 	jz nogatesel
-	mov eax,tempvar1
-	mov ebx,dword ptr [rGDTR+2]
-	mov cx,word ptr [rGDTR+0]
-	test ax,4
+	mov eax, dwSelector
+	mov ebx, dword ptr [rGDTR+2]
+	mov cx, word ptr [rGDTR+0]
+	test ax, 4
 	jz @F
 	mov bx,[rLDT]
 	call getlimitr
 	push eax
-	movzx eax,[rLDT]
-	invoke getbaser,eax
+	movzx eax, [rLDT]
+	invoke getbaser, eax
 	pop ecx
-	mov ebx,eax
-	mov eax,tempvar1
+	mov ebx, eax
 @@:
-	invoke gateout, eax, ebx, ecx
+	invoke print_gate, dwSelector, ebx, ecx
 	jmp exit
 nogatesel1:
-	mov ax, 0
+	xor eax, eax
 	stc
 nogatesel:
 	pushfd
 	shr ax, 5
 	and ax, 3
-	or word ptr tempvar1, ax
-	invoke printf, CStr("Sel=%04X "), tempvar1
+	or word ptr dwSelector, ax
+	invoke printf, CStr("Sel=%04X "), dwSelector
 	popfd
 	jnc @F
 	@strout offset tQuestions
@@ -1026,141 +1038,62 @@ nogatesel:
 	jmp exit
 @@:
 	@stroutc "Base="
-	invoke getbaser, tempvar1
+	invoke getbaser, dwSelector
 	jnc @F
 	call dispunknown
-	jmp selectorout_1
+	jmp pd_1
 @@:
 	call dispeax
-selectorout_1:
+pd_1:
 	@stroutc " Limit="
-	mov ebx,tempvar1
+	mov ebx, dwSelector
 	call getlimitr
 	jnc @F
 	call dispunknown
-	jmp selectorout_2
+	jmp pd_2
 @@:
 	call dispeax
-selectorout_2:
+pd_2:
 	@stroutc " Attr="
 	@wordout selattr
 	@putchr ' '
-	mov eax,selattr
-	call getstype
+	mov eax, selattr
+	call print_descattr
 	call _crout
 exit:
 	ret
 dispeax:
-	invoke printf, CStr("%X"), eax
+	invoke printf, CStr("%8X"), eax
 	retn
 dispunknown:
 	invoke printf, CStr("????????")
 	retn
 
-selectorout endp
+print_descriptor endp
 
-mbit7 proc c
-	test	al,80h
-	jnz 	@F
-	@stroutc ",NP"
-	ret
-@@:
-	@stroutc ",P"
-	ret
-mbit7 endp
+;--- display descriptor attributes
+;--- ax=attributes
 
-mbit3 proc c
-	test	al,8
-	jnz 	@F
-	@stroutc "Data"
+print_descattr proc stdcall public uses ebx
+	test ax,10h		;Memory oder System Segment?
+	jz @F
+	call mbit3		;Code/Data
+	call mbit14		;16Bit/32Bit
+	call mbit7		;Present/Not Present
+	push eax
+	invoke printf, CStr("%s,%uB,%s,"), ecx, edx, ebx
+	pop eax
+	call mbit1		;RO/RW bzw. EO/ER
+	call mbit2		;Conforming/Expand Down
+	call mbit0		;Accessed
+	invoke printf, CStr("%s%s,%s"), ecx, edx, ebx
 	ret
 @@:
-	@stroutc "Code"
-	ret
-mbit3 endp
-
-mbit14 proc c
-	test	ah,40h
-	jnz 	@F
-	@stroutc ",16Bit"
-	ret
+	mov ecx, CStr("valid ")
+	test al,80h
+	jnz @F
+	mov ecx, CStr("invalid ")
 @@:
-	@stroutc ",32Bit"
-	ret
-mbit14 endp
-
-mbit2 proc c
-	test	al,4
-	jnz 	@F
-	ret
-@@:
-	test	al,8
-	jnz 	@F
-	@stroutc ",DN"
-	ret
-@@:
-	@stroutc ",CF"
-	ret
-mbit2 endp
-
-mbit1 proc c
-	test	al,2
-	jnz 	mbit11
-	test	al,8
-	jnz 	@F
-	@stroutc ",R/O"
-	ret
-@@:
-	@stroutc ",E/O"
-	ret
-mbit11:
-	test	al,8
-	jnz 	@F
-	@stroutc ",R/W"
-	ret
-@@:
-	@stroutc ",E/R"
-	ret
-mbit1 endp
-
-mbit0 proc c
-	test	al,1
-	jnz 	@F
-	ret
-@@:
-	@stroutc ",Acc"
-	ret
-mbit0 endp
-
-getstype proc stdcall public
-	test	ax,10h		  ;Memory oder System Segment?
-	jz		getstype1
-	push	ax
-	call	mbit3		  ;Code/Data
-	pop 	ax
-	push	ax
-	call	mbit14		  ;16Bit/32Bit
-	pop 	ax
-	push	ax
-	call	mbit7		  ;Present/Not Present
-	pop 	ax
-	push	ax
-	call	mbit1		  ;RO/RW bzw. EO/ER
-	pop 	ax
-	push	ax
-	call	mbit2		  ;Conforming/Expand Down
-	pop 	ax
-	push	ax
-	call	mbit0		  ;Accessed
-	pop 	ax
-	ret
-getstype1:
-	mov		ecx, CStr("valid ")
-	test	al,80h
-	jnz		@F
-	mov		ecx, CStr("invalid ")
-@@:
-	push ebx
 	and al, 0Fh
 	shl al, 2
 	movzx ebx, al
@@ -1169,9 +1102,80 @@ getstype1:
 @@:
 	mov ebx, [ebx][segtypes]
 	@strout ebx
-	pop ebx
 	ret
-getstype endp
+
+;--------
+
+mbit3:
+	test al, 8
+	jnz @F
+	mov ecx, CStr("Data")
+	retn
+@@:
+	mov ecx, CStr("Code")
+	retn
+
+mbit14:
+	test ah, 40h
+	jnz @F
+	mov edx, 16
+	retn
+@@:
+	mov edx, 32
+	retn
+
+mbit7:
+	test al, 80h
+	jnz @F
+	mov ebx, CStr("NP")
+	retn
+@@:
+	mov ebx, CStr("P")
+	retn
+
+mbit1:
+	test al,2
+	jnz mbit1x
+	test al,8
+	jnz @F
+	mov ecx, CStr("R/O")
+	retn
+@@:
+	mov ecx, CStr("E/O")
+	retn
+mbit1x:
+	test al,8
+	jnz @F
+	mov ecx, CStr("R/W")
+	retn
+@@:
+	mov ecx, CStr("E/R")
+	retn
+
+mbit2:
+	test al, 4
+	jnz @F
+	mov edx, offset szNull
+	retn
+@@:
+	test al, 8
+	jnz @F
+	mov edx, CStr(",DN")
+	retn
+@@:
+	mov edx, CStr(",CF")
+	retn
+
+mbit0:
+	test al,1
+	jnz @F
+	mov ebx, CStr("NA")
+	retn
+@@:
+	mov ebx, CStr("Acc")
+	retn
+
+print_descattr endp
 
 XMSHDLTABLE struct
 bVersion	BYTE ?

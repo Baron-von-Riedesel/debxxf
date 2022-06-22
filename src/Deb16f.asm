@@ -4,6 +4,7 @@
 	.286
 	.MODEL SMALL
 	.386
+	option casemap:none
 
 	.nolist
 	.nocref

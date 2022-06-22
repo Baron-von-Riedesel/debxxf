@@ -8,7 +8,7 @@
 if ?FLAT
 	.model flat
 else
-	.model small
+	.model tiny
 endif
 	option casemap:none
 

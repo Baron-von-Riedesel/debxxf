@@ -1,4 +1,7 @@
 
+	pushcontext listing
+	.nolist
+
 ;*** KONSTANTEN ***
 
 ifdef _DEBUG
@@ -152,10 +155,4 @@ IGNMAC			equ '+'
 
 endif
 
-bPromptPM		equ '#'		; prompt PM
-bPromptRM		equ '>'		; prompt RM
-bPromptV86		equ '-'		; prompt V86
-
-XON 	equ 11h			; Ctrl-Q
-XOFF	equ 13h			; Ctrl-S
-
+	popcontext listing

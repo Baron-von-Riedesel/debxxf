@@ -9,7 +9,7 @@
 if ?FLAT
 	.MODEL FLAT
 else
-	.MODEL SMALL
+	.MODEL TINY
 	.DOSSEG
 endif
 	option proc:private
@@ -40,6 +40,8 @@ endif
 	include fcntl.inc
 	include rmdbghlp.inc
 	include debugsys.inc
+	include extern32.inc
+	include extern16.inc
 
 if @Model eq 7
 .stream  segment dword public 'DATA'
@@ -89,11 +91,6 @@ else
 UnAssemble proto stdcall :ptr BYTE, :QWORD, :DWORD
 endif
 alloctmpheap proto stdcall :DWORD
-
-;------------------------------------------------------------------------
-
-	include extern32.inc
-	include extern16.inc
 
 ;------------------------------------------------------------------------
 
@@ -348,11 +345,11 @@ idtexc	dd 0
 idterrc dd 0
 dstemp	dd 0
 
-fEscapemode db 0
 pSaveState	dd 0		; start linked list of savestates
 dwLastRC	dd 0
 MyBase		dd 0		; lineare adresse speicherbereich
 dwTmp		dd 0		; fuer diverses
+fEscapemode db 0		; tty output; bit 0: "escape" mode on
 cmdline		db 00,0Dh,00,00
 
 params label dword		; fuer int 21,4Bh
@@ -2151,7 +2148,7 @@ _Stosb endp
 endif
 
 ;*** allgemein: anhalten nach xLines zeilen
-;*** is called by XonXoffCheck/__checkforwait if a CR is written
+;*** is called by XonXoffCheck/_checkforwait if a CR is written
 
 checkifshouldwait proc stdcall public uses eax
 
@@ -2192,6 +2189,10 @@ __strout16:
 	add dword ptr [ebp+32], 2
 	jmp stroutx1
 endif
+
+;--- __strout32: proc called by @stroutc macro
+;--- all registers preserved
+
 __strout32 proc public
 	pushad
 	@loadesp ebp
@@ -3246,7 +3247,7 @@ symout_ls:
 	dec cl
 	jnz @B
 symout_lsex:
-		ret
+	ret
 symout_str:
 	cmp dword ptr [ebx], 0
 	jz @F
@@ -5098,15 +5099,15 @@ notifyout endp
 
 setnotify proc c value:dword,index:dword
 
-	movzx	edx,byte ptr index
-	mov 	eax,value
-	and 	eax,eax
-	jz		@F
-	bts 	notifylog,edx
+	movzx edx,byte ptr index
+	mov eax,value
+	and eax,eax
+	jz @F
+	bts notifylog,edx
 	clc
-	jmp 	setnotify_ex
+	jmp setnotify_ex
 @@:
-	btr 	notifylog,edx
+	btr notifylog,edx
 	clc
 setnotify_ex:
 	ret
@@ -5115,43 +5116,43 @@ setnotify endp
 idtuse proc c index:dword
 
 	push esi
-	mov  esi,offset oldidtvecs
-	cmp  al,2
-	jnz  idtuse_2
-	mov  ebx,[pNearHeap]
-	xor  edx,edx
-	mov  cl,_IDTVECS_
-	mov  dh,0
+	mov esi, offset oldidtvecs
+	cmp al,2
+	jnz idtuse_2
+	mov ebx, [pNearHeap]
+	xor edx, edx
+	mov cl, _IDTVECS_
+	mov dh, 0
 idtuse_3:
-	mov  ax,word ptr [esi+2]
-	and  ax,ax
-	jz	 @F
-	mov  byte ptr [ebx],dh
-	inc  ebx
-	inc  dl
+	mov ax, word ptr [esi+2]
+	and ax, ax
+	jz @F
+	mov byte ptr [ebx], dh
+	inc ebx
+	inc dl
 @@:
-	add  esi,8
-	inc  dh
-	dec  cl
-	jnz  idtuse_3
-	mov  eax,ebx
-	xchg eax,[pNearHeap]
-	mov  cl,__LIST__
-	jmp  idtuse_ex
+	add esi, 8
+	inc dh
+	dec cl
+	jnz idtuse_3
+	mov eax, ebx
+	xchg eax, [pNearHeap]
+	mov cl, __LIST__
+	jmp idtuse_ex
 idtuse_2:
-	mov  ebx,index
-	cmp  ebx,_IDTVECS_
-	jnc  idtuse_1
-	mov  ax,word ptr [ebx*8+esi+2]
-	cmp  ax,1
+	mov ebx, index
+	cmp ebx, _IDTVECS_
+	jnc idtuse_1
+	mov ax, word ptr [ebx*8+esi+2]
+	cmp ax, 1
 	cmc
-	sbb  al,al
+	sbb al, al
 	clc
-	jmp  idtuse_ex
+	jmp idtuse_ex
 idtuse_1:
-	mov  cl,__VOID__
+	mov cl, __VOID__
 idtuse_ex:
-	pop  esi
+	pop esi
 	ret
 idtuse endp
 
@@ -5779,20 +5780,20 @@ getpspname endp
 ;--- getdta
 
 getdta proc
-	test	[fStat], FSTAT_DTAREAD
-	jnz 	@F
-	push	es
-	push	ebx
+	test [fStat], FSTAT_DTAREAD
+	jnz @F
+	push es
+	push ebx
 	@DosCall 2Fh
-	or		[fStat], FSTAT_DTAREAD
-	mov 	dword ptr [dfCurDta+0],ebx
-	mov 	word ptr [dfCurDta+?SEGOFFS],es
+	or [fStat], FSTAT_DTAREAD
+	mov dword ptr [dfCurDta+0],ebx
+	mov word ptr [dfCurDta+?SEGOFFS],es
 	@tprintf <"getdta: dta read from dos %X:%X",lf>, es, ebx
-	pop 	ebx
-	pop 	es
+	pop ebx
+	pop es
 @@:
-	mov 	dx,word ptr [dfCurDta+?SEGOFFS]
-	mov 	eax,dword ptr [dfCurDta+0]
+	mov dx,word ptr [dfCurDta+?SEGOFFS]
+	mov eax,dword ptr [dfCurDta+0]
 	@tprintf <"getdta: dta is %X:%X",lf>,edx,eax
 	ret
 getdta endp
@@ -5946,10 +5947,10 @@ GetVIF endp
 ;--- set the state of the virtual interrupt flag
 
 SetVIF proc stdcall public
-	test  cs:[fMode], FMODE_STRICT
-	jnz   sv1
-	and   al,al
-	jnz   @F
+	test cs:[fMode], FMODE_STRICT
+	jnz sv1
+	and al,al
+	jnz @F
 	cli
 	ret
 @@:
@@ -5963,19 +5964,19 @@ SetVIF endp
 
 getfIrq proc c value:dword
 
-	cmp   al,1
-	mov   al,fIrq
-	jnz   exit
-	mov   al,byte ptr value
-	and   al,al
+	cmp al,1
+	mov al,fIrq
+	jnz exit
+	mov al,byte ptr value
+	and al,al
 	setne al
 	@tprintf <"getfIrq: AL=%X",lf>,eax
-	mov    dl,al
+	mov dl,al
 	invoke SetVIF
 	invoke GetVIF
-	cmp   al,dl
-	jnz   error
-	mov   fIrq,al
+	cmp al,dl
+	jnz error
+	mov fIrq,al
 exit:
 	clc
 	ret
@@ -6044,10 +6045,13 @@ error:
 	ret
 getldtaddr endp
 
-;*** accrights von ebx holen ***
+;--- in: selector in EBX
+;*** out: NC, eax=accessrights 
+;***       C if error
+;--- modifies ebx!
 
 getaccr proc stdcall public
-	lar eax,ebx
+	lar eax, ebx
 	jz getaccr3
 	test bl,4
 	jnz getaccr4
@@ -6102,10 +6106,10 @@ getlimit2:
 	clc
 	ret
 getlimit3:
-	test	[fMode], FMODE_LDTDIRECT
-	jz		getlimit_er
-	call	getldtaddr
-	jnc 	getlimit5
+	test [fMode], FMODE_LDTDIRECT
+	jz getlimit_er
+	call getldtaddr
+	jnc getlimit5
 getlimit_er:
 	stc
 	ret
@@ -6116,28 +6120,28 @@ getlimitr endp
 getbaser proc stdcall public uses ebx ecx edx selector:dword
 
 restartproc:
-	mov ebx,selector
+	mov ebx, selector
 	test bl,04
 	jnz localbase
-	and ebx,0000FFF8h
+	and ebx, 0000FFF8h
 	jz error
-	cmp bx,word ptr [rGDTR]
+	cmp bx, word ptr [rGDTR]
 	jnc error
-	add ebx,dword ptr [rGDTR+2]
+	add ebx, dword ptr [rGDTR+2]
 getbaser_1:
 	test [fMode], FMODE_STRICT
 	jnz error
-	mov [excexit],offset forcestrict
-	mov al,@flat:[ebx+7]
-	shl eax,24
-	mov edx,@flat:[ebx+2]
-	and edx,00FFFFFFh
-	or eax,edx
+	mov [excexit], offset forcestrict
+	mov al, @flat:[ebx+7]
+	shl eax, 24
+	mov edx, @flat:[ebx+2]
+	and edx, 00FFFFFFh
+	or eax, edx
 	jmp exit
 localbase:
 	test [fMode], FMODE_LDTDIRECT
 	jnz @F
-	mov ax,6
+	mov ax, 6
 	@DpmiCall
 	jc error
 	push cx
@@ -6234,15 +6238,15 @@ setlimit endp
 getattr proc c msel:dword
 
 	push ecx
-	mov  ebx,msel
+	mov ebx,msel
 	call getaccr
-	jc	 getattrx_ex
-	shr  eax,8
+	jc getattrx_ex
+	shr eax,8
 	clc
 getattrx_ex:
-	pop  ecx
-	jnc  @F
-	mov  cl,__VOID__
+	pop ecx
+	jnc @F
+	mov cl,__VOID__
 	clc
 @@:
 	ret
@@ -6359,33 +6363,33 @@ inportw endp
 
 outportw proc c wert:dword,port:dword
 
-	mov edx,port
-	mov eax,wert
+	mov edx, port
+	mov eax, wert
 	out dx,ax
 	ret
 outportw endp
 
 _highword proc pascal wert:dword
 
-	mov ax,word ptr wert+2
+	mov ax, word ptr wert+2
 	ret
 _highword endp
 
 _lowword proc pascal wert:dword
 
-	mov ax,word ptr wert+0
+	mov ax, word ptr wert+0
 	ret
 _lowword endp
 
 _highbyte proc pascal wert:dword
 
-	mov al,byte ptr wert+1
+	mov al, byte ptr wert+1
 	ret
 _highbyte endp
 
 _lowbyte proc pascal wert:dword
 
-	mov al,byte ptr wert
+	mov al, byte ptr wert
 	ret
 _lowbyte endp
 
@@ -6402,57 +6406,57 @@ gettype endp
 
 searchkap proc stdcall uses ds esi edi sbereich:dword,searchstr:near ptr byte
 
-	mov edi,sbereich
-	and edi,edi
+	mov edi, sbereich
+	and edi, edi
 	jz  searchkap1
 searchkap3:
-	mov al,@flat:[edi]
-	and al,al
+	mov al, @flat:[edi]
+	and al, al
 	jz  searchkap1
-	cmp al,'['
+	cmp al, '['
 	jz   searchkap2
 searchkap4:
-	mov al,@flat:[edi]
+	mov al, @flat:[edi]
 	inc edi
-	and al,al
+	and al, al
 	jz  searchkap1	 ;fertig
-	cmp al,lf
+	cmp al, lf
 	jnz searchkap4
 	jmp searchkap3
 searchkap2:
-	mov esi,searchstr
+	mov esi, searchstr
 	inc edi
 @@:
-	mov al,@flat:[edi]
+	mov al, @flat:[edi]
 	inc edi
 	call kl2gr
-	mov ah,al
+	mov ah, al
 	lodsb
-	cmp al,ah
+	cmp al, ah
 	jz @B
-	and al,al
+	and al, al
 	jz searchkap5
-	cmp al,' '		 ;ist parameter zuende?
+	cmp al, ' '		 ;ist parameter zuende?
 	jz searchkap5
 	jmp searchkap4
 searchkap5: 				 ;eingegebener parameter ist zuende
-	cmp ah,']'		 ;wie siehts mit fileparameter aus?
+	cmp ah, ']'		 ;wie siehts mit fileparameter aus?
 	jz searchkap6
-	mov al,@flat:[edi-1]
+	mov al, @flat:[edi-1]
 	call tstkl		 ;nur noch kleinbuchstaben?
 	jnc searchkap4
 searchkap6:
-	mov al,@flat:[edi]
+	mov al, @flat:[edi]
 	inc edi
-	and al,al
+	and al, al
 	jz @F
-	cmp al,lf
+	cmp al, lf
 	jnz searchkap6
 @@:
-	mov eax,edi
+	mov eax, edi
 	jmp searchkapex
 searchkap1:
-	xor eax,eax
+	xor eax, eax
 searchkapex:
 	ret
 searchkap endp
@@ -6485,7 +6489,7 @@ kapout2:
 	xor edx, edx
 	.while (ecx)
 if TABEXPAND
-		mov		al,@flat:[esi]
+		mov al,@flat:[esi]
 		.if (al == 9)			;expand TABS!
 			.repeat
 				@putchr ' '
@@ -6507,7 +6511,7 @@ endif
 		inc esi
 		dec ecx
 	.endw
-	invoke	_crout
+	invoke _crout
 	ret
 kapout endp
 
@@ -6576,80 +6580,80 @@ local base:dword
 local flag:dword
 local dwRdWr:dword
 
-	mov 	byte ptr flag,al
-	mov 	ebx,dword ptr pBuffer+4
-	mov		ax,6
-	int		31h
-	jc		exit
-	push	cx
-	push	dx
-	pop 	eax
-	add 	eax,dword ptr pBuffer+0
-	mov 	base,eax 		;linear address of read/write buffer
+	mov byte ptr flag,al
+	mov ebx,dword ptr pBuffer+4
+	mov ax,6
+	int 31h
+	jc exit
+	push cx
+	push dx
+	pop eax
+	add eax,dword ptr pBuffer+0
+	mov base,eax 		;linear address of read/write buffer
 
-	sub 	eax,eax
-	mov 	dwRdWr,eax
+	sub eax,eax
+	mov dwRdWr,eax
         
-	mov		cx,1
-	mov		ax,0
-	int		31h				;get a scratch selector
-	jc		exit
-	mov		ebx, eax
-	mov 	ds,eax
+	mov cx,1
+	mov ax,0
+	int 31h				;get a scratch selector
+	jc exit
+	mov ebx, eax
+	mov ds,eax
 
-	mov		dx, ?CHKSIZE-1
-	xor		ecx,ecx
-	mov		ax,8
-	int		31h
-	jc		sm1_er_pm4
+	mov dx, ?CHKSIZE-1
+	xor ecx,ecx
+	mov ax,8
+	int 31h
+	jc sm1_er_pm4
         
 nextblock:
 							;1. set new base of DS
-	mov 	ebx,ds
-	mov 	eax,base
-	add 	eax,dwRdWr
-	push	eax
-	pop 	dx
-	pop 	cx
-	mov		ax,7
-	int		31h
-	jc		sm1_er_pm3
-	push	ds				;make sure ds has new values
-	pop 	ds
+	mov ebx,ds
+	mov eax,base
+	add eax,dwRdWr
+	push eax
+	pop dx
+	pop cx
+	mov ax,7
+	int 31h
+	jc sm1_er_pm3
+	push ds				;make sure ds has new values
+	pop ds
 
-	mov 	eax,numBytes	;2. ecx = _min(laenge,?CHKSIZE)
-	and 	eax,eax
-	jz		sm1
-	mov 	ecx,?CHKSIZE
-	sub 	eax,ecx
-	jnc 	@F				;restlaenge ist groesser
-	add 	ecx,eax
-	sub 	eax,eax
+	mov eax,numBytes	;2. ecx = _min(laenge,?CHKSIZE)
+	and eax,eax
+	jz sm1
+	mov ecx,?CHKSIZE
+	sub eax,ecx
+	jnc @F				;restlaenge ist groesser
+	add ecx,eax
+	sub eax,eax
 @@:
-	mov 	numBytes,eax
-	xor 	edx,edx
-	mov 	ebx,handle
-	mov 	ah,byte ptr flag
+	mov numBytes,eax
+	xor edx,edx
+	mov ebx,handle
+	mov ah,byte ptr flag
 	@DosCall
-	jc		sm1_er
-	movzx	eax,ax
-	add 	dwRdWr,eax
-	cmp 	ax,?CHKSIZE
-	jz		nextblock		;---->
+	jc sm1_er
+	movzx eax,ax
+	add dwRdWr,eax
+	cmp ax,?CHKSIZE
+	jz nextblock		;---->
 sm1:
-	mov 	eax,dwRdWr
+	mov eax,dwRdWr
 	clc
 sm1_er:
 sm1_er_pm3:
 sm1_er_pm4:
 	pushfd
-	push	eax
-	mov 	ebx,ds
-	push	0
-	pop		ds
-	mov		ax,1
-	int		31h		;free descriptor
-	pop		eax
+	push eax
+	mov ebx,ds
+	push 0
+	pop ds
+	mov ax,1
+	int 31h		;free descriptor
+	pop eax
 	popfd
 exit:        
 	ret

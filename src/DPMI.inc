@@ -68,19 +68,41 @@ swapFile      dd ?            ;32
 res           db 12 dup (?)
 MEMINFO ends
 
-EXCFRAME struct	;DPMI v0.9 exception frame
-_dpmieip	dd ?
-_dpmics		dd ?
-errorcode	dd ?
-_eip		dd ?
-_cs			dd ?
-_eflags		dd ?
-_esp		dd ?
-_ss			dd ?
-EXCFRAME ends
+DPMIEXC struct
+if ?32BIT
+dpmiip	dd ?
+dpmics	dd ?
+ErrCode	dd ?
+rIP 	dd ?
+rCS 	dd ?
+rFL 	dd ?
+rSP 	dd ?
+rSS 	dd ?
+else
+dpmiip	dw ?
+dpmics	dw ?
+ErrCode	dw ?
+rIP 	dw ?
+rCS 	dw ?
+rFL 	dw ?
+rSP 	dw ?
+rSS 	dw ?
+endif
+DPMIEXC ends
 
-EXCFRAME10 struct	;DPMI v1.0 exception frame
-	EXCFRAME <>
+EXCFRAME32 struct	;DPMI v0.9 32-bit exception frame
+dpmiip	dd ?
+dpmics	dd ?
+ErrCode	dd ?
+rIP		dd ?
+rCS		dd ?
+rFL		dd ?
+rSP		dd ?
+rSS		dd ?
+EXCFRAME32 ends
+
+EXCFRAME32X struct	;DPMI v1.0 exception frame
+	EXCFRAME32 <>
 rDPMIIPx	dd ?	;+20h
 rDPMICSx	dd ?	;+24h
 rErrx		dd ?	;+28h	;filled with dr6 if exc 01
@@ -96,6 +118,6 @@ rFSx		dd ?	;+48h
 rGSx		dd ?	;+4Ch
 rCR2		dd ?	;+50h	;exc 0E only
 rPTE		dd ?	;+54h	;exc 0E only, bits 0-8 of PTE only
-EXCFRAME10 ends
+EXCFRAME32X ends
 
         popcontext listing

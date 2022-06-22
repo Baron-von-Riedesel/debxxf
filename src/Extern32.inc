@@ -179,6 +179,7 @@ RunBop              proto near stdcall :dword
 CopyString2TmpHeap  proto near stdcall :dword
 CopyStringInKbdBuff proto near stdcall :dword
 GetComChar          proto near stdcall
+GetI14Char          proto near stdcall
 GetComStatus        proto near stdcall
 GetExpression       proto near stdcall :dword
 GetString           proto near stdcall :dword,:dword,:dword
@@ -196,8 +197,6 @@ VioGetCurPosDir     proto near stdcall :ptr CRTPARMS
 _AUXPutChar         proto near stdcall :dword
 _AllocDescriptor    proto near stdcall :dword,:dword
 _DOSGetChar         proto near stdcall
-_GetComNum          proto near stdcall
-_I14GetChar         proto near stdcall
 __strout32          proto near
 
 _doscall            proto near stdcall
@@ -221,7 +220,6 @@ debug_entry         proto near c
 deletedebughandle   proto near stdcall
 eaxout              proto near stdcall
 freeflat            proto near stdcall :dword
-gateout             proto near stdcall gate:dword,bereich:dword,maxlen:dword
 GetCurrentCS        proto near stdcall
 getaccr             proto near stdcall
 getalternateadapter proto near stdcall
@@ -262,6 +260,8 @@ outmode             proto near c tvalue:dword
 ownerout            proto near stdcall hBlock:dword
 preparecmdline      proto near stdcall
 preparestring       proto near stdcall :dword
+print_descriptor    proto near stdcall sel:dword
+;print_gate          proto near stdcall gate:dword,bereich:dword,maxlen:dword
 regsout_tss         proto near c               ;aktuelles tss ausgeben
 ;;resetkbd            proto near stdcall
 restoremyscreenbuffer proto near stdcall pBuffer:ptr byte
@@ -272,8 +272,6 @@ saveviostate        proto near stdcall
 savexregs           proto near stdcall         ;erweiterte register retten
 searchkap           proto near stdcall bereich:dword,searchstr:near ptr byte
 SearchUserSymbol    proto near stdcall :dword,:ptr byte
-selectorout         proto near stdcall sel:dword
-selectorout         proto near stdcall sel:dword
 set_reset_idtvec    proto near stdcall index:dword,value:dword
 setdebuggeevidstate proto near stdcall
 SwitchToDebuggerScreen	proto near stdcall
@@ -335,7 +333,7 @@ if 1
 traprm21	proto stdcall
 untraprm21	proto stdcall
 endif
-getstype			proto near stdcall
+print_descattr		proto near stdcall
 setkeys				proto near stdcall
 GetVIF				proto near stdcall
 rmbreak				proto near stdcall

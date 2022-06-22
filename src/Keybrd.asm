@@ -1,9 +1,11 @@
 
+;--- keyboard and generic line input
+
 	.386
 if ?FLAT
 	.MODEL FLAT
 else
-	.MODEL SMALL
+	.MODEL tiny
 endif
 	option proc:private
 	option casemap:none
@@ -17,11 +19,8 @@ endif
 	include dpmi.inc
 	include putf.inc
 	include errors.inc
-	include toolhelp.inc
-	include fcntl.inc
 	include extern32.inc
 	include extern16.inc
-	include isvbop.inc
 	.list
 
 ;--- there was a problem in hdpmi v3.19, causing a crash in debxxf after
@@ -49,6 +48,10 @@ EBUFSTA  equ   480h
 EBUFEND  equ   482h
 
 ESCAPE	 equ 1Bh
+
+PromptPM	equ '#'
+PromptRM	equ '>'
+PromptV86	equ '-'
 
 @callint16 macro func
 	mov ah, func
@@ -380,17 +383,6 @@ keytrans_ex:
 	pop  esi
 	ret
 keytrans endp
-
-;*** get char from I14
-
-geti14char:
-	call _I14GetChar
-	test ah,80h
-	mov ah,00
-	jz @F
-	mov al,00
-@@:
-	ret
 
 if ?CATCHINT09
  if ?SAVEINT09
@@ -780,7 +772,7 @@ getchar_1:
 @@:
 	test [__inpmode], _I14INP
 	jz @F
-	call geti14char
+	call GetI14Char
 	and ax,ax
 	jnz exit
 @@:
@@ -803,13 +795,13 @@ promptout:
 	jz promptout_2
 	test [fCPUMode], 1
 	jnz promptout_1
-	@putchr bPromptRM
+	@putchr PromptRM
 	ret
 promptout_1:
-	@putchr bPromptV86
+	@putchr PromptV86
 	ret
 promptout_2:
-	@putchr bPromptPM
+	@putchr PromptPM
 	ret
 
 ;*** check last key 
@@ -1147,51 +1139,50 @@ mystrcat endp
 CURSOR_RIGHT equ 00435B1Bh
 CURSOR_LEFT  equ 00445B1Bh
 
-dottycursor proc stdcall
+dottycursor proc stdcall uses ecx
 
-if 0
+if _TRACE_
 	push eax
-	or fEscapemode,1
-	@strout <"req. pos=">
-	pop eax
-	push eax
-	@hexout al
-	@stroutc ",act. pos="
-	pop eax
-	push eax
-	@hexout ah
-	invoke _crout
-	and fEscapemode,0FEh
+	or fEscapemode, 1
+	movzx ecx, ah
+	movzx eax, al
+	@tprintf <"dottycsr: req. pos=%X, act. pos=%X",lf>, eax, ecx
+	and fEscapemode, not 1
 	pop eax
 endif
-	sub al,ah	;al=gewuenschte spalte
+	sub al, ah	; al=requested row
 	jz exit
-	jc dty_1 	;ah=aktuelle spalte
-	mov cl,al
-	mov eax,CURSOR_RIGHT
+	jc dty_1 	; ah=current row
+	mov cl, al
+	mov eax, CURSOR_RIGHT
 	jmp dty_2
-dty_1:				;cursor nach links
+dty_1:			; cursor nach links
 	neg al
-	mov cl,al
-	mov eax,CURSOR_LEFT
+	mov cl, al
+	mov eax, CURSOR_LEFT
 dty_2:
-	or fEscapemode,1
-dty_21:
+	or fEscapemode, 1
+	mov dl, [__outmode]
+	push edx
+	and [__outmode], _SEROUT or _I14OUT
+nextchunk:
 	push eax
-	mov ch,3
-dty_3:
+	mov ch, 3
+nextchar:
 	push ecx
 	push eax
-	invoke _AUXPutChar,eax
+	@putchr al
 	pop eax
 	pop ecx
-	shr eax,8
+	shr eax, 8
 	dec ch
-	jnz dty_3
+	jnz nextchar
 	pop eax
 	dec cl
-	jnz dty_21
-	and fEscapemode,0FEh
+	jnz nextchunk
+	pop edx
+	mov [__outmode], dl
+	and fEscapemode, not 1
 exit:
 	ret
 dottycursor endp
@@ -1201,18 +1192,16 @@ wCol dw ?
 wRow dw ?
 CSRPOS ends
 
-;*** Cursorposition setzen in GETSTRING() ***
+;*** set cursor position [ in getstring() ]
 
 setCursorPos proc stdcall xy:CSRPOS
 
-	test [__outmode], _SEROUT ;TTY devices
+	test [__outmode], _SEROUT or _I14OUT	; TTY device?
 	jz @F
 	mov al, byte ptr xy.wCol
 	mov ah, byte ptr ttycurpos
-	mov byte ptr ttycurpos,al
-	push ecx
+	mov byte ptr ttycurpos, al
 	call dottycursor
-	pop ecx
 @@:
 	mov al, byte ptr xy.wCol
 	mov ah, byte ptr xy.wRow
@@ -1228,33 +1217,33 @@ setCursorPos proc stdcall xy:CSRPOS
 
 setCursorPos endp
 
-;*** Cursorposition ermitteln in GETSTRING() ***
+;*** get cursor position [ in getstring() ]
 
 getCursorPos proc
 
 	test [__outmode], _VIOOUT
 	jz @F
 	invoke VioGetCurPosDir, addr stdcrt
-	mov cl,al
-	shl eax,8
-	movzx ax,cl
-	jmp exit
+	mov cl, al
+	shl eax, 8
+	movzx ax, cl
+	ret
 @@:
 	test [__outmode], _ALTOUT
 	jz @F
 	invoke VioGetCurPosDir, addr altcrt
-	mov cl,al
-	shl eax,8
-	movzx ax,cl
-	jmp exit
+	mov cl, al
+	shl eax, 8
+	movzx ax, cl
+	ret
 @@:
-	test [__outmode], _SEROUT
+	test [__outmode], _SEROUT or _I14OUT
 	jz @F
-	mov eax,ttycurpos
-	jmp exit
+	mov eax, ttycurpos
+	ret
 @@:
-	mov eax,ttycurpos
-exit:
+;--- other outputs (BIOS?)
+	mov eax, ttycurpos
 	ret
 
 getCursorPos endp
@@ -1317,9 +1306,9 @@ nextchar:				; <--- get next key
 	pop ecx
 
 	call chkmsg
-	test byte ptr flags,FL_ESCAPE
+	test byte ptr flags, FL_ESCAPE
 	jnz str_1
-	test byte ptr flags,FL_TERMINATE
+	test byte ptr flags, FL_TERMINATE
 	jz nextchar
 	mov esi, strsta
 	mov ecx, maxlen

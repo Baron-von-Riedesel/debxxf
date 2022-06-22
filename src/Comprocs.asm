@@ -1,10 +1,15 @@
 
+;--- serial port handling
+
 	.386
 if ?FLAT
 	.MODEL FLAT
 else
-	.MODEL SMALL
+	.MODEL TINY
 endif
+	option proc:private
+	option casemap:none
+
 	include const.inc
 	include ascii.inc
 	include function.inc
@@ -18,29 +23,43 @@ endif
 	include extern32.inc
 	include extern16.inc
 
+XON 	equ 11h			; Ctrl-Q
+XOFF	equ 13h			; Ctrl-S
+
 ?CHECKINPSTAT@CR equ 1	; check input status only if CR is displayed
+
+CF_CTS     equ 1	; check CTS
+CF_XONXOFF equ 2	; check XON/XOFF
 
 	.DATA
 
 if ?32BIT
-oldint0b  PF32 0
+oldint0B  PF32 0
 else
-oldint0b  PF16 0
+oldint0B  PF16 0
 endif
 comport   dd 0
+_comno    dd 1		; current COM #
 comirq	  db 0
-oldiereg  db 0			; original inhalt interrupt enable register
+oldiereg  db 0		; original inhalt interrupt enable register
+
+bEscSeqf  db 0
+bEscChar  db 0
+
+bComFlags db CF_CTS or CF_XONXOFF
+bInit     db 0
 
 	.CODE
 
-installirqcom proc stdcall
+installirqcom proc stdcall public
 
 	test [__inpmode],_SERINP
 	jz installirqcom_ex
 	cmp word ptr [oldint0B+?SEGOFFS],0
 	jnz installirqcom_ex
 	@loadflat
-	call _GetComNum
+;	call _GetComNum
+	mov eax, [_comno]
 	mov ebx,eax
 	mov bx,@flat:[ebx*2-2+400h]
 	and ebx,ebx
@@ -90,7 +109,7 @@ installirqcom_ex:
 	ret
 installirqcom endp
 
-setctrlctrap proc stdcall
+setctrlctrap proc stdcall public
 	push eax
 	mov al,1
 	call setiereg
@@ -100,7 +119,7 @@ setctrlctrap endp
 
 ;--- dont change any register
 
-resetctrlctrap proc stdcall
+resetctrlctrap proc stdcall public
 	push eax
 	mov al,00
 	call setiereg
@@ -134,7 +153,7 @@ intr0B0C proc
 	jz @F
 	pop edx
 	pop eax
-	jmp cs:[oldint0b]
+	jmp cs:[oldint0B]
 @@:
 	dec edx
 	dec edx
@@ -192,27 +211,26 @@ ctrlccheck endp
 
 
 ;*** XonXoffCheck: aufgerufen aus comwrite
-;*** __checkforwait: aufgerufen aus __vioputchardir
+;*** _checkforwait: aufgerufen aus __vioputchardir
 ;*** vorsicht: wird u.U. bei jeder einzelnen Zeichenausgabe aufgerufen
 ;*** inp: AL=char to output
 
-__checkforwait proc stdcall
-__checkforwait endp
+_checkforwait proc stdcall public
+_checkforwait endp
 
-XonXoffCheck proc stdcall
+XonXoffCheck proc stdcall uses ds
 
-	push ds
 	pushad
 	mov ds, cs:[__csalias]	; DS evtl. undefiniert!
 	test fEscapemode, 1		; nicht wenn wir escapes an terminal
 	jnz exit				; senden
 	inc ttycurpos
-	cmp al, CR
+	cmp al, cr
 	jnz @F
 	call checkifshouldwait	; schauen ob waitl erreicht
 @@:
 if ?CHECKINPSTAT@CR
-	cmp al,CR				; nur pruefen bei CR
+	cmp al, cr				; nur pruefen bei CR
 	jnz exit
 endif
 	call GetInpStatus
@@ -230,7 +248,6 @@ endif
 	jnz @B
 exit:
 	popad
-	pop ds
 	ret
 XonXoffCheck endp
 
@@ -241,7 +258,7 @@ ctsCheck proc stdcall
 	ret
 ctsCheck endp
 
-deinstallirqcom proc stdcall
+deinstallirqcom proc stdcall public
 	pushad
 	mov cx,word ptr [oldint0B+?SEGOFFS]
 	jcxz @F
@@ -260,7 +277,7 @@ deinstallirqcom endp
 
 ; *** status von COMx holen (funktioniert auch bei gesperrten interrupts) ***
 
-GetComStatus proc stdcall
+GetComStatus proc stdcall public
 	push eax
 	push edx
 	mov edx,cs:[comport]
@@ -307,51 +324,246 @@ ne_1:
 	ret
 normemu endp
 
-;*** zeichen von COMx holen (funktioniert auch mit gesperrten interrupts) ***
+ComWrite proc stdcall uses ebx port:dword,zeichen:dword
 
-	.DATA
+	mov ebx,port
+	movzx ebx,bl
+	dec ebx
+	cmp ebx,4
+	jnb error
+	add ebx,ebx
+	mov bx,@flat:[ebx+400h]
+	and ebx,ebx
+	jz error
+	mov edx, ebx
+	add edx, 5			;LSR - Leitungs Status Register
+	xor ecx, ecx
+@@:
+	in al, dx
+	test al, 40h		;TEMT - transmitter empty?
+	loopz @B
 
-escseqf db 0
-escchar db 0
+	test cs:bComFlags, CF_XONXOFF
+	jz @F
+	mov al,byte ptr zeichen
+	call XonXoffCheck
+@@:
+	test cs:bComFlags,1
+	jz sm2
+	call ctsCheck
+	jnc sm2
+error:
+	xor eax,eax
+	jmp sm1
+sm2:
+	mov edx,ebx
+	mov al,byte ptr zeichen
+	out dx,al
+	mov al,1
+sm1:
+	ret
+ComWrite endp
 
-	.CODE
+InitCOM proc stdcall uses ds ebx
 
-;*** getcomchar wird u.U. auch bei gesperrten ints aufgerufen ***
+	mov ds, [__csalias]
+	or bInit,1
+	xor eax,eax
+	mov ebx,[_comno]
+	movzx ebx,bl
+	dec ebx
+	cmp ebx,4
+	jnb InitCOMErr
+	add ebx,ebx
+	mov bx,word ptr @flat:[ebx+400h]
+	and ebx,ebx
+	jz InitCOMErr
+	mov edx,ebx
+	add edx,4
+	in al, dx
+	or al, 1		; set DTR
+	out dx, al
+InitCOMErr:
+	ret
+InitCOM endp
 
-GetComChar proc stdcall
+
+_AUXPutChar proc stdcall public char:dword
+
+	pushad
+	test   cs:bInit,1
+	jz @F
+	invoke InitCOM
+@@:
+	invoke ComWrite, cs:[_comno], char
+	popad
+	ret
+
+_AUXPutChar endp
+
+translatechar proc
+	cmp al,1Bh
+	jnz @F
+	xor bEscSeqf,1
+	jz @F
+	mov bEscChar, 0
+	mov al,00
+	ret
+@@:
+	test bEscSeqf,1			; liegt escapeseq an?
+	jnz @F
+	call normemu
+	ret
+@@:
+	cmp bEscChar,0
+	jnz @F
+	xchg al, bEscChar
+	ret 					; AX=0 -> kein zeichen
+@@:
+	xchg ah, bEscChar
+	mov bEscSeqf, 0
+	call termemu
+	ret
+translatechar endp
+
+;*** get char from COMx ( works with interrupts disabled)
+
+GetComChar proc stdcall public
 	call GetComStatus
 	jnz @F
 	xor eax,eax
 	ret
 @@:
-	mov ah,00
+	mov ah, 00
 	push edx
 	mov edx,[comport]
-	in al,dx
+	in al, dx
 	pop edx
-	cmp al,1Bh
-	jnz @F
-	xor byte ptr escseqf,1
-	jz @F
-	mov byte ptr escchar,0
-	mov al,00
+	call translatechar
 	ret
-@@:
-	test byte ptr escseqf,1	;liegt escapeseq an?
-	jnz @F
-	call normemu
-	ret
-@@:
-	cmp byte ptr escchar,0
-	jnz @F
-	xchg al,escchar
-	ret 					;AX=0 -> kein zeichen
-@@:
-	xchg ah,escchar
-	mov byte ptr escseqf,0
-	call termemu
-	ret
+
 GetComChar endp
+
+;*** get char from I14
+
+GetI14Char proc stdcall public
+	call _I14GetChar
+	test ah,80h	; timeout?
+	mov ah,00
+	jz @F
+	xor eax, eax			; then return 00
+	ret
+@@:
+	call translatechar
+	ret
+GetI14Char endp
+
+_I14GetChar proc stdcall
+
+	push edx
+	mov  edx,cs:[_comno]
+	dec  edx
+	mov  ah,2
+	int  14h
+	pop  edx
+	ret
+_I14GetChar endp
+
+_I14PutChar proc stdcall public zeichen:dword
+
+	push edx
+	mov edx,[_comno]
+	dec edx
+	mov al,byte ptr zeichen
+	mov ah,01h
+	int 14h
+	call XonXoffCheck
+	pop edx
+	ret
+_I14PutChar endp
+
+SetComSpeed proc stdcall public uses ebx comnr:dword,speed:dword
+
+local	port:dword
+
+		xor 	eax,eax 	;rc=0 ist fehler
+		xor 	edx,edx
+		mov 	ecx,speed
+		jecxz	exit		;0 nicht moeglich
+		mov 	eax,115200
+		div 	ecx
+		and 	edx,edx 	;rest uebrig?
+		jnz 	exit
+		mov 	ecx,eax 	;teiler -> ecx
+		mov 	ebx,comnr	;1-4
+		dec 	ebx 		;0-3
+		cmp 	ebx,4
+		jnb 	exit
+		add 	ebx,ebx
+		mov 	ax,@flat:[ebx+400h]
+		and 	eax,eax
+		jz		exit
+		mov 	port,eax
+		mov 	edx,port
+		add 	dl,3
+		in		al,dx
+		push	eax
+		or		al,80h	   ;baudratenregister selektieren
+		out 	dx,al
+		mov 	edx,port
+		mov 	al,cl
+		out 	dx,al
+		inc 	dl
+		mov 	al,ch
+		out 	dx,al
+		add 	dl,2
+		pop 	eax
+		out 	dx,al
+		mov 	al,1
+exit:
+		ret
+SetComSpeed endp
+
+GetComSpeed proc stdcall public uses ebx comnr:dword
+
+local	port:dword
+
+		xor 	eax,eax
+		mov 	ebx,comnr
+		dec 	ebx
+		cmp 	ebx,4
+		jnb 	getcomspeed_err
+		add 	ebx,ebx
+		mov 	ax,@flat:[ebx+400h]
+		and 	eax,eax
+		jz		getcomspeed_err
+		mov 	port,eax
+
+		mov 	edx,eax
+		add 	dl,3
+		in		al,dx
+		push	eax
+		or		al,80h		 ;baudratenregister selektieren
+		out 	dx,al
+		mov 	edx,port
+		in		al,dx
+		inc 	dl
+		mov 	ah,al
+		in		al,dx
+		add 	dl,2
+		xchg	ah,al
+		movzx	ecx,ax
+		pop 	eax
+		out 	dx,al
+		mov 	eax,115200
+		xor 	edx,edx
+		cmp 	ecx,1
+		jb		getcomspeed_1
+		div 	ecx
+getcomspeed_1:
+getcomspeed_err:
+		ret
+GetComSpeed endp
 
 if ?SUPPVCD
 

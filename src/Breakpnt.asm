@@ -1,9 +1,11 @@
 
+;--- breakpoint procs
+
 	.386
 if ?FLAT
 	.MODEL FLAT
 else
-	.MODEL SMALL
+	.MODEL TINY
 endif
 	option proc:private
 	option casemap:none
@@ -21,9 +23,21 @@ endif
 	include extern16.inc
 	include isvbop.inc
 
+HWBP struct
+hwbpAddr	 dd ?		;lineare adresse
+hwbpHandle	 dw ?		;dpmi handle
+hwbpLen 	 db ?		;Bit 7: Auto-reset Flag
+hwbpTyp 	 db ?		;0=execute,1=read,2=read&write
+hwbpState	 db ?		;status
+HWBP ends
+
+;--- hwbpState flags
+FHWBP_TRIGGERED	equ 01h	;B0: 1 -> watchpoint ausgeloest (von DPMI 0B02)
+FHWBP_SET		equ 80h	;B7: 1 -> watchpoint aktiv
+
 BREAK struct
 pNext		dd ?
-bFlags1		db ?	;FBRP Flags
+bFlags1		db ?	;FBRP Flags (see debxxfd.inc)
 bFlags2		db ?	;FBRP2 Flags
 brpByte		db ?	;saved byte at breakpoint address
 bCondTyp	db ?	;condition Typ (0=inaktiv)

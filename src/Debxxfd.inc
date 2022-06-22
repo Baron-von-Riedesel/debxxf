@@ -1,28 +1,22 @@
 
-ife ?FLAT
-DGROUP group _TEXT
-endif
-
     assume fs:nothing
     assume gs:nothing
 
 if ?32BIT eq 0
 
 ?SEGOFFS equ 2
-if ?WINDOWS
-?MYNAME equ <"deb16fw">
-else
-?MYNAME equ <"deb16f">
-endif
+?MYNAME textequ <"deb16f">
+ if ?WINDOWS
+?MYNAME textequ ?MYNAME,<,"w">
+ endif
 
 else
 
 ?SEGOFFS equ 4
-if ?FLAT
-?MYNAME  equ <"deb32f">
-else
-?MYNAME  equ <"deb32fo">
-endif
+?MYNAME  textequ <"deb32f">
+ ife ?FLAT
+?MYNAME  textequ ?MYNAME,<,"o">
+ endif
 
 endif
 
@@ -44,17 +38,14 @@ ife ?FLAT
 DGROUP group CCONST, CONST
 endif
 
-;*** typdefinitionen ***
+;*** type definitions
 
 PF16 typedef far16 ptr
 PF32 typedef far32 ptr
 
-;*** Konstanten ***
+;*** constants
 
-GMEM_MOVEABLE equ 0002h
-GMEM_SHARE	  equ 2000h
-
-;High byte von flags
+;--- high byte of cpu flags
 
 FL_TRACE	equ 01h
 FL_INT		equ 02h
@@ -118,7 +109,6 @@ FTMODE_SKIPUNKNOWNEXC01 equ 40h	;skip unknown exceptions 01
 FTMODE_STOPIFCTRLLOST	equ 80h	;stop trace (prompt user) if control may be
 								;lost (unknown protected-mode breakpoint)
                                  
-
 ;--- bTraceFlags flags
 FTRAC_LOG 			equ 01h	;log trace step
 
@@ -153,11 +143,6 @@ FDT_SWITCHSCREEN equ 2		;switch to debuggee screen when getting bytes
 
 ;--- fUnastype flags
 FUT_RMADDR		equ 1
-
-
-NF_NORMAL		  equ 0
-NFY_STARTDLL	  equ 3
-NFY_STARTTASK	  equ 4
 
 SEM_NOOPENFILEERRORBOX equ 8000h
 SEM_FAILCRITICALERRORS equ 0001h
@@ -212,36 +197,11 @@ __LIST__	   equ 0Dh		  ;Byteliste
 __TBYTE__	   equ 0Eh		  ;ten byte (internes floating point format)
 __OWORD__	   equ 0Fh		  ;XMM (16 byte)
 
-							  ;Flags SYMTYPE
+;--- Flags SYMTYPE
 _FNCALL_ equ 10h
 _RDONLY_ equ 20h
-							  ;Flags SYMXTYP (bits 0-3 parmanzahl)
-							  ;bzw. default segment bei registern
 
 ;*** structs
-
-DPMIEXC struct
-if ?32BIT
-		dd ?
-		dd ?
-ErrCode	dd ?
-rIP 	dd ?
-rCS 	dd ?
-rFL 	dd ?
-rSP 	dd ?
-rSS 	dd ?
-else
-		dw ?
-		dw ?
-ErrCode	dw ?
-rIP 	dw ?
-rCS 	dw ?
-rFL 	dw ?
-rSP 	dw ?
-rSS 	dw ?
-endif
-DPMIEXC ends
-
 
 PUSHADS struct
 rEdi	dd ?
@@ -297,19 +257,7 @@ rSS 	dw ?
 endif
 IRETS ends
 
-HWBP struct
-hwbpAddr	 dd ?			;lineare adresse
-hwbpHandle	 dw ?			;dpmi handle
-hwbpLen 	 db ?			;Bit 7: Auto-reset Flag
-hwbpTyp 	 db ?			;0=execute,1=read,2=read&write
-hwbpState	 db ?			;status:
-							;B0=1 -> watchpoint ausgeloest (von DPMI 0B02)
-							;B7=1 -> watchpoint aktiv
-HWBP ends
-
-FHWBP_TRIGGERED	equ 1
-FHWBP_SET		equ 80h
-
+;--- flags for insertbreakpnt()
 FBRP_ACTIVE 	equ 01h	;bp is active (enabled or disabled)
 FBRP_ENABLED	equ 02h	;bp is enabled
 FBRP_AUTO		equ 04h	;bp auto-reset nach "enter debug"
@@ -317,8 +265,7 @@ FBRP_REAL		equ 08h	;bp address is in real mode format
 FBRP_CMDSET 	equ 10h	;Inhalt DefCmd gÅltig
 FBRP_USEHW		equ 20h	;Hardware Breakpoint verwenden (im ROM)
 FBRP_NOADDR 	equ 40h	;"Breakpoint" ohne Adresse (=Watchpoint)
-FBRP_SILENT		equ	80h	;internal bp to help trace command
-
+FBRP_SILENT		equ 80h	;internal bp to help trace command
 
 FBRP2_TRAPPED	equ 01h	;Breakpoint hat debug trap verursacht
 FBRP2_SET		equ 02h	;bp is set
@@ -362,12 +309,12 @@ wSeg1   textequ <p1.dwSeg>
 wSeg2   textequ <p2.dwSeg>
 
 SYMBOL struct
-pNext	db ?					 ;adresse naechstes symbol
-pText	dd ?					 ;adresse symbolbezeichner
-bType	db ?					 ;symboltyp
-bType2	db ?					 ;zusatzinfos (0-3:parmanzahl)
-dwProc	dd ?					 ;adresse procedur/variable
-dwAddr	dd ?					 ;adresse variable (falls procedur in SYMPROC)
+pNext	db ?			;adresse naechstes symbol
+pText	dd ?			;adresse symbolbezeichner
+bType	db ?			;symboltyp
+bType2	db ?			;zusatzinfos (0-3:parmanzahl)
+dwProc	dd ?			;adresse procedur/variable
+dwAddr	dd ?			;adresse variable (falls procedur in SYMPROC)
 SYMBOL	ends
 
 ;--- values for bType2
@@ -428,8 +375,6 @@ endm
 @wrmsr macro
 	db 0Fh,030h
 endm
-
-;--- nicht die c routinen verwenden
 
 @close macro a
 	mov ebx,a
@@ -537,7 +482,6 @@ endm
 	  mov ax,x
 	endif
 	call _dpmicall
-;	int 31h
 endm
 
 @DosCall macro x
@@ -545,7 +489,6 @@ endm
 	  mov ah,x
 	endif
 	call _doscall
-;	int 21h
 endm
 
 ;--- simple macro for a 3 byte move, used i.e.: @mov ecx, 3
@@ -599,7 +542,6 @@ VCD_DEVICE_ID				  equ 000Eh
 VCD_Get_Focus				  equ 0002h
 Get_Sys_VM_Handle			  equ 0003h
 
-
 @savewinsegregs macro
 	push gs
 	push es
@@ -622,7 +564,7 @@ endm
 ;---- bits 0-3 of type2 are number of arguments
 
 @symbol macro a,b,c,d,e,f
-local	nlab,x
+local nlab,x
 ifnb <f>
 f	label byte
 endif
@@ -638,7 +580,7 @@ ifnb <a>
 	db a
 endif
 	db 0
-CConst	ends
+CConst ends
 	dd offset x 		; SYMBOL.pText
 	db b				; SYMBOL.bType
 ifnb <c>
@@ -748,7 +690,8 @@ CONST ends
 	exitm <offset sym>
 endm
 
-;--- CCStr() define a string in _CCONST ( which is located before _DATA )
+;--- CCStr() define a string in CCONST.
+;--- it's located before _DATA, and within the first 64k (for 16-bit)
 
 CCStr macro text:vararg
 local sym
@@ -778,7 +721,7 @@ if ?CS16ALIAS
 endif        
 endm
 
-;----- @defstream macro
+;--- define a "stream"
 
 @defstream macro x,y
 
@@ -797,32 +740,4 @@ else
 _STREAMS ends
 endif
 endm
-
-if ?WINDOWS
-
-VMEXEC struct
-pifflags dd ?			;00 DWORD (pif)-flags
-						;	0=exclusive
-						;	1=background
-dispflg  dd ?			;04 DWORD display flags
-						;	0=emulate text mode
-						;	1=monitor text port
-						;	2=monitor low graphics port
-						;	3=monitor high graphics port
-pgmpath df ?			;08 FWORD pgmpath
-pgmparm df ?			;14 FWORD parameter
-curdir	df ?			;20 FWORD curdir
-mainmir dw ?			;26 main mem min
-mainmax dw ?			;28 main mem max
-fgprior dw ?			;30 foreground priority
-bgprior dw ?			;32 background priority
-emsmax	dw ?			;34 maximum EMS
-emsmin	dw ?			;36 minimum EMS
-xmsmax	dw ?			;38 maximum XMS
-xmsmin	dw ?			;40 minimum XMS
-res1	dw ?
-res2	dw ?
-VMEXEC ends
-
-endif
 

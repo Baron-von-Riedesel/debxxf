@@ -1,4 +1,6 @@
 
+;--- program to load the 32-bit debugger version
+
 	.386
 	.MODEL FLAT,stdcall
 	option casemap:none

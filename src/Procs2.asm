@@ -3,7 +3,7 @@
 if ?FLAT
 	.MODEL FLAT
 else
-	.MODEL SMALL
+	.MODEL TINY
 endif
 ;	option proc:private
 	option casemap:none
@@ -26,6 +26,34 @@ endif
 
 ;GetEnvironmentVariableA proto stdcall :ptr BYTE, :ptr BYTE, :DWORD
 memcpy proto stdcall :ptr, :ptr, :DWORD
+
+if ?WINDOWS
+
+VMEXEC struct
+pifflags dd ?		;00 DWORD (pif)-flags
+					;	0=exclusive
+					;	1=background
+dispflg  dd ?		;04 DWORD display flags
+					;	0=emulate text mode
+					;	1=monitor text port
+					;	2=monitor low graphics port
+					;	3=monitor high graphics port
+pgmpath df ?		;08 FWORD pgmpath
+pgmparm df ?		;14 FWORD parameter
+curdir	df ?		;20 FWORD curdir
+mainmir dw ?		;26 main mem min
+mainmax dw ?		;28 main mem max
+fgprior dw ?		;30 foreground priority
+bgprior dw ?		;32 background priority
+emsmax	dw ?		;34 maximum EMS
+emsmin	dw ?		;36 minimum EMS
+xmsmax	dw ?		;38 maximum XMS
+xmsmin	dw ?		;40 minimum XMS
+res1	dw ?
+res2	dw ?
+VMEXEC ends
+
+endif
 
 	.data
 
@@ -894,7 +922,7 @@ nextitem:
 	invoke printf, CStr(" %02X %04X:%08X %04X "),eax,ecx,edx,esi
 	mov eax, esi
 	shr eax, 8
-	call getstype
+	call print_descattr
 	mov eax,esi
 	shr eax, 13
 	and al, 03
@@ -1333,47 +1361,47 @@ pageflgs endp
 
 pagedirout proc stdcall
 
-	mov		edi, eax
-	movzx	eax,dx
-	shl 	eax,22
-	mov 	ebx,eax
-	add 	ebx,3FFFFFh
-	mov		ecx, edi
-	shr 	ecx,12
-	movzx	edx, di
-	and 	dx,0FFFh
-	invoke printf, CStr("%08X-%08X %05X %03X-"),eax,ebx, ecx, edx
+	mov edi, eax
+	movzx eax, dx
+	shl eax, 22
+	mov ebx, eax
+	add ebx, 3FFFFFh
+	mov ecx, edi
+	shr ecx, 12
+	movzx edx, di
+	and dx,0FFFh
+	invoke printf, CStr("%08X-%08X %05X %03X-"), eax, ebx, ecx, edx
 
-	mov		eax, edi
-	call	pageflgs
+	mov eax, edi
+	call pageflgs
 
-	push	edi        
-	pop 	cx
-	pop 	bx
-	and 	cx,0F000h
-	xor		esi, esi
-	mov 	di,1000h
-	mov		ax, 800h
+	push edi        
+	pop cx
+	pop bx
+	and cx,0F000h
+	xor esi, esi
+	mov di,1000h
+	mov ax, 800h
 	@DpmiCall 				;map entry to linear address
-	jc		notmapped
-	push	bx
-	push	cx
-	pop 	eax
-	mov		esi, eax
-	mov		ebx, eax
-	mov		ecx,400h
-	xor		edx,edx
+	jc notmapped
+	push bx
+	push cx
+	pop eax
+	mov esi, eax
+	mov ebx, eax
+	mov ecx,400h
+	xor edx,edx
 nextitem:
-	lodsd	@flat:[dwPageAddr]
-	test	al,1
-	jz		@F
-	inc		edx
+	lodsd @flat:[dwPageAddr]
+	test al,1
+	jz @F
+	inc edx
 @@:        
-	loop	nextitem
-	mov		esi, edx
+	loop nextitem
+	mov esi, edx
 	invoke printf, CStr(" %08X %5u"),ebx, edx
 notmapped:
-	invoke	_crout
+	invoke _crout
 	ret
 pagedirout endp
 
@@ -1749,34 +1777,34 @@ _setpageattr proc c uses edi pb:PARMBLK
 
 local dwESP:dword
 
-	cmp 	[pb.p1.bType], __CONST__
-	jnz 	error2
-	cmp 	[pb.p2.bType], __CONST__
-	jnz 	error2
-	cmp 	[pb.p3.bType], __CONST__
-	jnz 	error2
-	mov 	esi, pb.p1.dwOffs
-	mov 	ebx, pb.p2.dwOffs
-	mov 	ecx, pb.p3.dwOffs
-	cmp 	ecx, 16*16
-	ja		error2
-	mov 	dwESP, esp
-	sub 	esp, ecx
-	sub 	esp, ecx
+	cmp [pb.p1.bType], __CONST__
+	jnz error2
+	cmp [pb.p2.bType], __CONST__
+	jnz error2
+	cmp [pb.p3.bType], __CONST__
+	jnz error2
+	mov esi, pb.p1.dwOffs
+	mov ebx, pb.p2.dwOffs
+	mov ecx, pb.p3.dwOffs
+	cmp ecx, 16*16
+	ja error2
+	mov dwESP, esp
+	sub esp, ecx
+	sub esp, ecx
 	@loadesp edx
-	mov 	edi, edx
-	push	ecx
-	mov 	eax, pb.p4.dwOffs
-	rep 	stosw
-	pop 	ecx
-	mov 	ax, 0507h
+	mov edi, edx
+	push ecx
+	mov eax, pb.p4.dwOffs
+	rep stosw
+	pop ecx
+	mov ax, 0507h
 	@DpmiCall
-	mov 	esp, dwESP
-	jc		error
-	jmp 	exit
+	mov esp, dwESP
+	jc error
+	jmp exit
 error2:
 	@errorout ERR_WRONG_PARAM
-	jmp 	exit
+	jmp exit
 error:
 	@errorout ERR_FROM_DPMI
 exit:
@@ -1792,84 +1820,84 @@ local segbase:dword
 local myseg:dword
 local ptentry:dword
 
-	verr	bx
-	jnz 	segptab_ex
-	lsl 	eax,ebx
-	mov 	myseg,ebx
-	inc 	eax
-	mov 	ecx,eax
-	shr 	eax,12
-	test	cx,0FFFh
-	jz		@F
-	inc 	eax
+	verr bx
+	jnz segptab_ex
+	lsl eax, ebx
+	mov myseg, ebx
+	inc eax
+	mov ecx, eax
+	shr eax, 12
+	test cx, 0FFFh
+	jz @F
+	inc eax
 @@:
-	mov 	seglimit,eax
-	invoke	getbaser,ebx
-	jc		segptab_ex
-	mov 	segbase,eax
-	mov 	edi,eax
-	movzx	ebx, bx
+	mov seglimit, eax
+	invoke getbaser, ebx
+	jc segptab_ex
+	mov segbase, eax
+	mov edi, eax
+	movzx ebx, bx
 	invoke printf, CStr("uncommited pages in segment %X",lf), ebx
 	invoke printf, CStr("Offset   linear   ^pagetab PT entry",lf)
 	invoke printchars, '-', eax, 1
-	mov 	ecx,seglimit
-	mov 	esi,segbase
-	and 	esi,0FFFFF000h
-	xor 	ebx,ebx
-segptab_0:							  ;<----
-	test	bx,0FFFh
-	jnz 	segptab_2
+	mov ecx, seglimit
+	mov esi, segbase
+	and esi, 0FFFFF000h
+	xor ebx, ebx
+segptab_0:						;<----
+	test bx, 0FFFh
+	jnz segptab_2
 @@:
-	invoke	getptaddr,esi		  ;adresse der zugehoerigen pagetable
-	jnc 	@F
-	add 	esi,400000h
-	sub 	ecx,400h
-	ja		@B
-	jmp 	segptab_ex
+	invoke getptaddr, esi		;adresse der zugehoerigen pagetable
+	jnc @F
+	add esi, 400000h
+	sub ecx, 400h
+	ja @B
+	jmp segptab_ex
 @@:
-	mov 	ebx,eax
-	mov 	eax,esi
-	shr 	eax,10				;adresse -> pages*2 (=offset in pagetab)
-	and 	eax,0FFFh
-	add 	ebx,eax
+	mov ebx, eax
+	mov eax, esi
+	shr eax, 10				;adresse -> pages*2 (=offset in pagetab)
+	and eax, 0FFFh
+	add ebx, eax
 segptab_2:
-	mov 	gs,[__flatsel]
-	mov 	eax,@flat:[ebx]
-	test	eax,1
-	jnz 	@F
-	mov 	ptentry,eax
-	mov 	eax,esi
-	sub 	eax,segbase
+	mov gs,[__flatsel]
+	mov eax, @flat:[ebx]
+	test eax, 1
+	jnz @F
+	mov ptentry, eax
+	mov eax, esi
+	sub eax, segbase
 	call eaxout
 	@putchr ' '
 	@dwordout esi
 	@putchr ' '
 	@dwordout ebx
 	@putchr ' '
-	mov 	eax,ptentry
-	shr 	eax,16
+	mov eax, ptentry
+	shr eax, 16
 	@wordout eax
-	mov 	eax,ptentry
-	mov 	al,ah
-	shr 	al,4
+	mov eax, ptentry
+	mov al, ah
+	shr al, 4
 	call __nibout
 	@putchr ' '
 	@putchr '['
-	mov 	eax,ptentry
-	mov 	al,ah
+	mov eax, ptentry
+	mov al,ah
 	call __nibout
-	mov 	eax,ptentry
+	mov eax, ptentry
 	invoke	_hexout
 	@putchr ','
-	mov 	eax,ptentry
-	call	pageflgs
+	mov eax, ptentry
+	call pageflgs
 	@putchr ']'
-	invoke	_crout
+	invoke _crout
 @@:
-	add 	esi,1000h
-	add 	ebx,4
-	dec 	ecx
-	jnz 	segptab_0
+	add esi, 1000h
+	add ebx, 4
+	dec ecx
+	jnz segptab_0
 segptab_ex:
 	ret
 _uncommited endp
@@ -1878,30 +1906,30 @@ _uncommited endp
 
 _physmap proc c pb:PARMBLK
 
-	cmp 	byte ptr pb.wArgc,2
-	jnb 	@F
-	mov 	eax,1000h
-	mov 	pb.dwOffs2,eax
+	cmp byte ptr pb.wArgc,2
+	jnb @F
+	mov eax,1000h
+	mov pb.dwOffs2,eax
 @@:
-	push	dword ptr pb.dwOffs1
-	pop 	cx
-	pop 	bx
-	mov 	si,word ptr pb.dwOffs2+2
-	mov 	di,word ptr pb.dwOffs2+0
-	mov 	ax,0800h
+	push dword ptr pb.dwOffs1
+	pop cx
+	pop bx
+	mov si,word ptr pb.dwOffs2+2
+	mov di,word ptr pb.dwOffs2+0
+	mov ax,0800h
 	@DpmiCall
-	jnc 	@F
+	jnc @F
 	@errorout ERR_UNMAPPED_ADDRESS
-	jmp 	linearex
+	jmp linearex
 @@:
-	mov 	eax,pb.dwOffs1
-;;      and     ah,0Fh
-;;      or      cx,ax
-	push	bx
-	push	cx
-	push	pb.dwOffs1
+	mov eax,pb.dwOffs1
+;;	and ah,0Fh
+;;	or  cx,ax
+	push bx
+	push cx
+	push pb.dwOffs1
 	@errorout MSG_PHYS_ADDR_MAPPED
-	add 	esp,8
+	add esp, 8
 linearex:
 	ret
 _physmap endp
@@ -1995,53 +2023,55 @@ inpmode_ex:
 	ret
 inpmode endp
 
-;*** outmode function
+;*** OUTMode function
 
 outmode proc c tvalue:dword
 
-	cmp   al,1
-	jnz   outmode_2
-	mov   eax,[__stream]
-	cmp   eax,5
-	jb	  @F
-	call  MarkDOSused
+	cmp al, 1
+	jnz outmode_2
+	mov eax, [__stream]		;__stream is the file handle for DOS output ( out_dosc.asm )
+	cmp eax, 5				; fixme: whether it's a file can't be detected by the fh#!!!
+	jb @F
+	call MarkDOSused
 	@close eax
+	mov [__stream], 1
 @@:
-	and   [fStat], not FSTAT_DOSOUT
-	mov   al,byte ptr tvalue
-	test  al,_DOSOUT
-	jz	  outmode_1
-	mov   edx,[outmodefn]
-	and   edx,edx
-	jz	  outmode_1
-	cmp   byte ptr [edx],0
-	jz	  outmode_1
-	call  MarkDOSused
+	and [fStat], not FSTAT_DOSOUT
+
+	mov al, byte ptr tvalue
+	test al, _DOSOUT
+	jz outmode_1
+	mov edx, [outmodefn]
+	and edx, edx
+	jz outmode_1
+	cmp byte ptr [edx],0
+	jz outmode_1
+	call MarkDOSused
 if ?32BIT eq 0
 	invoke CopyString2TmpHeap, edx
-	mov   edx,eax
+	mov edx, eax
 endif
-	mov   ah,3ch
-	mov   cx,0		;normal
+	mov ah,3ch
+	mov cx, 0		;normal
 	@DosCall
-	jnc   @F
-	push  edx
-	push  [outmodefn]
+	jnc @F
+	push edx
+	push [outmodefn]
 	@errorout ERR_FILE_CREATE
-	add   esp,2*4
-	jmp   outmode_ex
+	add esp, 2*4
+	jmp outmode_ex
 @@:
 	or [fStat], FSTAT_DOSOUT
-	movzx eax,ax
-	mov   [__stream],eax
+	movzx eax, ax
+	mov [__stream], eax
 	invoke printf, CStr("file handle for DOS output is %X",lf), eax
-	mov   al,byte ptr tvalue
+	mov al, byte ptr tvalue
 outmode_1:
-	mov   [__outmode],al
-	call  installirqcom
-	call  installirqmou
+	mov [__outmode], al
+	call installirqcom
+	call installirqmou
 outmode_2:
-	mov   al,[__outmode]
+	mov   al, [__outmode]
 	clc
 outmode_ex:
 	ret

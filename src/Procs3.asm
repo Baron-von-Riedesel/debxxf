@@ -6,7 +6,7 @@
 if ?FLAT
 	.MODEL FLAT
 else
-	.MODEL SMALL
+	.MODEL TINY
 endif
 	option casemap:none
 	option proc:private
@@ -99,27 +99,27 @@ local	procaddr:dword
 
 if ?WINDOWS
 	@savewinsegregs
-	mov 	eax,ds
-	push	ax
-	mov 	eax,libname
-	push	ax
-	call	_LoadLibrary
+	mov eax,ds
+	push ax
+	mov eax,libname
+	push ax
+	call _LoadLibrary
 	@restorewinsegregs
 else
-	xor 	ebx, ebx
-	mov		edx, libname
-	mov		ax, 4b00h
+	xor ebx, ebx
+	mov edx, libname
+	mov ax, 4b00h
 	@DosCall
 endif
-	movzx	eax,ax
-	cmp 	eax,20h
-	jb		ImportProc_er1
-	mov 	libhandle,eax
+	movzx eax,ax
+	cmp eax,20h
+	jb ImportProc_er1
+	mov libhandle,eax
 if ?WINDOWS
 	@savewinsegregs
-	push	ax
-	push	procnr
-	call	_GetProcAddress
+	push ax
+	push procnr
+	call _GetProcAddress
 	@restorewinsegregs
 else
 	mov ebx, eax
@@ -129,8 +129,8 @@ else
 	@DosCall
 endif
 	mov ecx, edx
-	or	cx, ax
-	jz	ImportProc_er2
+	or cx, ax
+	jz ImportProc_er2
 	mov word ptr procaddr+0, ax
 	mov word ptr procaddr+2, dx
 	mov ebx, offset libhandles
@@ -138,10 +138,10 @@ endif
 	mov ecx, [dwLoadedLibs]
 	jecxz importproc_2
 @@:
-	cmp 	eax,[ebx]
-	jz		importproc_1
-	add 	ebx,4
-	loop	@B
+	cmp eax, [ebx]
+	jz importproc_1
+	add ebx, 4
+	loop @B
 importproc_2:
 	mov [ebx], eax
 	inc dword ptr [dwLoadedLibs]
@@ -675,34 +675,34 @@ _tregsout endp
 
 _ushow proc c public pb:PARMBLK
 
-	mov 	esi,dwUserSymbols
-	xor 	ecx,ecx
+	mov esi,dwUserSymbols
+	xor ecx,ecx
 uymto2:
-	and 	esi,esi
-	jz		uymtoex
-	push	ecx
-	add 	esi,4
-	mov 	ebx,[esi.SYMBOL.pText]
+	and esi,esi
+	jz uymtoex
+	push ecx
+	add esi,4
+	mov ebx,[esi.SYMBOL.pText]
 	@strout ebx
-	test	byte ptr [esi.SYMBOL.bType],_RDONLY_
-	jz		@F
+	test byte ptr [esi.SYMBOL.bType],_RDONLY_
+	jz @F
 	@stroutc " (r/o)"
 @@:
 	@stroutc ": "
-	mov 	al,[esi.SYMBOL.bType]
-	and 	al,1fh			   ;_RDONLY_ l”schen
-	mov 	ebx,[esi.SYMBOL.dwProc]  ;proc holen
-	mov 	cl,al
-	call	symout
-	invoke	_crout
+	mov al,[esi.SYMBOL.bType]
+	and al,1fh			   ;_RDONLY_ l”schen
+	mov ebx,[esi.SYMBOL.dwProc]  ;proc holen
+	mov cl,al
+	call symout
+	invoke _crout
 uymto4:
-	mov 	esi,[esi-4]
-	pop 	ecx
-	inc 	ecx
-	jmp 	uymto2
+	mov esi,[esi-4]
+	pop ecx
+	inc ecx
+	jmp uymto2
 uymtoex:
-	and 	ecx,ecx
-	jnz 	@F
+	and ecx,ecx
+	jnz @F
 	@errorout MSG_NO_USERVARS_DEFINED
 @@:
 	ret
@@ -887,29 +887,29 @@ local	szFlags[64]:byte
 local	szType[16]:byte
 local	dwItems:dword
 
-	mov  dwItems,0
-	mov  eax,pb.dwOffs1
-	cmp  cl,__VOID__
-	jnz  @F
-	mov  eax,[r1.rDS]
+	mov dwItems, 0
+	mov eax, pb.dwOffs1
+	cmp cl, __VOID__
+	jnz @F
+	mov eax, [r1.rDS]
 @@:
 	verr ax
-	jnz  exit
-	mov  fs,eax
-	mov  bx,fs:[0]
-	cmp  bx,"EN"
-	jnz  @F
-	mov  bx,fs:[0008]
-	mov  ax,fs:[bx+8]
+	jnz exit
+	mov fs, eax
+	mov bx, fs:[0]
+	cmp bx, "EN"
+	jnz @F
+	mov bx, fs:[0008]
+	mov ax, fs:[bx+8]
 	verr ax
-	jnz  exit
+	jnz exit
 @@:
 	mov  lcle.le_dwSize, sizeof LOCALENTRY
 if ?WINDOWS
 	@savewinsegregs
-	mov ecx,ss
+	mov ecx, ss
 	push cx
-	lea ecx,lcle
+	lea ecx, lcle
 	push cx
 	push ax
 	call _LocalFirst
@@ -920,20 +920,20 @@ else
 	invoke LocalFirst, eax, ecx
 endif        
 nextitem:
-	and  eax, eax
-	jz	 exit
-	cmp  dwItems, 0
-	jnz  @F
+	and eax, eax
+	jz exit
+	cmp dwItems, 0
+	jnz @F
 	invoke printf, CStr("Hndl Addr Size Lock Type        Flags",lf)
-	add  eax, 12
+	add eax, 12
 	invoke printchars, '-',eax, 1
 @@:
-	inc  dwItems
-	mov  si, lcle.le_wFlags
-	lea  edi, szFlags
+	inc dwItems
+	mov si, lcle.le_wFlags
+	lea edi, szFlags
 	call getlflags
-	mov  si, lcle.le_wType
-	lea  ebx, szType
+	mov si, lcle.le_wType
+	lea ebx, szType
 	call getltype
 	movzx eax, lcle.le_hHandle
 	movzx ecx, lcle.le_wAddress
@@ -942,11 +942,11 @@ nextitem:
 	invoke printf, CStr("%4X %4X %4X %4X %-11s %s",lf), eax, ecx, edx, esi, ebx, edi
 if ?WINDOWS
 	@savewinsegregs
-	mov   eax, ss
-	push  ax
-	lea   eax, lcle
-	push  ax
-	call  _LocalNext
+	mov eax, ss
+	push ax
+	lea eax, lcle
+	push ax
+	call _LocalNext
 	@restorewinsegregs
 	movzx eax, ax
 else
@@ -954,9 +954,9 @@ else
 endif        
 	jmp nextitem
 exit:
-	mov  eax, dwItems
-	and  eax, eax
-	jnz  @F
+	mov eax, dwItems
+	and eax, eax
+	jnz @F
 	@errorout ERR_NO_LOCAL_HEAP
 @@:
 	ret
@@ -1304,12 +1304,12 @@ callprochlp endp
 
 checklibandproc proc stdcall procaddr:dword
 
-	mov 	eax,hdeb16fwh
-	and 	eax,eax
-	jz		exit1
-	mov 	eax,procaddr
-	and 	eax,eax
-	jz		exit2
+	mov eax,hdeb16fwh
+	and eax,eax
+	jz exit1
+	mov eax,procaddr
+	and eax,eax
+	jz exit2
 	ret
 exit2:
 	@errorout ERR_CANNOT_FIND_PROC32
@@ -1533,7 +1533,7 @@ endif
 if ?32BIT
 
 getpesize proc stdcall handle:dword
-	mov edx,handle
+	mov edx, handle
 	add edx, @flat:[edx+3Ch]
 	mov eax, @flat:[edx].IMAGE_NT_HEADERS.OptionalHeader.SizeOfImage
 	ret
@@ -1609,58 +1609,58 @@ endif
 GetNextName proc stdcall parm1:dword, pOut:ptr DWORD
 
 nextitem:
-	mov 	al, fs:[esi]
-	inc 	esi
-	movzx	eax, al
-	and 	eax, eax
-	jz		exit
-	sub 	ecx, eax
-	sub 	ecx, 3
-	push	ecx
-	mov 	ecx, eax
-	mov 	edi, [pNearHeap]
+	mov al, fs:[esi]
+	inc esi
+	movzx eax, al
+	and eax, eax
+	jz exit
+	sub ecx, eax
+	sub ecx, 3
+	push ecx
+	mov ecx, eax
+	mov edi, [pNearHeap]
 @@:
-	mov 	al, fs:[esi]
-	inc 	esi
+	mov al, fs:[esi]
+	inc esi
 	stosb
-	loop	@B
-	mov 	al, 0
+	loop @B
+	mov al, 0
 	stosb
-	mov 	ax, fs:[esi]
-	inc 	esi
-	inc 	esi
-	movzx	edx, ax
-	push	edx 		;exportnr
-	xor 	eax, eax
-	and 	edx, edx
-	jz		@F
+	mov ax, fs:[esi]
+	inc esi
+	inc esi
+	movzx edx, ax
+	push edx 		;exportnr
+	xor eax, eax
+	and edx, edx
+	jz @F
 
-	mov 	eax, parm1
-	movzx	edx, dx
-	movzx	eax, ax
+	mov eax, parm1
+	movzx edx, dx
+	movzx eax, ax
 if ?WINDOWS
 	@savewinsegregs
-	push	ax
-	push	edx
-	call	_GetProcAddress
+	push ax
+	push edx
+	call _GetProcAddress
 	@restorewinsegregs
 else
-	mov		ebx, eax
-	mov 	cl, 1
-	mov		ax, 4B85h
+	mov ebx, eax
+	mov cl, 1
+	mov ax, 4B85h
 	@DosCall
 endif
-	movzx	edx, dx
-	movzx	eax, ax
+	movzx edx, dx
+	movzx eax, ax
 @@:
-	pop 	ecx
-	mov		edi, pOut
-	mov		[edi+0], ecx
-	mov		[edi+4], edx
-	mov		[edi+8], eax
-	mov		eax, pNearHeap
-	mov		[edi+12], eax
-	pop 	ecx
+	pop ecx
+	mov edi, pOut
+	mov [edi+0], ecx
+	mov [edi+4], edx
+	mov [edi+8], eax
+	mov eax, pNearHeap
+	mov [edi+12], eax
+	pop ecx
 exit:
 	ret
 GetNextName endp
@@ -1967,14 +1967,14 @@ if 0;ife ?FLAT
 	xor ecx,ecx
 	cmp ebx,1
 	cmc
-	adc		ecx,ecx
-	call	GetTranslateSyms
-	cmp		ebx, eax
-	jz		disptranslation
-	movzx	eax,word ptr oldsymhdl+0
-	mov 	dx,word ptr oldsymhdl+4
-	push	dx
-	push	eax
+	adc ecx,ecx
+	call GetTranslateSyms
+	cmp ebx, eax
+	jz disptranslation
+	movzx eax,word ptr oldsymhdl+0
+	mov dx,word ptr oldsymhdl+4
+	push dx
+	push eax
 	call _SetSymbolicNameHandler
 	mov dword ptr oldsymhdl+0,eax
 	mov word ptr oldsymhdl+4,dx
@@ -2021,7 +2021,7 @@ local	szModName[9]:byte
 local	procname[40]:byte
 
 	pushad
-	mov 	eax,pb.wSeg1
+	mov eax,pb.wSeg1
 if ?WINDOWS
 	@savewinsegregs
 	push ax
@@ -2092,7 +2092,8 @@ error2:
         
 _symbolout endp
 
-;*** display owner of a selector. save all registers except eax
+;*** display owner of a selector
+;--- used by disassembler symbol translation, so save all registers except eax
 
 ownerout proc stdcall public hBlock:dword
 
@@ -2101,10 +2102,12 @@ local	owner:dword
 
 	pushad
 if ?WINDOWS
+	push fs
 	@savewinsegregs
 	push word ptr hBlock
 	call _GetExePtr
 	@restorewinsegregs
+	pop fs
 else
 	mov cl, 1
 	mov edx, hBlock
@@ -2184,29 +2187,29 @@ if ?32BIT or ?WINDOWS
 	jmp exit
 @@:        
 endif
-	call  CheckModuleHandle
-	jnz   freelib_err
+	call CheckModuleHandle
+	jnz freelib_err
 	call SaveState
-	jc	  freelib_err
+	jc freelib_err
 if ?WINDOWS
 	@savewinsegregs
-	mov   eax,pb.dwOffs1
-	push	ax
-	call  _FreeLibrary
+	mov eax,pb.dwOffs1
+	push ax
+	call _FreeLibrary
 	@restorewinsegregs
 else
-	mov   edx, pb.dwOffs1
+	mov edx, pb.dwOffs1
 	movzx edx, dx
-	mov   ax, 4b80h
+	mov ax, 4b80h
 	@DosCall
 endif
 	movzx eax,ax
-	push  eax
+	push eax
 	@errorout MSG_LIBRARY_FREED
-	pop   eax
+	pop eax
 
-	call  LoadState
-	jmp   exit
+	call LoadState
+	jmp exit
 freelib_err:
 	@strout offset tQuestions
 exit:
@@ -2319,42 +2322,42 @@ if ?SUPPSFT
 
 SftNext proc stdcall public uses ebx esi edi pFileEntry:ptr FILEENTRY
 
-	mov ebx,pFileEntry
+	mov ebx, pFileEntry
 nextitem:
-	movzx esi,word ptr [ebx.FILEENTRY.feAddr+0]
-	movzx eax,word ptr [ebx.FILEENTRY.feAddr+2]	 ;segment holen
+	movzx esi, word ptr [ebx.FILEENTRY.feAddr+0]
+	movzx eax, word ptr [ebx.FILEENTRY.feAddr+2]	;segment holen
 	shl eax, 4
 	add esi, eax
-	mov ax,[ebx.FILEENTRY.feAnzahl] 
-	cmp ax,@flat:[esi+4]			;anzahl files in struktur
+	mov ax, [ebx.FILEENTRY.feAnzahl] 
+	cmp ax, @flat:[esi+4]			;anzahl files in struktur
 	jb @F
-	mov eax,@flat:[esi+0]
-	mov [ebx.FILEENTRY.feAddr],eax
-	mov [ebx.FILEENTRY.feAnzahl],0
-	cmp ax,-1
+	mov eax, @flat:[esi+0]
+	mov [ebx.FILEENTRY.feAddr], eax
+	mov [ebx.FILEENTRY.feAnzahl], 0
+	cmp ax, -1
 	jnz nextitem
 	xor eax, eax
 	jmp exit
 @@:
 	inc word ptr [ebx.FILEENTRY.feAnzahl]
 	inc word ptr [ebx.FILEENTRY.feIndex]
-	mov cx,[ebx.FILEENTRY.feLength]
+	mov cx, [ebx.FILEENTRY.feLength]
 	mul cl
 	movzx eax, ax
-	add esi,eax
-	add esi,6
-	mov ax,@flat:[esi]
-	and ax,ax			;Handles = 0? > dann eintrag frei
+	add esi, eax
+	add esi, 6
+	mov ax, @flat:[esi]
+	and ax, ax			;Handles = 0? > dann eintrag frei
 	jz nextitem
 
 	mov eax, esi
-	movzx ecx,word ptr [ebx.FILEENTRY.feAddr+2]
+	movzx ecx, word ptr [ebx.FILEENTRY.feAddr+2]
 	shl ecx, 4
 	sub eax, ecx
-	mov es:[ebx.FILEENTRY.feOffset],ax
+	mov es:[ebx.FILEENTRY.feOffset], ax
 
-	lea edi,[ebx.FILEENTRY.feHandles]
-	movzx ecx,[ebx.FILEENTRY.feLength]
+	lea edi, [ebx.FILEENTRY.feHandles]
+	movzx ecx, [ebx.FILEENTRY.feLength]
 ife ?FLAT
 	push ds
 	push @flat
@@ -2372,30 +2375,30 @@ SftNext endp
 
 SftFirst proc stdcall public uses ebx esi pFileEntry:ptr FILEENTRY
 
-	mov esi,pFileEntry
+	mov esi, pFileEntry
 if 1
-	mov  eax,dwLoL
-	mov eax,@flat:[eax+4]
+	mov eax, dwLoL
+	mov eax, @flat:[eax+4]
 else
 	push es
 	@DosCall DOS_listoflists
-	movzx ebx,bx
-	mov eax,es:[ebx+4]			;startwert der SFT holen
+	movzx ebx, bx
+	mov eax, es:[ebx+4]			;startwert der SFT holen
 	pop es
 endif
-	mov [esi.FILEENTRY.feAddr],eax
+	mov [esi.FILEENTRY.feAddr], eax
 	inc eax						;if FFFF:FFFF then not supported
 	jz sm9
-	mov [esi.FILEENTRY.feAnzahl],0
-	mov [esi.FILEENTRY.feIndex],-1
+	mov [esi.FILEENTRY.feAnzahl], 0
+	mov [esi.FILEENTRY.feIndex], -1
 	mov bx, wDosVersion
-	xor eax,eax
-	cmp bl,20
+	xor eax, eax
+	cmp bl, 20
 	jnb sm9
-	mov cx,3bh					;DOS 4+
-	cmp bl,4
+	mov cx, 3bh					;DOS 4+
+	cmp bl, 4
 	jnb @F
-	mov cx,35h					;DOS 3
+	mov cx, 35h					;DOS 3
 @@:
 	mov [esi.FILEENTRY.feLength], cx 	;offset zu naechstem file
 	invoke SftNext, esi
@@ -2473,10 +2476,10 @@ local	hFind:dword
 	call MarkDOSused
 
 	lea edx, finddata
-	mov ah,1Ah					   ;set DTA
+	mov ah, 1Ah					   ;set DTA
 	@DosCall
 
-	mov edx,pb.dwOffs1
+	mov edx, pb.dwOffs1
 	cmp pb.p1.bType, __STRING__
 	jz @F
 	mov edx, CCStr("*.*")
@@ -2518,12 +2521,12 @@ getfiles_3:
 	@putchr al
 	@putchr ' '
 
-	lea 	ebx,[finddata.DOSFIND.filename]
+	lea ebx,[finddata.DOSFIND.filename]
 	@strout ebx
-	invoke	_crout
-	mov		ax, 4F00h
+	invoke _crout
+	mov ax, 4F00h
 	@DosCall
-	jmp 	getfiles_1
+	jmp getfiles_1
 getfiles_2:
 exit:
 	ret
@@ -2574,7 +2577,7 @@ local	str1[MAXPATH]:byte
 	invoke _crout
 	jmp changedir_ex
 @@:
-	invoke	SetCurrentDirectory,pb.dwOffs1
+	invoke SetCurrentDirectory,pb.dwOffs1
 
 	and eax,eax 			;0 ist ok, -1 ist Fehler
 	jz changedir_ex
@@ -2589,11 +2592,11 @@ if 0
 
 _changedrive proc c pb:PARMBLK
 
-	mov 	ebx,[a1.dwPx]
-	mov 	dl,[ebx]
-	or		dl,20h
-	sub 	dl,'a'
-	mov 	ah,0Eh
+	mov ebx,[a1.dwPx]
+	mov dl,[ebx]
+	or dl,20h
+	sub dl,'a'
+	mov ah,0Eh
 	@doscallx
 	ret
 _changedrive endp
@@ -2616,12 +2619,12 @@ CdsNext proc stdcall uses esi edi pCB:ptr CDSENTRY
 	mov cx,word ptr [edi.CDSENTRY.ceLastdrive]
 	inc ch
 	cmp cl,ch
-	jc	sm1 						   ;fertig!
+	jc sm1 						   ;fertig!
 	mov [edi.CDSENTRY.ceDrive],ch
 	movzx eax, word ptr [edi.CDSENTRY.ceEntry+2]
 	movzx esi, word ptr [edi.CDSENTRY.ceEntry+0]
-	shl	eax, 4
-	add	esi, eax
+	shl eax, 4
+	add esi, eax
 	mov ax,@flat:[esi+67]				;flags
 	mov [edi.CDSENTRY.ceFlags],ax
 	mov eax,@flat:[esi+69]				;lpDPB
@@ -2634,9 +2637,9 @@ CdsNext proc stdcall uses esi edi pCB:ptr CDSENTRY
 ife ?FLAT
 	push ds
 	push @flat
-	pop	ds
-	rep	movsb
-	pop	ds
+	pop ds
+	rep movsb
+	pop ds
 else
 	rep movsb
 endif
@@ -2653,48 +2656,48 @@ DOS_version equ 30H ; get version number
 CdsFirst proc stdcall uses ebx esi pCB:ptr CDSENTRY
 
 	@DosCall DOS_version
-	push	es
-	push	eax
+	push es
+	push eax
 	@DosCall 52h				;get LoL in ES:BX
-	movzx	ebx,bx
-	pop 	eax
-	mov 	esi,pCB
+	movzx ebx,bx
+	pop eax
+	mov esi,pCB
 
 	assume esi:ptr CDSENTRY
 
-	mov 	ecx,81
-	cmp 	al,4
-	jb		@F
-	push	ebx
-	mov 	ax,3306h
+	mov ecx,81
+	cmp al,4
+	jb @F
+	push ebx
+	mov ax,3306h
 	@DosCall
-	mov 	edx,ebx
-	pop 	ebx
-	mov 	cl,47h
-	cmp 	dx,3205h				;win NT?
-	jz		@F
-	mov 	cl,88					;offset auf naechsten eintrag (gilt ab DOS 4.X)
+	mov edx,ebx
+	pop ebx
+	mov cl,47h
+	cmp dx,3205h				;win NT?
+	jz @F
+	mov cl,88					;offset auf naechsten eintrag (gilt ab DOS 4.X)
 @@:
-	mov 	[esi.CDSENTRY.ceDistance],cx
+	mov [esi.CDSENTRY.ceDistance],cx
 if ?USELASTDRIVE
-	mov 	al,es:[ebx+21h] 		;lastdrive
+	mov al,es:[ebx+21h] 		;lastdrive
 else
-	mov 	ah,19h
+	mov ah,19h
 	@DosCall
-	mov 	dl,al
-	mov 	ah,0Eh
+	mov dl,al
+	mov ah,0Eh
 	@DosCall
 endif
-	mov 	ah,00
-	mov 	word ptr [esi.CDSENTRY.ceLastdrive],ax
-	mov 	eax,es:[ebx+16h]		;offset naechster eintrag
-	pop		es
-	inc 	eax
-	jz		exit					;falls adresse = FFFF:FFFF -> exit
-	dec		eax
-	sub 	ax,[esi.CDSENTRY.ceDistance]
-	mov 	[esi.CDSENTRY.ceEntry],eax
-	invoke	CdsNext, esi
+	mov ah,00
+	mov word ptr [esi.CDSENTRY.ceLastdrive],ax
+	mov eax,es:[ebx+16h]		;offset naechster eintrag
+	pop es
+	inc eax
+	jz exit					;falls adresse = FFFF:FFFF -> exit
+	dec eax
+	sub ax,[esi.CDSENTRY.ceDistance]
+	mov [esi.CDSENTRY.ceEntry],eax
+	invoke CdsNext, esi
 exit:
 	ret
 	assume esi:nothing
@@ -3485,30 +3488,30 @@ if 0
 
 checkclientmemory proc stdcall adresse:dword,laenge:dword,flags:dword
 
-	test  [fmode], FMODE_STRICT
-	jnz   exit
-	mov   eax,adresse
-	cmp   eax,100000h		;konventioneller Speicher immer ok!
-	jb	  exit
-	push  eax
+	test [fmode], FMODE_STRICT
+	jnz exit
+	mov eax, adresse
+	cmp eax, 100000h		;konventioneller Speicher immer ok!
+	jb exit
+	push eax
+	invoke getptentry, eax
+	pop edx
+	jc error2
+	and al,byte ptr flags
+	cmp al,byte ptr flags
+	jnz error2
+	mov eax, laenge
+	add eax, edx
+	dec eax
+	and dx, 0F000h
+	and ax, 0F000h
+	cmp eax, edx
+	jz exit
 	invoke getptentry,eax
-	pop   edx
-	jc	  error2
-	and   al,byte ptr flags
-	cmp   al,byte ptr flags
-	jnz   error2
-	mov   eax,laenge
-	add   eax,edx
-	dec   eax
-	and   dx,0F000h
-	and   ax,0F000h
-	cmp   eax,edx
-	jz	  exit
-	invoke getptentry,eax
-	jc	  error2
-	and   al,byte ptr flags
-	cmp   al,byte ptr flags
-	jnz   error2
+	jc error2
+	and al, byte ptr flags
+	cmp al, byte ptr flags
+	jnz error2
 exit:
 	clc
 	ret
@@ -3576,12 +3579,13 @@ dumpb endp
 dumpt proc stdcall strptr:dword,laenge:dword
 
 	@putchr ' '
-	mov 	ecx,laenge
-	mov 	ebx,strptr
-dumpt5: mov 	al,[ebx]
-	cmp 	al,' '
-	jnc 	dumpt6
-	mov 	al,'.'
+	mov ecx, laenge
+	mov ebx, strptr
+dumpt5:
+	mov al, [ebx]
+	cmp al, ' '
+	jnc dumpt6
+	mov al, '.'
 dumpt6:
 	@putchr al
 	inc ebx
@@ -3644,100 +3648,100 @@ _dump proc c public pb:PARMBLK
 local	anzahl:dword
 local	segbase:dword
 
-	mov 	ebx,dword ptr [dumparg+0]
-	mov 	al, pb.p1.bType
-	cmp 	al,__VOID__
-	jz		@F
-	mov 	ebx,pb.dwOffs1
+	mov ebx, dword ptr [dumparg+0]
+	mov al, pb.p1.bType
+	cmp al, __VOID__
+	jz @F
+	mov ebx, pb.dwOffs1
 @@:
-	mov 	ecx,dword ptr [dumparg+4]
-	cmp 	al,__FPTR__
-	jnz 	@F
-	mov 	ecx,pb.wSeg1
-	and 	[fDump], not FDT_RMADDR
+	mov ecx, dword ptr [dumparg+4]
+	cmp al, __FPTR__
+	jnz @F
+	mov ecx, pb.wSeg1
+	and [fDump], not FDT_RMADDR
 @@:
-	cmp 	al,__RMLPTR__
-	jnz 	@F
-	mov 	ecx,[a1.dwSeg]
-	or		[fDump], FDT_RMADDR
+	cmp al, __RMLPTR__
+	jnz @F
+	mov ecx, [a1.dwSeg]
+	or [fDump], FDT_RMADDR
 @@:
-	mov 	dword ptr [dumparg+4],ecx
-	test	[fDump], FDT_RMADDR
-	jz		@F
-	movzx	eax,cx
-	shl 	eax,4
-	invoke	setworkselbase, eax
-	mov 	ecx,[worksel]
+	mov dword ptr [dumparg+4],ecx
+	test [fDump], FDT_RMADDR
+	jz @F
+	movzx eax, cx
+	shl eax, 4
+	invoke setworkselbase, eax
+	mov ecx,[worksel]
 @@:
-	lar		eax, ecx
-	jnz 	exit
-	push	ecx
-	invoke	getbaser, ecx
-	mov 	segbase, eax
-	pop 	fs
-	mov 	ecx,[dumplines]
-	cmp 	pb.p2.bType, __CONST__
-	jnz 	@F
-	mov 	ecx,pb.p2.dwOffs	;anzahl zeilen
-	mov 	[dumplines], ecx
+	lar eax, ecx
+	jnz exit
+	push ecx
+	invoke getbaser, ecx
+	mov segbase, eax
+	pop fs
+	mov ecx,[dumplines]
+	cmp pb.p2.bType, __CONST__
+	jnz @F
+	mov ecx,pb.p2.dwOffs	;anzahl zeilen
+	mov [dumplines], ecx
 @@:
-	cmp 	pb.p3.bType, __CONST__
-	jnz 	@F
-	mov 	eax,pb.p3.dwOffs	;anzahl bytes/zeile
-	mov 	[dumpbytes], eax
+	cmp pb.p3.bType, __CONST__
+	jnz @F
+	mov eax,pb.p3.dwOffs	;anzahl bytes/zeile
+	mov [dumpbytes], eax
 @@:
-	mov 	al, [dumptyp]
-	mov 	edx, [dumpbytes]
-	cmp 	al,__CHAR__
-	jnz 	@F
-	shl 	edx,2
+	mov al, [dumptyp]
+	mov edx, [dumpbytes]
+	cmp al,__CHAR__
+	jnz @F
+	shl edx,2
 @@:
-	mov 	anzahl,edx		 ;anzahl bytes/zeile
-dump2:							 ;<----
-	push	ecx
-	push	ebx
+	mov anzahl,edx		;anzahl bytes/zeile
+dump2:					;<----
+	push ecx
+	push ebx
 
-	push	segbase
-	push	anzahl
-	push	fs
-	push	ebx
-	push	[pNearHeap]
-	call	ReadMemory		 ;ReadMemory(pNearHeap,fs:ebx,anzahl)
-	jc		error1
-	mov 	anzahl,eax
+	push segbase
+	push anzahl
+	push fs
+	push ebx
+	push [pNearHeap]
+	call ReadMemory		 ;ReadMemory(pNearHeap,fs:ebx,anzahl)
+	jc error1
+	mov anzahl,eax
 
-	call	dumpprefixout
+	call dumpprefixout
 
-	pop 	ebx
-	push	ebx
+	pop ebx
+	push ebx
 
-	call	outdmpprefix
-	invoke	dumpx,anzahl
-	invoke	_crout
+	call outdmpprefix
+	invoke dumpx,anzahl
+	invoke _crout
 
-	pop 	ebx
-	pop 	ecx
-	add 	ebx,anzahl
-	loop	dump2
+	pop ebx
+	pop ecx
+	add ebx,anzahl
+	loop dump2
 
-	mov 	dword ptr [dumparg+0],ebx
-	jmp 	exit
+	mov dword ptr [dumparg+0],ebx
+	jmp exit
 error1:
 	@errorout eax
-	pop 	ebx
-	pop 	ecx
+	pop ebx
+	pop ecx
 exit:
 	ret
 
 dumpprefixout:
-	mov 	eax,dword ptr [dumparg+4]
-	test	[fDump], FDT_RMADDR
-	jz		@F
+	mov eax, dword ptr [dumparg+4]
+	test [fDump], FDT_RMADDR
+	jz @F
 	@putchr '&'
-	jmp 	dpo_1
+	jmp dpo_1
 @@:
-	cmp 	ax,word ptr [__flatsel]
-	jz		@F
+	cmp ax,word ptr [__flatsel]
+	jz @F
 dpo_1:
 	@wordout eax
 	@putchr ':'
@@ -3835,22 +3839,22 @@ ReadMemory endp
 ;--- eax = selector
 
 outdmpprefix proc
-	test	[fDump], FDT_RMADDR
-	jnz		outdmp_2
-	lar 	edx,eax
-	shr 	edx,8
-	test	dh,0C0h 		; granularity page oder 32-Bit?
-	jnz 	outdmp_0
-	lsl 	edx,eax
-	test	edx,0FFFF0000h
-	jnz 	outdmp_1
-	jmp 	outdmp_2
+	test [fDump], FDT_RMADDR
+	jnz outdmp_2
+	lar edx,eax
+	shr edx,8
+	test dh,0C0h 		; granularity page oder 32-Bit?
+	jnz outdmp_0
+	lsl edx,eax
+	test edx,0FFFF0000h
+	jnz outdmp_1
+	jmp outdmp_2
 outdmp_0:
 	@dwordout ebx
-	jmp 	exit
+	jmp exit
 outdmp_1:
-	mov 	eax,ebx
-	shr 	eax,16
+	mov eax,ebx
+	shr eax,16
 	call __nibout
 outdmp_2:
 	@wordout ebx
@@ -3868,53 +3872,53 @@ local	hFile:dword
 local	dwSize:dword
 local	szPath[260]:byte
 
-	mov		eax, nnModule
-	call	CheckModuleHandle
-	jnz		error
-	mov		ecx, eax
-	invoke	GetModule16Filename, ecx, addr szPath, sizeof szPath
+	mov eax, nnModule
+	call CheckModuleHandle
+	jnz error
+	mov ecx, eax
+	invoke GetModule16Filename, ecx, addr szPath, sizeof szPath
 
-	call	MarkDOSused
+	call MarkDOSused
 
-	lea 	edx,szPath				;szPath
-	mov		ax,3d00h				;open r/o, deny write
+	lea edx,szPath				;szPath
+	mov ax,3d00h				;open r/o, deny write
 	@DosCall
-	jc		error
-	movzx	eax,ax
-	mov 	hFile,eax				;hFile
+	jc error
+	movzx eax,ax
+	mov hFile,eax				;hFile
 
-	mov 	fs, nnModule
-	movzx	eax,WORD PTR fs:[0020h] ;laenge nichtresidente namen holen
-	mov 	dwSize,eax
-	inc 	eax 					;1 byte mehr (EOF)
+	mov fs, nnModule
+	movzx eax,WORD PTR fs:[0020h] ;laenge nichtresidente namen holen
+	mov dwSize,eax
+	inc eax 					;1 byte mehr (EOF)
 if 1
-	shr 	eax, 4
-	inc		eax
-	mov 	ebx, eax
-	mov 	ah,48h
+	shr eax, 4
+	inc eax
+	mov ebx, eax
+	mov ah,48h
 	@DosCall
 
-	movzx	esi,ax
-	or		esi,esi
-	jz		gnn_ex1
+	movzx esi,ax
+	or esi,esi
+	jz gnn_ex1
 else
-	invoke	allocflat,eax
-	jc		gnn_ex1
-	mov 	esi,[worksel]
-	mov 	edi,eax
-	invoke	setworkselbase,eax
+	invoke allocflat,eax
+	jc gnn_ex1
+	mov esi,[worksel]
+	mov edi,eax
+	invoke setworkselbase,eax
 endif
-	mov 	fs,nnModule
-	mov 	edx,fs:[002Ch]		;position nres names
-	xor		ecx,ecx
-	invoke	_fileread, hFile, esi::ecx, dwSize, edx
-	cmp 	eax,-1
-	jz		@F
-	mov		fs, esi
-	mov 	BYTE PTR fs:[eax],0
+	mov fs,nnModule
+	mov edx,fs:[002Ch]		;position nres names
+	xor ecx,ecx
+	invoke _fileread, hFile, esi::ecx, dwSize, edx
+	cmp eax,-1
+	jz @F
+	mov fs, esi
+	mov BYTE PTR fs:[eax],0
 @@:
 gnn_ex1:
-	@close	hFile
+	@close hFile
 	mov eax,esi
 	jmp exit
 error:

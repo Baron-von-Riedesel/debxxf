@@ -7,7 +7,7 @@
 if ?FLAT
 	.MODEL FLAT
 else
-	.MODEL SMALL
+	.MODEL TINY
 endif
 	option proc:private
 	option dotname
@@ -32,7 +32,7 @@ VioSetCurPosDir    proto stdcall crtport:ptr CRTPARMS, pos:dword
 VioSetTextPage     proto stdcall pCrt:ptr CRTPARMS
 VioShowCursor      proto stdcall
 WriteConsoleString proto stdcall pStr:ptr byte
-__checkforwait     proto stdcall
+_checkforwait      proto stdcall
 
 ;------------------------------------------------------------------------
 
@@ -1196,7 +1196,7 @@ local   zeilen:dword
 	mov al,cr
 	test [fVideo], FVIDEO_NOSWITCH
 	jnz ppch3
-	call __checkforwait
+	call _checkforwait
 	jmp ppch3
 ppch21:
 	cmp al,lf

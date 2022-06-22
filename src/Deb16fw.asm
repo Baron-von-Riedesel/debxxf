@@ -1,8 +1,9 @@
 
+;--- windows program to load and communicate with the debugger
+
 	.286
 	.model small
 	.386
-
 	option casemap:none
 
 ?WINDOWS equ 1

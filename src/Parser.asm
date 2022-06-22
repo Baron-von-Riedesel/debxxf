@@ -1,9 +1,11 @@
 
+;--- parse expressions
+
 	.386
 if ?FLAT
 	.MODEL FLAT
 else
-	.MODEL SMALL
+	.MODEL TINY
 endif
 	option proc:private
 	option casemap:none
