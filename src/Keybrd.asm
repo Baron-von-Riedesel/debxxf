@@ -699,7 +699,7 @@ _getchar proc stdcall public
 
 _getchar endp
 
-Sleep proc stdcall public uses ebx edi dwInterval:dword
+Sleep proc stdcall public uses es ebx edi dwInterval:dword
 
 if ?DOSLEEP
 local rmcs:RMCS
@@ -710,6 +710,8 @@ local rmcs:RMCS
 	mov rmcs.rSSSP, 0
 	mov rmcs.rFlags, 202h
 	lea edi, rmcs
+	push ss
+	pop es
 	mov bx, 02Fh
 	xor ecx, ecx
 	mov ax, 300h

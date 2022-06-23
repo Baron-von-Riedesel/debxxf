@@ -1,4 +1,8 @@
 
+;--- there are a few procs called in 16-bit dlls.
+;--- if the stack is 32-bit ( hiword esp != 0 ), then
+;--- the dpmildr api ax=4B87h is used for the call.
+
 ?CHECKPAGE equ 1
 
 	.386
@@ -324,7 +328,7 @@ _ShowTextFile	PF16 0
 	db 3
 _ShowMemory		PF16 0
 	db 4
-_SetVideoParms	PF16 0
+_SetIoParms		PF16 0
 	db 0
 
 
@@ -557,15 +561,22 @@ endif
 	push ax
 	movzx eax, [esi].CRTPARMS.rows
 	push ax
+
+;--- modify the showfile.dll input routine
+	mov edx, cs
+	mov eax, offset getcharexx
+	push dx
+	push eax
+
 if ?32BIT
-	mov cx, 4
+	mov cx, 7
 	mov ebx, esp
-	mov edx, _SetVideoParms
-	mov ax,  4b87h
+	mov edx, _SetIoParms
+	mov ax, 4b87h	; call SetIoParms
 	@DosCall
-	add esp, 4*2
+	add esp, 7*2
 else
-	call _SetVideoParms
+	call _SetIoParms
 endif
 	mov cl, pb.p1.bType
 	cmp cl, __STRING__				   ;filename angegeben?
@@ -602,7 +613,7 @@ if 1
 	mov cx, 8
 	mov ebx, esp
 	mov edx, _ShowMemory
-	mov ax, 4b87h
+	mov ax, 4b87h	; call ShowMemory
 	@DosCall
 	add esp,8*2
  else
@@ -622,7 +633,7 @@ if ?32BIT
 	mov cx, 5
 	mov ebx, esp
 	mov edx, _ShowTextFile
-	mov ax, 4b87h
+	mov ax, 4b87h	; call ShowTextFile
 	@DosCall
 	add esp,5*2
 else
@@ -638,6 +649,14 @@ endif
 type_2:
 type_ex:
 	ret
+
+getcharexx:
+	push ds
+	mov ds, cs:[__csalias]
+	call getcharex
+	pop ds
+	retf
+
 _type endp
 
 ;*** SH cmd: display internal variables
@@ -2060,7 +2079,7 @@ if ?32BIT
 	mov ebx, esp
 	mov cx, 5
 	mov edx, _GetSymbolName
-	mov ax, 4b87h
+	mov ax, 4b87h	; call GetSymbolName
 	@DosCall
 	add esp,5*2
 else

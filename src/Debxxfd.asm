@@ -8024,47 +8024,47 @@ SearchSymbol proc stdcall public pszOut:DWORD, qwAddress:QWORD
 	.if (bTranslateSyms)
 ife ?32BIT
 		@savewinsegregs
-		mov		eax, dword ptr qwAddress+4
-		push	ax
-		mov		eax, dword ptr qwAddress+0
-		push	ax
-		mov		eax, ds
-		push	ax
-		mov		eax, pszOut
-		push	ax
-		push	word ptr 40h
-		call	_GetSymbolName
+		mov eax, dword ptr qwAddress+4
+		push ax
+		mov eax, dword ptr qwAddress+0
+		push ax
+		mov eax, ds
+		push ax
+		mov eax, pszOut
+		push ax
+		push word ptr 40h
+		call _GetSymbolName
 		@restorewinsegregs
-		movzx	eax, ax
+		movzx eax, ax
 else
   if ?FLAT
-		push	workselbase
-		invoke	setworkselbase, pszOut
-		mov		ecx, worksel
-		shl		ecx, 16
-		xor		cx,cx
+		push workselbase
+		invoke setworkselbase, pszOut
+		mov ecx, worksel
+		shl ecx, 16
+		xor cx,cx
   else
-		mov		ecx, ds
-		shl		ecx, 16
-		mov		cx, word ptr pszOut
+		mov ecx, ds
+		shl ecx, 16
+		mov cx, word ptr pszOut
   endif
-		mov		eax, dword ptr qwAddress+4
-		push	ax
-		mov		eax, dword ptr qwAddress+0
-		push	ax
-		push	ecx
-		push	word ptr 40h
-		mov		ebx, esp
-		mov 	edx, _GetSymbolName
-		mov 	cx, 5
-		mov 	ax, 4B87h
+		mov eax, dword ptr qwAddress+4
+		push ax
+		mov eax, dword ptr qwAddress+0
+		push ax
+		push ecx
+		push word ptr 40h
+		mov ebx, esp
+		mov edx, _GetSymbolName
+		mov cx, 5
+		mov ax, 4B87h	; call GetSymbolName
 		@DosCall
-		add		esp,2*5
+		add esp,2*5
   if ?FLAT
-		pop		ecx
-		push	eax
-		invoke	setworkselbase, ecx
-		pop		eax
+		pop ecx
+		push eax
+		invoke setworkselbase, ecx
+		pop eax
   endif
 endif
 	.else
@@ -10680,7 +10680,7 @@ endif
 	mov ebx, esp
 	mov edx, _GetSymbolAddr
 	mov cx, 4
-	mov ax, 4B87h
+	mov ax, 4B87h	; call GetSymbolAddr
 	@DosCall
 	add esp, 4*2
 else
