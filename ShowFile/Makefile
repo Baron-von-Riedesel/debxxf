@@ -16,7 +16,7 @@ ODIR2=Exe
 
 deps = ShowFile.inc Makefile
 
-aopt1 = -nologo -Fl$* -Fo$* -D?DLL=1
+aopt1 = -nologo -Fl$* -Sg -Fo$* -D?DLL=1
 mods1 = $(ODIR1)\$(name1).obj $(ODIR1)\$(name2).obj $(ODIR1)\$(name3).obj $(ODIR1)\$(name4).obj
 
 aopt2  = -nologo -Fl$* -Fo$* -D?DLL=0 -D?USEPREDEFSEGS=1

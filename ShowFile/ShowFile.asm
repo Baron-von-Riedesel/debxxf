@@ -30,7 +30,7 @@ endif
 	ret
 WEP endp
 
-SetVideoParms proc far pascal uses ds wtCrt:word, wPageStart:word, cols:word, trows:word
+SetIoParms proc far pascal uses ds wtCrt:word, wPageStart:word, cols:word, trows:word, inpproc:fword
 
 	mov ax, DGROUP
 	mov ds, ax
@@ -43,8 +43,17 @@ SetVideoParms proc far pascal uses ds wtCrt:word, wPageStart:word, cols:word, tr
 	mov ax, trows
 	dec ax
 	mov rows, ax
+	mov eax, dword ptr inpproc
+	mov dx, word ptr inpproc+4
+	or eax, eax
+	jnz @F
+	mov dx, cs
+	mov eax, offset getkeyex
+@@:
+	mov dword ptr [ioproc+0], eax
+	mov word ptr [ioproc+4], dx
 	ret
-SetVideoParms endp
+SetIoParms endp
 
 ShowTextFile proc far pascal uses ds es ebx esi edi path:fword, parms:dword
 

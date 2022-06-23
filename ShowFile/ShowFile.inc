@@ -11,6 +11,8 @@ CR	equ 0Dh
 LF	equ 0Ah
 TAB equ  9
 
+PF32 typedef ptr far32
+
 externdef  __0040H:abs
 externdef  __B000H:abs
 externdef  __B800H:abs
@@ -48,18 +50,20 @@ ife ?USEPREDEFSEGS
 		externdef  mono:word
 		externdef  color:word
 endif
+		externdef  ioproc:PF32
 
 	.code
 
 	externdef  savefile:proc
-	externdef  getkey:proc
 	externdef  DllEntry:proc
 	externdef  DllEntry2:proc
 
-	EXTERNDEF	pager:PROC
-	EXTERNDEF	isEGA:PROC
-	EXTERNDEF	_edit:PROC
+	EXTERNDEF  pager:PROC
+	EXTERNDEF  isEGA:PROC
+	EXTERNDEF  _edit:PROC
 
 	externdef  HexWrt:proc
 	externdef  CellWrt:proc
 
+	externdef  getkey:proc
+	externdef  getkeyex:far

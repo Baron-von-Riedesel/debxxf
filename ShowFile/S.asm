@@ -55,6 +55,9 @@ laltpf10  equ $ - altpf10
 
 
 linenum   DD      1
+ioproc    label PF32
+          dd offset getkeyex
+          dw 0
 
 ; Variables for screen handling
 
@@ -138,10 +141,15 @@ ife ?DLL
 endif
 
 getkey proc public
-	mov ah, 0
-	int 16h
+	call [ioproc]
 	ret
 getkey endp
+
+getkeyex proc far public
+	mov ah, 0
+	int 16h
+	retd
+getkeyex endp
 
 ;*** ax = filehandle ***
 ;*** es:edx = filename ***
@@ -304,6 +312,8 @@ mainproc:
 	mov bp, sp
 	push 0					; rc=0
 
+	mov word ptr [ioproc+4], cs
+
 	movzx edx, dx
 	cld
 	mov word ptr fname+0, dx
@@ -409,8 +419,11 @@ memoryproc:
 nextkey:					;*** programm loop ***
 	call getkey
 nextkey2:
+	cmp al,0E0h				; extended key?
+	je @F
 	cmp al,0				; Is it a null?
 	jne normal
+@@:
 	mov al,ah
 	push es
 	push ds					; Load DS into ES
