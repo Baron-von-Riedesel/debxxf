@@ -9,6 +9,7 @@ externdef __outmode:byte
 externdef stdcall __stream:dword
 externdef __vidaddr:dword               ;video adresse falls gewuenscht
 externdef _comno:dword
+externdef bComFlags:byte
 externdef _psp:dword					;debugger psp
 externdef _environ:dword				;debugger environment
 externdef a1:ARGDESC

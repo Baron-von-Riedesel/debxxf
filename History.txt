@@ -11,6 +11,8 @@
    detection now optional and disabled as default.
  þ use escape sequences for cursor positioning also for Int 14h output.
  þ fixed: replacing a value in debxxf.inc may have caused a page fault.
+ þ COM flags may be changed inside debugger.
+ þ fixed: .dn did a wrong check of the debuggercontext argument.
  
  2022/06/15: version 2.10
 

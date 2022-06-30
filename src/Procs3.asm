@@ -1559,6 +1559,7 @@ getpesize proc stdcall handle:dword
 getpesize endp
 
 ;--- command .DM32 for 32BIT
+;--- syntax: .DM32 [unused] [,debuggerview]
 
 _moduleout32 proc c public pb:PARMBLK
 
@@ -1694,15 +1695,15 @@ CheckModuleHandle proc
 CheckModuleHandle endp
 
 if ?32BIT or ?WINDOWS
-IsValidModule32 proc stdcall bClientView:dword
+IsValidModule32 proc stdcall bDebuggerContext:dword
 if ?32BIT
 	mov esi, eax
 	xor edx, edx
 	mov ax,4b83h
-	.if (bClientView)
-		int 21h
-	.else
+	.if bDebuggerContext
 		@DosCall
+	.else
+		int 21h
 	.endif
 	.while (eax)
 		.if (esi == eax)
@@ -1710,10 +1711,10 @@ if ?32BIT
 		.endif
 		mov edx, eax
 		mov ax, 4b83h
-		.if (bClientView)
-			int 21h
-		.else
+		.if bDebuggerContext
 			@DosCall
+		.else
+			int 21h
 		.endif
 	.endw
 	stc
@@ -1758,7 +1759,8 @@ endif
 IsValidModule32 endp
 endif
 
-;--- .DN command
+;--- .DN command (for both 16 and 32 bit)
+;--- syntax: .DN hModule, [address|export], [debuggercontext]
 
 _namesout proc c public uses esi edi pb:PARMBLK
 

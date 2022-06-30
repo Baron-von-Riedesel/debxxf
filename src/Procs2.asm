@@ -569,8 +569,8 @@ notss:
 	ret
 _tssout endp
 
-;--- EPM cmd
-;--- display exception vectors (DPMI ax=0202h)
+;--- EPM cmd: display exception vectors (DPMI ax=0202h)
+;--- syntax: EPM [exc#],[debuggercontext]
 
 _excpm proc c pb:PARMBLK
 

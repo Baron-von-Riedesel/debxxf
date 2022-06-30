@@ -1304,7 +1304,6 @@ endif
 	@symbol 'OUTMode'	   ,_FNCALL_+__BYTE__, ,outmode
 	@symbol 'INPMFN'	   ,__STRING__, ,inpmodefn
 	@symbol 'OUTMFN'	   ,__STRING__, ,outmodefn
-	@symbol 'COM'		   ,__BYTE__, ,_comno
 	@symbol 'STRICTMode'   ,_FNCALL_+__BOOL__, ,getstrictmode
 	@symbol 'DIRECTMode'   ,_FNCALL_+__BOOL__, ,getdirectmode
 	@symbol 'UNASSFlags'   ,__BYTE__, ,fUnass
@@ -1325,6 +1324,8 @@ endif
 	@symbol 'PICValue'     ,__WORD__, ,wPicValue
 ;	@symbol 'SPICValue'    ,__BYTE__, ,wPicValue+1
 	@symbol 'IRQ'		   ,_FNCALL_+__BOOL__, ,getfIrq
+	@symbol 'COMFlags'	   ,__BYTE__, ,bComFlags
+	@symbol 'COMPort'	   ,__BYTE__, ,_comno
 
 intvartabend label byte
 

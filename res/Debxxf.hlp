@@ -128,11 +128,11 @@ Comment:  Display list of loaded 16-bit modules. Output has format:
           +--------------- 8000 DLL/0000=EXE
 
 [.DM32]
-Syntax:   .DM32 [processid],[ClientView:BOOL=0]
+Syntax:   .DM32 [processid] [,DebuggerContext:BOOL=0]
 Comment:  displays loaded 32-bit modules of a process.
           <processid> is valid in the windows version only.
 [.DN]
-Syntax:   .DN hModule,[wExport|dwAddress],[ClientView:BOOL=0]
+Syntax:   .DN hModule,[wExport|dwAddress],[DebuggerContext:BOOL=0]
 Comment:  Displays list of exports of a module. hModule may be a handle
           of a 16bit NE or a 32bit PE module. <wExport|dwAddress> will
           restrict output to exports with this address (linear for 
@@ -222,7 +222,7 @@ Comment:  will install debugger as TSR program. Will be activated again
           by breakpoints, hard coded Int 1/3 or pressing Ctrl-SysReq.
           Deinstall debugger again with .Quit command.
 [.SEG]
-Syntax:   .SEG hModule,[wSegNr],[ClientView:BOOL=0]
+Syntax:   .SEG hModule,[wSegNr] [,DebuggerContext:BOOL=0]
 Comment:  Display segments/sections of module <hModule>.
           For 16-bit NE binaries format of display is:
           XXXX XXXX XXXX XXXX XXXX XXXX
@@ -596,6 +596,12 @@ Comment:  displays or sets value of coprocessor status with dpmi functions
            2: 80287
            3: 80387
            4: 80487
+[COMFlags]
+Internal variable
+Comment:  determines what kind of handshake is done if in/out is
+          thru serial ports:
+          01: CTS handshake.
+          02: XON/XOFF handshake.
 [CPU]
 Syntax:   CPU
 function  display information about CPU and protected registers
@@ -821,12 +827,11 @@ Comment:  If EMSave is TRUE (default), the debuggee's MP and EM bits in
           CR0 will be saved and restored by the debugger with DPMI
           functions 0E00h/0E01h (if the DPMI server supports these functions).
 [EPM]
-Syntax:   EPM [exc#:BYTE=0],[ClientView:BOOL=0]
+Syntax:   EPM [exc#:BYTE=0],[DebuggerContext:BOOL=0]
 Comment:  display exception vectors reported by int 31h, ax=0202h. 
-          If <ClientView> is not entered or FALSE, the debugger will use
-          the internally saved vector for int 31h calls. If <ClientView>
-          is TRUE, the current vector for int 31h will be used, which
-          in fact will display the vectors from the debuggee's view.
+          If <DebuggerContext> is not entered or FALSE, the debugger will
+          display the values as seen by the debuggee, if <DebuggerContext>
+          is TRUE, the values as seen by the debugger are displayed.
 [ERRCodes]
 Error Code
 Segment Exceptions (10,11,12,13):
@@ -1105,7 +1110,7 @@ Comment:  Display protected mode interrupt vectors (DPMI-function 0204).
           are displayed (should be the same in most cases).
           
           - <debugger context>=0: int 31h/int 21h will be used directly, so
-            what' displayed are vectors from the debuggee's view.
+            the values displayed are the values seen by the debuggee.
           - <debugger context>=1: this will show the vectors how the 
             debugger will see them.
 [IPMS]
@@ -1156,13 +1161,12 @@ Comment:  displays stack frames.
 Internal variable.
 Comment:  Flags for keyboard device.
     01:   1=handle Ctrl-SysReq,0=ignore it
-    02:   1=debugger will execute an INT 01 if Ctrl-SysReq has been detected
-    04:   1=debugger will execute an INT 03 if Ctrl-SysReq has been detected
+    02+04:determines what's to be done if Ctrl-Sysreq has been detected:
+          00=the trace flag in the CPU flags stored on the stack will be set.
+          01=an INT 01 will be executed.
+          1X=an INT 03 will be executed.
     08:   0=use Alt-Print as SysReq (default)
           1=use Alt-Scroll as SysReq (default for NT platforms)
-
-    if neither bit 1 nor bit 2 is set, then the debugger will set the
-    trace flag on the IRET stack frame. This may work well or not at all.
 [KEYS]
  <Home>         : Cursor at start of line
  <End>          : Cursor at EOL

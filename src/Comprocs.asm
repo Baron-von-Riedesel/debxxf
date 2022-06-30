@@ -28,6 +28,7 @@ XOFF	equ 13h			; Ctrl-S
 
 ?CHECKINPSTAT@CR equ 1	; check input status only if CR is displayed
 
+;--- bComFlags values
 CF_CTS     equ 1	; check CTS
 CF_XONXOFF equ 2	; check XON/XOFF
 
@@ -40,7 +41,7 @@ oldint0B  PF16 0
 endif
 comport   dd 0
 _comno    dd 1		; current COM #
-comirq	  db 0
+comirq	  db 0		; it's the COM int ( 0Bh or 0Ch )
 oldiereg  db 0		; original inhalt interrupt enable register
 
 bEscSeqf  db 0
@@ -60,49 +61,49 @@ installirqcom proc stdcall public
 	@loadflat
 ;	call _GetComNum
 	mov eax, [_comno]
-	mov ebx,eax
-	mov bx,@flat:[ebx*2-2+400h]
-	and ebx,ebx
+	mov ebx, eax
+	mov bx, @flat:[ebx*2-2+400h]
+	and ebx, ebx
 	jz installirqcom_ex
 
-	mov [comport],ebx
-	and al,1
-	xor al,1
-	sub al,0Ch		  ;0B oder 0C
+	mov [comport], ebx
+	and al, 1
+	xor al, 1
+	sub al, 0Ch		;0B oder 0C
 	neg al
-	mov bl,al
-	mov [comirq],al
-	sub al,8		  ;3=COM2/COM4	4=COM1/COM3
-	mov cl,al
-	mov ax,1
-	shl ax,cl
-	or [wPicOn],ax
-	xor ax,0FFFFh
-	and [wPicValue],ax
+	mov bl, al
+	mov [comirq], al
+	sub al, 8		;3=COM2/COM4, 4=COM1/COM3
+	mov cl, al
+	mov ax, 1
+	shl ax, cl
+	or [wPicOn], ax
+	xor ax, 0FFFFh
+	and [wPicValue], ax
 
 	mov ax, 204h
 	int 31h
-	mov dword ptr [oldint0B+0],edx
-	mov word ptr [oldint0B+?SEGOFFS],cx
+	mov dword ptr [oldint0B+0], edx
+	mov word ptr [oldint0B+?SEGOFFS], cx
 if ?CS16ALIAS
-	mov ecx,[__cs16alias]
+	mov ecx, [__cs16alias]
 else
-	mov ecx,cs
+	mov ecx, cs
 endif        
-	mov edx,offset intr0B0C
+	mov edx, offset intr0B0C
 	mov ax, 205h
 	int 31h
 
-	mov edx,[comport]
-	mov ecx,edx
-	in al,dx			;sicherheitshalber buffer leeren
+	mov edx, [comport]
+	mov ecx, edx
+	in al, dx			;sicherheitshalber buffer leeren
 	inc edx
-	in al,dx
-	mov [oldiereg],al
+	in al, dx
+	mov [oldiereg], al
 
-	add dx,3			;DTR setzen
-	mov al,0Bh
-	out dx,al
+	add dx, 3			;DTR setzen
+	mov al, 0Bh
+	out dx, al
 
 	call resetctrlctrap
 installirqcom_ex:
@@ -145,7 +146,7 @@ intr0B0C proc
 	@switch32bit
 	push eax
 	push edx
-	mov edx,cs:[comport]
+	mov edx, cs:[comport]
 	inc edx
 	inc edx
 	in al,dx
@@ -157,11 +158,11 @@ intr0B0C proc
 @@:
 	dec edx
 	dec edx
-	in al,dx
-	cmp al,3		   ;CTRL-C?
+	in al, dx
+	cmp al, 3		   ;CTRL-C?
 	jnz exit
 	push ds
-	mov ds,cs:[__csalias]
+	mov ds, cs:[__csalias]
 	and [fMode], not FMODE_EXEACTIVE
 	test [fMode], FMODE_INDEBUG
 	jnz done
@@ -304,7 +305,7 @@ ne_1:
 	ret
 normemu endp
 
-ComWrite proc stdcall uses ebx port:dword,zeichen:dword
+ComWrite proc stdcall uses ebx port:dword, char:dword
 
 	mov ebx,port
 	movzx ebx,bl
@@ -319,7 +320,7 @@ ComWrite proc stdcall uses ebx port:dword,zeichen:dword
 ;--- check if LSR.TEMT is ok ( last byte sent )
 
 	mov edx, ebx
-	add edx, 5			;LSR - Leitungs Status Register
+	add edx, 5			;LSR - Line Status Register
 	xor ecx, ecx
 @@:
 	in al, dx
@@ -328,23 +329,23 @@ ComWrite proc stdcall uses ebx port:dword,zeichen:dword
 
 	test cs:bComFlags, CF_XONXOFF
 	jz @F
-	mov al,byte ptr zeichen
+	mov al,byte ptr char
 	call XonXoffCheck
 @@:
 	test cs:bComFlags, CF_CTS
-	jz sm2
+	jz @F
 	call ctsCheck
-	jnc sm2
+	jc error
+@@:
+	mov edx, ebx
+	mov al, byte ptr char
+	out dx, al
+	mov al, 1
+exit:
+	ret
 error:
 	xor eax,eax
-	jmp sm1
-sm2:
-	mov edx,ebx
-	mov al,byte ptr zeichen
-	out dx,al
-	mov al,1
-sm1:
-	ret
+	jmp exit
 ComWrite endp
 
 InitCOM proc stdcall uses ds ebx
@@ -387,7 +388,7 @@ _AUXPutChar endp
 translatechar proc
 	cmp al,1Bh
 	jnz @F
-	xor bEscSeqf,1
+	xor bEscSeqf, 1
 	jz @F
 	mov bEscChar, 0
 	mov al,00
