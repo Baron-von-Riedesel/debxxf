@@ -855,9 +855,8 @@ VideoDone endp
 ;--- LibEntry
 
 LibEntry proc far
-	mov ah,0
-	mov al,1
-	db 66h			; LibEntry is called as 16bit proc!
+	mov ax, 1
+	db 66h			; LibEntry is called as far16 proc!
 	ret
 LibEntry endp
 

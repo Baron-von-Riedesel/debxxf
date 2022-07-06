@@ -233,8 +233,8 @@ getint03:
 	iret
 execrm_2:						; int 21h,ax=4B00
 	popf
-	mov  cs:[vars.essave],es	; ziel: wir wollen beim
-	pop  cs:[vars.ipsave]		; programmeinstieg dabeisein
+	mov  cs:[vars.essave],es	; goal: we want to stop at
+	pop  cs:[vars.ipsave]		; program entry.
 	pop  cs:[vars.cssave]
 	pop  cs:[vars.flsave]
 	push ds
@@ -286,9 +286,9 @@ endif	;?TRAPRM214B
 
 if ?TRAPRM2F
 
-myint2Fr proc far				; funktioniert leider nicht,
-	cmp 	ax,1687h			; da interrupt im ring0 verarbeitet
-	jz		@F					; wird (Win 95)
+myint2Fr proc far				; doesn't work, since interrupt
+	cmp 	ax,1687h			; may be handled in ring 0 (win9x)
+	jz		@F
 	jmp 	dword ptr cs:[vars.oldint2Fr]
 @@:
 	pushf

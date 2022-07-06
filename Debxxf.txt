@@ -53,8 +53,9 @@
  this won't suffice, then use command ".LDR 0" to disable the loaders.
   Additionally, for deb16f/deb32f, it may be necessary to disable HDPMI's
  ability to load clients in separate address spaces - the debuggers assume
- they're running in the same address context as the debuggee. So don't set
- environment variable HDPMI=32!
+ they're running in the same address context as the debuggee. HDPMI offers
+ an API to ensure this since v3.20, and it's used by the debuggers, but for
+ older versions of HDPMI don't set environment variable HDPMI=32!
 
 
  3. Debugging Applications that are using Graphics

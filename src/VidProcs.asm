@@ -35,8 +35,10 @@ WriteConsoleString proto stdcall pStr:ptr byte
 
 ;------------------------------------------------------------------------
 
+;--- Why is the video page set directly?
+;--- Because this works more reliable, especially in emulated environments!
 ?LOWSETPAGE		equ 1	; 1=program CRT to set text page, 0=use BIOS (DOS only)
-?LOWSETCSR		equ 0	; 1=set cursor share directly, 0=use BIOS
+?LOWSETCSR		equ 0	; 1=set cursor shape directly, 0=use BIOS
 ?BUFFERED		equ 0	; todo: save output to a buffer for scroll back
 ?SETDACDIR		equ 0	; todo: explain what 1 is supposed to achieve
 

@@ -13,6 +13,8 @@
  þ fixed: replacing a value in debxxf.inc may have caused a page fault.
  þ COM flags may be changed inside debugger.
  þ fixed: .dn did a wrong check of the debuggercontext argument.
+ þ fixed: write file in showfile.dll caused a crash.
+ þ uses new HDPMI v3.20 vendor API to disable HDPMI=32.
  
  2022/06/15: version 2.10
 

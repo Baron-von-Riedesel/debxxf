@@ -11,6 +11,12 @@
 	.code
 
 _hwrite proc pascal public hFile:word, buffer:ptr far32, dwSize:dword
+
+local result:dword
+local base:dword
+local cursiz:word
+local mode:word
+
 	mov ax, 4000h
 	jmp readwrite
 _hwrite endp

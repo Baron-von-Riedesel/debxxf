@@ -17,7 +17,7 @@ $(OUTDIR):
 
 $(OUTDIR)\$(name).dll: $*.obj $(name).def Makefile $(name).lbc
 #	@link16 $(lopt) $*.obj,$*.dll,$*.map,$(LIBDIR)\libw.lib,$(name).def
-	@jwlink format win dll f $*.obj n $*.dll lib $(LIBDIR)\libw.lib op q,m=$*.map,align=16,version=3.10 @$(name).lbc
+	@jwlink format win dll f $*.obj n $*.dll lib $(LIBDIR)\libw.lib op q,m=$*.map @$(name).lbc
 
 $(OUTDIR)\$(name).obj: $(name).asm Makefile
 	@jwasm $(aopt) $(name).asm

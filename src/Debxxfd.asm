@@ -2533,22 +2533,22 @@ endif
 	mov word ptr dpmipagesiz+0,cx
 	mov word ptr dpmipagesiz+2,bx
 
-if ?LDTSEL							;has problems on NT platforms
 	push es
+if ?LDTSEL							;has problems on NT platforms
 	mov esi, CCStr("MS-DOS")
 	mov ax,168Ah
 	@callint2F
 	cmp al,0
 	jnz @F
-if ?32BIT
+ if ?32BIT
 	test [fStat], FSTAT_ISNT
 	jnz @F
 	push es
 	push edi
 	mov ax,100h
-	call fword ptr [esp]   ; 32bit only
-	add esp,8
-else
+	call fword ptr [esp]
+	add esp,4+4
+ else
 	mov eax,es
 	shl eax,16
 	mov ax,di
@@ -2558,11 +2558,30 @@ else
 	db 66h
 	call fword ptr ss:[esi]
 	pop edx
-endif
+ endif
 	mov ldtsel,ax
 @@:
-	pop es
 endif
+ife ?WINDOWS
+	mov esi, CCStr("HDPMI")
+	mov ax, 168Ah
+	@callint2F
+	cmp al,0
+	jnz @F
+	mov ax, 5		;disable HDPMI=32
+	push es
+ if ?32BIT
+	push edi
+	call fword ptr [esp]
+	add esp,4+4
+ else
+	push di
+	call far16 ptr [esp]
+	add esp,4+2
+ endif
+@@:
+endif
+	pop es
 	ret
 getdpmiparms endp
 
@@ -13896,7 +13915,8 @@ _heap db ?HEAPSIZE dup (?)
 	.code
 
 ;--- program entry
-;--- actually, since deb16f(w).ovl is loaded "manually",
+;--- actually, since deb16f(w).ovl is loaded "manually" (as overlays),
+;--- this isn't the "real" entry, but called.
 
 ife ?FLAT
 

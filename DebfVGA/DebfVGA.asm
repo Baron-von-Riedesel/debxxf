@@ -84,8 +84,8 @@ if ?USEBIOSSAVE
 		align 4
 dwSaveBufSel	dd 0	;selector save state buffer
 dwSaveBufSize	dd 0	;size in bytes of save state buffer
-wSaveBufSeg		dw 0	;segment save state buffer
 oldint31		df 0
+wSaveBufSeg		dw 0	;segment save state buffer
 else
 bCols			db 0	;saved BIOS 449h text cols
 bRows			db 0	;saved BIOS 484h text rows-1
@@ -163,10 +163,10 @@ vga1c proc
 	mov edi, offset rmcs
 	xor ecx, ecx
 	mov dword ptr [edi].RMCS.rSP, ecx
-	mov ax,wSaveBufSeg
+	mov ax, wSaveBufSeg
 	mov [edi].RMCS.rES, ax
 	mov [edi].RMCS.rFlags, 202h
-	mov word ptr [edi].RMCS.rECX, 0007h
+	mov word ptr [edi].RMCS.rECX, 0111b	; save/restore hw, bios, colors
 	mov word ptr [edi].RMCS.rEBX, 0000h
 	mov dh, 1Ch
 	mov word ptr [edi].RMCS.rEAX, dx
@@ -191,45 +191,45 @@ ife ?USEBIOSSAVE
 ;--- save attribute controler register (15h bytes)
 
 saveattr proc stdcall
-	mov 	edx,wCRTport	;3B4/3D4
-	add		dl,6			;3BA/3DA
-	in		al,dx
-	mov 	dl,0C0h			;3C0
-	mov 	ecx,?NUMATTRREGS
-	mov 	ah,00
+	mov edx, wCRTport	;3B4/3D4
+	add dl, 6			;3BA/3DA
+	in al, dx
+	mov dl, 0C0h		;3C0
+	mov ecx, ?NUMATTRREGS
+	mov ah, 00
 @@:
-	mov 	al,ah
-	out 	dx,al
-	inc 	edx
-	in		al,dx
+	mov al, ah
+	out dx, al
+	inc edx
+	in al, dx
 	stosb
-	dec 	edx
-	out 	dx,al		;another out to select index register
-	inc 	ah
-	loop	@B
-	mov 	al,20h
-	out 	dx,al
+	dec edx
+	out dx, al		;another out to select index register
+	inc ah
+	loop @B
+	mov al, 20h
+	out dx, al
 	ret
 saveattr endp
 
 ;*** load attribute controler register ***
 
 loadattr proc stdcall
-	mov 	edx,wCRTport
-	add		dl,6			;3BA/3DA
-	in		al,dx
-	mov 	dl,0C0h			;3C0
-	mov 	ecx,?NUMATTRREGS
-	mov 	ah,0
+	mov edx, wCRTport
+	add dl, 6			;3BA/3DA
+	in al,dx
+	mov dl, 0C0h		;3C0
+	mov ecx, ?NUMATTRREGS
+	mov ah, 0
 @@:
-	mov 	al,ah
-	out 	dx,al
+	mov al, ah
+	out dx, al
 	lodsb
-	out 	dx,al
-	inc 	ah
-	loop	@B
-	mov 	al,20h
-	out 	dx,al
+	out dx, al
+	inc ah
+	loop @B
+	mov al, 20h
+	out dx, al
 	ret
 loadattr endp
 
@@ -239,20 +239,20 @@ loadattr endp
 ;--- 3C6: pel mask
 
 savedac proc stdcall
-	mov 	dx,3C7h
-	mov 	al,0
-	out 	dx,al		;puts DAC in read mode
-	inc 	edx
-	inc 	edx
-	mov 	ecx,?NUMDACREGS	;now all registers can be read 
+	mov dx, 3C7h
+	mov al, 0
+	out dx, al		;puts DAC in read mode
+	inc edx
+	inc edx
+	mov ecx, ?NUMDACREGS	;now all registers can be read 
 @@:
-	in		al,dx
+	in al, dx
 	stosb
-	in		al,dx
+	in al, dx
 	stosb
-	in		al,dx
+	in al, dx
 	stosb
-	loop	@B
+	loop @B
 	ret
 savedac endp
 
@@ -260,19 +260,19 @@ savedac endp
 ;--- 3C8: palette address (write mode)
 
 loaddac proc stdcall
-	mov 	dx,3C8h
-	mov 	al,0
-	out 	dx,al
-	inc 	edx
-	mov 	ecx,?NUMDACREGS
+	mov dx, 3C8h
+	mov al, 0
+	out dx, al
+	inc edx
+	mov ecx, ?NUMDACREGS
 @@:
 	lodsb
-	out 	dx,al
+	out dx, al
 	lodsb
-	out 	dx,al
+	out dx, al
 	lodsb
-	out 	dx,al
-	loop	@B
+	out dx, al
+	loop @B
 	ret
 loaddac endp
 
@@ -288,42 +288,42 @@ savegraphregister proc stdcall
 
 ;--- save misc output register 
 
-	mov		edx, 3cch
-	in		al, dx
+	mov edx, 3cch
+	in al, dx
 	stosb
-	mov		dl,0B4h
-	test	al,1
-	jz		@F
-	mov		dl,0D4h
+	mov dl,0B4h
+	test al,1
+	jz @F
+	mov dl,0D4h
 @@:        
-	mov		wCRTport, edx
-	mov 	esi,offset graphconst
+	mov wCRTport, edx
+	mov esi, offset graphconst
 nextitem:
 	lodsd
-	and 	eax,eax
-	jz		exit
-	mov 	edx,eax
+	and eax, eax
+	jz exit
+	mov edx, eax
 	lodsd
-	mov 	ecx,eax
-	mov 	ah,0
-	in		al,dx
+	mov ecx, eax
+	mov ah, 0
+	in al, dx
 	stosb				;save index register itself
 @@:
-	mov 	al,ah
-	out 	dx,al
-	inc 	edx
-	in		al,dx
+	mov al, ah
+	out dx, al
+	inc edx
+	in al, dx
 	stosb
-	dec 	edx
-	inc 	ah
-	loop	@B
-	jmp 	nextitem
+	dec edx
+	inc ah
+	loop @B
+	jmp nextitem
 exit:
-	call	saveattr
-	call	savedac
-	pop		eax
-	test	ah,2
-	jz		@F
+	call saveattr
+	call savedac
+	pop eax
+	test ah, 2
+	jz @F
 	sti
 @@:        
 	ret
@@ -343,53 +343,53 @@ loadgraphregister proc stdcall
 ;--- restore misc output register 
 
 	lodsb
-	mov		dx, 3c2h
-	out		dx, al
+	mov dx, 3c2h
+	out dx, al
 
-	mov		dl,0B4h
-	test	al,1
-	jz		@F
-	mov		dl,0D4h
+	mov dl, 0B4h
+	test al, 1
+	jz @F
+	mov dl, 0D4h
 @@:        
-	mov		wCRTport, edx
+	mov wCRTport, edx
         
-	mov 	al,11h
-	out 	dx,al
-	inc 	edx
-	in		al,dx
-	and 	al,7Fh				 ;clear write protection for 0-7 CRT
-	out 	dx,al
+	mov al, 11h
+	out dx, al
+	inc edx
+	in al, dx
+	and al, 7Fh				 ;clear write protection for 0-7 CRT
+	out dx, al
         
-	mov 	edi,esi
+	mov edi, esi
 
-	mov 	esi,offset graphconst
+	mov esi, offset graphconst
 nextitem:
 	lodsd
-	and 	eax,eax
-	jz		exit
-	mov 	edx,eax
+	and eax, eax
+	jz exit
+	mov edx, eax
 	lodsd
-	mov 	ecx,eax
-	mov		al,[edi]
-	inc		edi
-	push	eax
-	mov 	al,0
+	mov ecx, eax
+	mov al, [edi]
+	inc edi
+	push eax
+	mov al, 0
 @@:
-	mov 	ah,[edi]
-	out 	dx,ax
-	inc 	edi
-	inc 	al
-	loop	@B
-	pop		eax
-	out		dx,al			;restore the index register itself
-	jmp 	nextitem
+	mov ah, [edi]
+	out dx, ax
+	inc edi
+	inc al
+	loop @B
+	pop eax
+	out dx, al			;restore the index register itself
+	jmp nextitem
 exit:
-	mov 	esi,edi
-	call	loadattr
-	call	loaddac
-	pop		eax
-	test	ah,2
-	jz		@F
+	mov esi, edi
+	call loadattr
+	call loaddac
+	pop eax
+	test ah, 2
+	jz @F
 	sti
 @@:
 	ret
@@ -401,67 +401,67 @@ endif	;!?USEBIOSSAVE
 ;*** set planes: changes eax edx  ***
 
 setplane0 proc
-	mov 	ah,0
+	mov ah, 0
 setplane::
-	mov 	dx,3ceh
-	mov 	al,4		;"read map select"
-	out 	dx,ax
-	mov 	dl,0c4h
-	mov 	cl,ah
-	mov 	ah,1
-	shl 	ah,cl
-	mov 	al,2		;"map mask" register:select map to write to
-	out 	dx,ax
+	mov dx, 3ceh
+	mov al, 4		;"read map select"
+	out dx, ax
+	mov dl, 0c4h
+	mov cl, ah
+	mov ah, 1
+	shl ah, cl
+	mov al, 2		;"map mask" register:select map to write to
+	out dx, ax
 	ret
 setplane0 endp
 
 setplane1:
-	mov 	ah,1
-	jmp 	setplane
+	mov ah, 1
+	jmp setplane
 setplane2:
-	mov 	ah,2
-	jmp 	setplane
+	mov ah, 2
+	jmp setplane
 if ?PLANE3SIZE
 setplane3:
-	mov 	ah,3
-	jmp 	setplane
+	mov ah, 3
+	jmp setplane
 endif
         
 ;---  setevenmode: changes edx, eax
 
 setevenmode proc
-	mov 	dx,3ceh
-	mov 	ax,1		;"enable set/reset" register
-	out		dx,ax
-	mov 	al,5		;"graphics mode" register
-	out 	dx,al
-	inc 	edx
-	in		al,dx
-	and 	al,084h 	;reset "odd/even mode", set "read mode 0"
-	out 	dx,al		;set "write mode" 0
+	mov dx, 3ceh
+	mov ax, 1		;"enable set/reset" register
+	out dx, ax
+	mov al, 5		;"graphics mode" register
+	out dx, al
+	inc edx
+	in al, dx
+	and al, 084h 	;reset "odd/even mode", set "read mode 0"
+	out dx, al		;set "write mode" 0
 
-	mov 	dl,0ceh
-	mov 	al,6		;"miscellaneous" register
-	out 	dx,al
-	inc 	edx
-	in		al,dx
-	and 	al,0F0h 	;reset "odd/even"
-	or		al,5		;set addr=A0000h,64K, set graphic mode
-	out 	dx,al
+	mov dl, 0ceh
+	mov al, 6		;"miscellaneous" register
+	out dx, al
+	inc edx
+	in al, dx
+	and al, 0F0h	;reset "odd/even"
+	or al, 5		;set addr=A0000h,64K, set graphic mode
+	out dx, al
 
-	mov 	dl,0ceh
-	mov 	al,8		;"bit mask" register: all bits to change 
-	mov 	ah,0FFh
-	out 	dx,ax
+	mov dl, 0ceh
+	mov al, 8		;"bit mask" register: all bits to change 
+	mov ah, 0FFh
+	out dx, ax
 
-	mov 	dl,0c4h
-	mov 	al,4
-	out 	dx,al
-	inc 	edx
-	in		al,dx
-	and 	al,not 8	;reset "chain 4"
-	or		al,4+2		;set odd/even=4, set extended memory=2	
-	out 	dx,al
+	mov dl, 0c4h
+	mov al, 4
+	out dx, al
+	inc edx
+	in al, dx
+	and al, not 8	;reset "chain 4"
+	or al, 4+2		;set odd/even=4, set extended memory=2	
+	out dx, al
 	ret
 setevenmode endp
 
@@ -471,28 +471,28 @@ setevenmode endp
 savevidmem proc stdcall uses ds es
 
 	cld
-	mov		es, [__flatsel]
-	mov 	ds, [__flatsel]
-	call	setevenmode
+	mov es, [__flatsel]
+	mov ds, [__flatsel]
+	call setevenmode
 if ?PLANE01SIZE
-	call	setplane0				;character plane
-	mov 	esi, 0A0000h
-	mov 	ecx, ?PLANE01SIZE/4
-	rep 	movsd
-	call	setplane1				;attribute plane
-	mov 	esi, 0A0000h
-	mov 	ecx, ?PLANE01SIZE/4
-	rep 	movsd
+	call setplane0				;character plane
+	mov esi, 0A0000h
+	mov ecx, ?PLANE01SIZE/4
+	rep movsd
+	call setplane1				;attribute plane
+	mov esi, 0A0000h
+	mov ecx, ?PLANE01SIZE/4
+	rep movsd
 endif
-	call	setplane2
-	mov 	esi, 0A0000h 			;charset plane
-	mov 	ecx, ?PLANE2SIZE/4
-	rep 	movsd
+	call setplane2
+	mov esi, 0A0000h 			;charset plane
+	mov ecx, ?PLANE2SIZE/4
+	rep movsd
 if ?PLANE3SIZE
-	call	setplane3
-	mov 	esi, 0A0000h
-	mov 	ecx, ?PLANE3SIZE/4
-	rep 	movsd
+	call setplane3
+	mov esi, 0A0000h
+	mov ecx, ?PLANE3SIZE/4
+	rep movsd
 endif
 	ret
         
@@ -504,28 +504,28 @@ savevidmem endp
 loadvidmem proc stdcall uses ds es
 
 	cld
-	mov 	es,[__flatsel]
-	mov 	ds,[__flatsel]
-	call	setevenmode
+	mov es, [__flatsel]
+	mov ds, [__flatsel]
+	call setevenmode
 if ?PLANE01SIZE
-	call	setplane0
-	mov 	edi,0A0000h
-	mov 	ecx,?PLANE01SIZE/4
-	rep 	movsd
-	call	setplane1
-	mov 	edi,0A0000h
-	mov 	ecx,?PLANE01SIZE/4
-	rep 	movsd
+	call setplane0
+	mov edi, 0A0000h
+	mov ecx, ?PLANE01SIZE/4
+	rep movsd
+	call setplane1
+	mov edi, 0A0000h
+	mov ecx, ?PLANE01SIZE/4
+	rep movsd
 endif
-	call	setplane2
-	mov 	edi,0A0000h
-	mov 	ecx,?PLANE2SIZE/4
-	rep 	movsd
+	call setplane2
+	mov edi, 0A0000h
+	mov ecx, ?PLANE2SIZE/4
+	rep movsd
 if ?PLANE3SIZE
-	call	setplane3
-	mov 	edi,0A0000h
-	mov 	ecx,?PLANE3SIZE/4
-	rep 	movsd
+	call setplane3
+	mov edi, 0A0000h
+	mov ecx, ?PLANE3SIZE/4
+	rep movsd
 endif
 	ret
 loadvidmem endp
@@ -534,39 +534,43 @@ loadvidmem endp
 
 AllocDbgeeSaveMem proc        
 
-	mov		bx,HIGHWORD ?TOTALSIZE
-	mov		cx,LOWWORD ?TOTALSIZE
-	mov		ax,0501h
-	int		31h
-	jc		@F
-	mov 	word ptr dwHdlDbgeeSave+0,di
-	mov 	word ptr dwHdlDbgeeSave+2,si
-	push	bx
-	push	cx
-	pop		eax
-	mov 	pDbgeeSaveMem, eax
+	mov bx, HIGHWORD ?TOTALSIZE
+	mov cx, LOWWORD ?TOTALSIZE
+	mov ax, 501h
+	int 31h
+	jc @F
+	mov word ptr dwHdlDbgeeSave+0, di
+	mov word ptr dwHdlDbgeeSave+2, si
+	push bx
+	push cx
+	pop eax
+	mov pDbgeeSaveMem, eax
 @@:
 	ret
 AllocDbgeeSaveMem	endp        
 
-SwapSaveBuf	proc  uses ds es      
+;--- the vesa save buffer resides in conv. memory, but
+;--- we need 2 buffers ( for debuggee and debugger state )
+;--- so the buffer contents must be swapped.
 
-	mov		edi,pDbgerSaveState
-	mov		ecx,dwSaveBufSize
-	jecxz	exit
-	mov		es, [__flatsel]
-	mov		ds, dwSaveBufSel
-	xor		esi,esi
-	shr		ecx, 2				;size is a multiple of 64!
+SwapSaveBuf proc  uses ds es      
+
+	mov edi, pDbgerSaveState
+	mov ecx, dwSaveBufSize
+	jecxz exit
+	mov es, [__flatsel]
+	mov ds, dwSaveBufSel
+	xor esi, esi
+	shr ecx, 2				;size is a multiple of 64!
 @@:
-	mov		eax, [esi]
-	mov		edx, es:[edi]
-	mov		es:[edi], eax
-	mov		[esi], edx
-	add		esi, 4
-	add		edi, 4
-	dec		ecx
-	jnz		@B
+	mov eax, [esi]
+	mov edx, es:[edi]
+	mov es:[edi], eax
+	mov [esi], edx
+	add esi, 4
+	add edi, 4
+	dec ecx
+	jnz @B
 exit:
 	ret
 SwapSaveBuf endp        
@@ -581,41 +585,41 @@ savetab label word
 	dw -1
 
 saveregs proc
-	lea		esi, savetab
+	lea esi, savetab
 nextitem:
 	lodsw
-	mov		edx, eax
-	cmp		ax,-1
-	jz		done
+	mov edx, eax
+	cmp ax, -1
+	jz done
 nextitem2:
 	lodsb
-	cmp		al,-1
-	jz		nextitem
-	out		dx,al
-	inc		edx
-	in		al,dx
+	cmp al, -1
+	jz nextitem
+	out dx, al
+	inc edx
+	in al, dx
 	stosb
-	dec		edx
-	jmp		nextitem2
+	dec edx
+	jmp nextitem2
 done:
 	ret
 saveregs endp
 
 loadregs proc
-	lea		esi, savetab
+	lea esi, savetab
 nextitem:
 	lodsw
-	mov		edx, eax
-	cmp		ax,-1
-	jz		done
+	mov edx, eax
+	cmp ax, -1
+	jz done
 nextitem2:
 	lodsb
-	cmp		al,-1
-	jz		nextitem
-	mov		ah, [edi]
-	out		dx,ax
-	inc		edi
-	jmp		nextitem2
+	cmp al, -1
+	jz nextitem
+	mov ah, [edi]
+	out dx, ax
+	inc edi
+	jmp nextitem2
 done:
 	ret
 loadregs endp
@@ -627,32 +631,32 @@ loadregs endp
 LoadFontInPlane2 proc uses esi edi ebx
 
 	cld
-	push	eax
-	push	ecx
-	mov		edi,offset savedregs
-	call	saveregs
-	call	setevenmode
-	call	setplane2
-	pop		ecx
-	pop		esi
-	mov		edi, 0A0000h
-	push	ds
-	push	es
-	mov 	es,[__flatsel]
-	mov 	ds,[__flatsel]
-	mov		dl,00h
-	mov		dh,cl
+	push eax
+	push ecx
+	mov edi, offset savedregs
+	call saveregs
+	call setevenmode
+	call setplane2
+	pop ecx
+	pop esi
+	mov edi, 0A0000h
+	push ds
+	push es
+	mov es, [__flatsel]
+	mov ds, [__flatsel]
+	mov dl, 00h
+	mov dh, cl
 nextchar:
-	movzx	ecx,dh
-	lea		ebx, [edi+20h]
-	rep		movsb
-	mov		edi, ebx
-	inc		dl
-	jnz		nextchar
-	pop		es
-	pop		ds
-	mov		edi,offset savedregs
-	call	loadregs
+	movzx ecx, dh
+	lea ebx, [edi+20h]
+	rep movsb
+	mov edi, ebx
+	inc dl
+	jnz nextchar
+	pop es
+	pop ds
+	mov edi, offset savedregs
+	call loadregs
 	ret
 LoadFontInPlane2 endp
 
@@ -661,29 +665,29 @@ endif
 if ?TEXTPAGESIZE
 
 SaveLoadTextPage proc uses ds es
-	mov		cl, al
-	mov		edi, pDbgeeSaveMem
-	add		edi, ?PLANE2SIZE + ?PLANE3SIZE
-	mov		es, [__flatsel]
-	mov		ds, [__flatsel]
-	mov		esi, 0B0000h
-	mov		dx, 3ceh
-	mov		al, 6
-	out		dx, al
-	inc		edx
-	in		al, dx
-	test	al, 04h
-	jz		@F
-	mov		si, 8000h
+	mov cl, al
+	mov edi, pDbgeeSaveMem
+	add edi, ?PLANE2SIZE + ?PLANE3SIZE
+	mov es, [__flatsel]
+	mov ds, [__flatsel]
+	mov esi, 0B0000h
+	mov dx, 3ceh
+	mov al, 6
+	out dx, al
+	inc edx
+	in al, dx
+	test al, 04h
+	jz @F
+	mov si, 8000h
 @@:
-	test	cl, 1
-	jz		@F
-	xchg	esi, edi
+	test cl, 1
+	jz @F
+	xchg esi, edi
 @@:
-;	mov		ecx, ?TEXTPAGESIZE/4
-	mov		ecx, ds:[44Ch]
-	shr		ecx, 2
-	rep		movsd
+;	mov ecx, ?TEXTPAGESIZE/4
+	mov ecx, ds:[44Ch]
+	shr ecx, 2
+	rep movsd
 	ret
 SaveLoadTextPage endp
 
@@ -747,7 +751,7 @@ else
 	jz isnormalmode
 	mov ebx,eax
 	or bh, 80h			; dont clear video memory
-	mov ax,4f02h		; this is a VESA call!
+	mov ax,4f02h		; to be fixed: this is a VESA call!
 isnormalmode:		 
 	call _Int10
 endif
@@ -763,49 +767,49 @@ SetDebuggerVideoMode endp
 
 SaveGraphicScreen proc far stdcall public uses ds es
 
-	mov		ds, cs:[__csalias]
-	push	ds
-	pop		es
+	mov ds, cs:[__csalias]
+	push ds
+	pop es
 ife ?USEBIOSSAVE
-	mov		edi, offset DbgeeSaveRegs
+	mov edi, offset DbgeeSaveRegs
 	invoke	savegraphregister			;save register
-	push	ds
-	mov		ds, [__flatsel]
-	mov 	ax,ds:[449h]
+	push ds
+	mov ds, [__flatsel]
+	mov ax, ds:[449h]
 	stosw								;EDI -> save buffer
   if ?USEBIOSGRAPH
-	mov		clVMode, al
+	mov clVMode, al
   endif
-	mov 	ax,ds:[450h]
+	mov ax, ds:[450h]
 	stosw
-	mov 	ax,ds:[484h]
+	mov ax, ds:[484h]
 	stosw
-	pop		ds
+	pop ds
 else
-	mov		dl,01			;save VGA state
-	call	vga1c
+	mov dl, 1			;save VGA state
+	call vga1c
 endif
 if ?SCREENOFF
-	mov		dx,3c4h
-	mov 	al,1
-	out		dx,al
-	inc		dx
-	in		al,dx
-	push	eax
-	or		al,20h
-	out		dx,al
+	mov dx, 3c4h
+	mov al, 1
+	out dx, al
+	inc dx
+	in al, dx
+	push eax
+	or al, 20h
+	out dx, al
 endif
-	mov		edi, pDbgeeSaveMem
-	and		edi, edi
-	jz		@F
-	invoke	savevidmem
+	mov edi, pDbgeeSaveMem
+	and edi, edi
+	jz @F
+	invoke savevidmem
 @@:  
 if ?SCREENOFF
-	pop		eax
-	mov		ah,al
-	mov		dx,3c4h
-	mov 	al,1
-	out		dx,ax
+	pop eax
+	mov ah, al
+	mov dx, 3c4h
+	mov al, 1
+	out dx, ax
 endif
 	ret
 
@@ -815,46 +819,46 @@ SaveGraphicScreen endp
 
 RestoreGraphicScreen proc far stdcall public uses ds es
 
-	mov		ds, cs:[__csalias]
-	push	ds
-	pop		es
+	mov ds, cs:[__csalias]
+	push ds
+	pop es
 if ?USEBIOSGRAPH
-	mov 	al,[clVMode]
-	or		al,80h
-	mov 	ah,00
-	call	_Int10
+	mov al,[clVMode]
+	or al,80h
+	mov ah,00
+	call _Int10
 endif
 if ?SCREENOFF
-	mov		dx,3c4h
-	mov 	al,1
-	out		dx,al
-	inc		dx
-	in		al,dx
-	or		al,20h
-	out		dx,al
+	mov dx,3c4h
+	mov al,1
+	out dx,al
+	inc dx
+	in al,dx
+	or al,20h
+	out dx,al
 endif
 if ?TEXTPAGESIZE
-	mov		al,1
-	call	SaveLoadTextPage
+	mov al,1
+	call SaveLoadTextPage
 endif
-	mov		esi, pDbgeeSaveMem
-	and		esi, esi
-	jz		@F
-	invoke	loadvidmem				;reload saved video memory
+	mov esi, pDbgeeSaveMem
+	and esi, esi
+	jz @F
+	invoke loadvidmem				;reload saved video memory
 @@:
 ife ?USEBIOSSAVE
-	mov		esi, offset DbgeeSaveRegs
+	mov esi, offset DbgeeSaveRegs
 	invoke	loadgraphregister
-	mov		es,[__flatsel]
+	mov es,[__flatsel]
 	lodsw							;ESI -> save buffer
-	mov		es:[449h],ax
+	mov es:[449h],ax
 	lodsw
-	mov 	es:[450h],ax
+	mov es:[450h],ax
 	lodsw
-	mov 	es:[484h],ax
+	mov es:[484h],ax
 else
-	mov		dl,02				;load VGA state
-	call	vga1c
+	mov dl,02				;load VGA state
+	call vga1c
 endif
 	ret
 
@@ -1056,10 +1060,8 @@ VideoDone endp
 
 LibEntry proc far
 	mov ax,1
-	db 66h		;LibEntry is called as 16bit!
+	db 66h		;LibEntry is called as far16 proc!
 	ret
 LibEntry endp
 
 	end LibEntry
-        
-
