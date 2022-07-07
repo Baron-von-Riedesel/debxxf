@@ -2568,7 +2568,8 @@ ife ?WINDOWS
 	@callint2F
 	cmp al,0
 	jnz @F
-	mov ax, 5		;disable HDPMI=32
+	mov ax, 5		;modify HDPMI, bit 5
+	mov bl, 0		;reset HDPMI=32
 	push es
  if ?32BIT
 	push edi
@@ -13567,51 +13568,60 @@ _unregister endp
 
 ;*** here SS might be <> DS
 ;*** so take care if push/pop segment registers
+;--- (es:)ebx = cmdline
+;--- out: eax=0|1
+;---     0=error?
+;---     1=ok?
 
-if ?FLAT
 parsecmdline proc stdcall uses edi
-else
-parsecmdline proc stdcall uses edi
-endif
 
 ;	@tprintf <"enter parsecmdline",lf>
 	mov edi,[pKbdBuff]
-	dec ebx
 nextchar:
-	inc ebx
 	mov al, es:[ebx]
+	inc ebx
 	cmp al, 00
-	jz	noparm
+	jz noparm
 	cmp al, cr
-	jz	noparm
+	jz noparm
 	cmp al, '/'
-	jz	parsecmdline1
+	jz parsecmdline1
 	cmp al, '-'
-	jz	parsecmdline1
+	jz parsecmdline1
 	cmp al, '@'
-	jz	parsecmdline_0
-	test [fStat], FSTAT_BUFNOTEMPTY
-	jnz @F
+	jz parsecmdline_0
 	cmp al,' '
-	jz	nextchar
-	or	[fStat], FSTAT_BUFNOTEMPTY
+	jz nextchar
+
+	or [fStat], FSTAT_BUFNOTEMPTY
 	mov word ptr [edi], " L"
 	add edi, 2
 @@:
-	mov ah, 00
-	mov [edi], ax
+	mov [edi], al
 	inc edi
-	jmp nextchar
+	mov al, es:[ebx]
+	inc ebx
+	and al, al
+	jz @F
+	cmp al, cr
+	jnz @B
+	mov al, 0
+@@:
+	mov [edi], al
+	jmp noparm
+
+;--- input file in cmdline
+
 parsecmdline_0:
-	or [fStat], FSTAT_BUFNOTEMPTY
 	mov dword ptr [edi+0], "MPNI"
 	mov dword ptr [edi+4], "=NF"
 	add edi, 7
 @@:
-	inc ebx
 	mov al, es:[ebx]
+	inc ebx
 	cmp al, ' '
 	jbe @F
+	or [fStat], FSTAT_BUFNOTEMPTY
 	mov [edi], al
 	inc edi
 	jmp @B
@@ -13621,7 +13631,10 @@ parsecmdline_0:
 	add edi, 8
 	dec ebx
 	jmp nextchar
-parsecmdline1:				   ;"/" options
+
+;--- option, '-' or '/' in cmdline
+
+parsecmdline1:
 	inc ebx
 	mov al, es:[ebx]
 	cmp al, cr
@@ -13640,15 +13653,16 @@ parsecmdline1:				   ;"/" options
 @@:
 	cmp al, 'q'
 	jnz @F
-	or	[fMode], FMODE_QUIET	 ;/Q=quiet
+	or [fMode], FMODE_QUIET	 ;/Q=quiet
+	jmp nextchar
 @@:
 	cmp al, 'c'
 	jnz @F					 ;/C=output COMx
 	mov al, es:[ebx+1]
 	cmp al, '1'
-	jb	usageout
+	jb usageout
 	cmp al, '4'
-	ja	usageout
+	ja usageout
 	sub al, '0'
 	movzx eax, al
 	mov _comno, eax
@@ -13686,7 +13700,7 @@ usageout:
 @@:
 	jmp nextchar
 noparm:
-	@mov eax,1
+	@mov eax, 1
 exit:
 	@tprintf <"exit  parsecmdline",lf>
 	ret

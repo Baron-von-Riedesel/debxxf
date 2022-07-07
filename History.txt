@@ -15,6 +15,8 @@
  þ fixed: .dn did a wrong check of the debuggercontext argument.
  þ fixed: write file in showfile.dll caused a crash.
  þ uses new HDPMI v3.20 vendor API to disable HDPMI=32.
+ þ fixed: any '-' or '/' found in the cmdline was assumed to start an
+   option for the debugger.
  
  2022/06/15: version 2.10
 
