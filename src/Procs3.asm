@@ -702,7 +702,7 @@ uymto2:
 	push ecx
 	add esi,4
 	mov ebx,[esi.SYMBOL.pText]
-	@strout ebx
+	invoke __stroutebx		; modifies ebx, eax
 	test byte ptr [esi.SYMBOL.bType],_RDONLY_
 	jz @F
 	@stroutc " (r/o)"
@@ -1057,7 +1057,7 @@ globalheap_1:
 	movzx ecx, glblentry.ge_hOwner
 	invoke GetModuleName, ecx, addr modname
 	lea ebx, modname
-	@strout ebx
+	invoke __stroutebx		; modifies ebx, eax
 	invoke _crout
 globalheap_2:
 	cmp pb.p1.bType,__VOID__
@@ -2122,27 +2122,27 @@ local	modname[12]:byte
 local	owner:dword
 
 	pushad
-if ?WINDOWS
 	push fs
+if ?WINDOWS
 	@savewinsegregs
 	push word ptr hBlock
 	call _GetExePtr
 	@restorewinsegregs
-	pop fs
 else
 	mov cl, 1
 	mov edx, hBlock
 	mov ax, 4b88h
 	@DosCall
 endif
-	movzx eax,ax
-	mov owner,eax
-	and eax,eax
+	movzx eax, ax
+	mov owner, eax
+	and eax, eax
 	jz exit
-	lea ebx,modname
-	invoke GetModuleName, eax, ebx
-	@strout ebx
+	lea ebx, modname
+	invoke GetModuleName, eax, ebx	; modifies fs
+	invoke __stroutebx		; modifies ebx, eax
 exit:
+	pop fs
 	popad
 	mov eax,owner
 	ret
@@ -2543,7 +2543,7 @@ getfiles_3:
 	@putchr ' '
 
 	lea ebx,[finddata.DOSFIND.filename]
-	@strout ebx
+	invoke __stroutebx		; modifies ebx, eax
 	invoke _crout
 	mov ax, 4F00h
 	@DosCall
@@ -2594,7 +2594,7 @@ local	str1[MAXPATH]:byte
 	jnz @F
 	call getcurdir
 	mov ebx,eax
-	@strout ebx
+	invoke __stroutebx		; modifies ebx, eax
 	invoke _crout
 	jmp changedir_ex
 @@:
@@ -2761,7 +2761,7 @@ getcds_1:
 	@wordout [esi.CDSENTRY.ceFlags]
 	@putchr ' '
 	lea ebx,[esi.CDSENTRY.cePath]
-	@strout ebx
+	invoke __stroutebx		; modifies ebx, eax
 	invoke _crout
 	invoke CdsNext, esi
 sm1:

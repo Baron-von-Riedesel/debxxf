@@ -465,18 +465,6 @@ else
 endif
 endm
 
-@sti macro
-if ?ALLOWSTI
-	sti
-endif
-endm
-
-@cli macro
-if ?ALLOWSTI
-	cli
-endif
-endm
-
 @DpmiCall macro x
 	ifnb <x>
 	  mov ax,x
@@ -524,6 +512,26 @@ endm
 
 @moveaxtr5 macro
 	db 0Fh,24h,0E8h
+endm
+
+@cli macro
+if 0
+	cli
+else
+	push eax
+	@DpmiCall 900h
+	pop eax
+endif
+endm
+
+@sti macro
+if 0
+	sti
+else
+	push eax
+	@DpmiCall 901h
+	pop eax
+endif
 endm
 
 VxDCall macro x,y

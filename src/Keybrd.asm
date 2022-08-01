@@ -104,6 +104,13 @@ if ?CATCHINT09
  else
 	@symbol 'INT_09'	   ,_RDONLY_+__LPTR__, ,oldint09
  endif
+ if ?DISABLEPD
+  if ?32BIT
+	@symbol 'INT_74'	   ,_RDONLY_+__FPTR__, ,oldint74
+  else
+	@symbol 'INT_74'	   ,_RDONLY_+__LPTR__, ,oldint74
+  endif
+ endif
 endif
 kbdvartabend label byte
 
@@ -255,7 +262,7 @@ endif
 
 ;*** int 09 interrupt handler
 
-myint09 proc far public
+myint09 proc
 
  if ?HIDEINT09
 	test cs:[fMode], FMODE_INDEBUG
@@ -304,6 +311,7 @@ sm1:
 	jnz checksysreq
 @@:
 exit:
+	sti		; needed if iopl==0
 	@iret
 
 checksysreq:
@@ -335,6 +343,7 @@ issysreq:
 	jz settraceflg
 	test fKeybrd, FKB_EXECINT03
 	pop ds
+	sti
 	jnz @F
 	int 1
 	@iret
@@ -347,6 +356,7 @@ settraceflg:
 	or byte ptr [ebp+2*4].IRETS.rFL+1, 1
 	pop ebp
 	pop ds
+	sti
 	@iret
 
 myint09 endp
@@ -738,7 +748,7 @@ Sleep endp
 getcharex proc stdcall public
 	test [fIrq],1
 	jz @F
-	sti 					; enable interrupts
+	sti
 @@:
 getchar_1:
 	test [__inpmode], _DBGINP

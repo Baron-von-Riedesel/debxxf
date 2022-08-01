@@ -28,7 +28,8 @@
 
  2. How to use Debxxf
 
- To be able to start Deb16f/Deb32f you'll need the HX runtime for the DPMI
+ The debuggers are 32-bit applications and hence need a 80386 cpu. As for
+ software, besides a DOS (emulation), you'll need the HX runtime for the DPMI
  loaders DPMILD16/DPMILD32. This also supplies the DPMI hosts HDPMI16/HDPMI32,
  required for plain DOS.
 
@@ -66,7 +67,8 @@
  DOS debuggers, there a 2 dlls provided for graphics screen switching,
  DEBFVESA.DLL - which is loaded as default - and DEBFVGA.DLL. To make
  the debugger actually use the screen switcher dll, one has to enable
- swapping either in the debugger or in debxxf.ini: ScrnSwap=1.
+ swapping either in the debugger or in debxxf.ini: ScrnSwap=1. Note that
+ screen swapping for graphics requires at least a VGA adapter.
 
 
  4. Files Overview

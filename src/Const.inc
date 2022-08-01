@@ -30,7 +30,6 @@ endif
 ?MMXREGS		equ 1		; support MMX registers
 ?XMMREGS		equ 1		; support XMM registers
 ?SYMTRACE		equ 1		; activate STRAC (???)
-?CHECKSEGREGS	equ 1		; ??? most likely unnecessary
 ife ?WINDOWS
 ?WATCHI2F		equ 1		; remember+use int 2F on entry
 else
@@ -45,7 +44,6 @@ endif
 ?USEHOSTSTACK	equ 1		; don't use debugger stack when debuggee is loaded
 ?HSTACKCORR		equ 50h		; size of stack correction if ?USEHOSTSTACK is active
 ?RESETVIDEOONSAVESTATE = 1	; must be 1
-?ALLOWSTI		equ 0		; 0=@cli und @sti are dummy
 ?ENTRYFROMRMPROT equ 1		; display if entry from real mode
 if ?32BIT
 ?SUPI4112		equ 0

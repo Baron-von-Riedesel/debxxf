@@ -47,11 +47,7 @@ CCONST ends
 endm
 
 @strout macro xx
-ifidni <xx>,<ebx>
-	invoke  __stroutebx  ; returns size of string in eax
-else
 	invoke  __strout, xx ; preserves all registers and flags
-endif
 endm
 
 @putchr  macro xx:req

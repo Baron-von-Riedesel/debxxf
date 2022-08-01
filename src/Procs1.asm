@@ -1101,7 +1101,7 @@ print_descattr proc stdcall public uses ebx
 	invoke printf, ecx
 @@:
 	mov ebx, [ebx][segtypes]
-	@strout ebx
+	invoke __stroutebx
 	ret
 
 ;--------

@@ -139,7 +139,7 @@ fMode db 0	; mode flags
 			; 0=FMODE_QUIET: no logo display on startup
 			; 1=FMODE_SKIP: dont handle next exception
 			; 2=FMODE_NODISP: no display on entry
-			; 3=FMODE_STRICT: GDT und LDT nicht direkt lesen
+			; 3=FMODE_STRICT: no direct r/w access to GDT and LDT
 			; 4=FMODE_INDEBUG: debugger is executing
 			; 5=FMODE_LDTDIRECT: LDT direkt lesen
 			; 6=free
@@ -1240,7 +1240,7 @@ endif
 	@symbol 'ALT_CRTPort'  ,		 __WORD__, ,altcrt.crtadr
 	@symbol 'ALT_COLs'	   ,		 __BYTE__, ,altcrt.cols
 	@symbol 'ALT_ROWs'	   ,		 __BYTE__, ,altcrt.rows
-	@symbol 'DCC'		   ,_RDONLY_+__WORD__, ,dcc
+	@symbol 'DCC'		   ,_RDONLY_+__WORD__, ,wDCC
 ife ?WINDOWS        
 	@symbol 'DBGEE_VPage'  ,_RDONLY_+__BYTE__, ,clVPage
 	@symbol 'DBGER_VPage'  ,		 __BYTE__, ,stdcrt.page_
@@ -2568,8 +2568,8 @@ ife ?WINDOWS
 	@callint2F
 	cmp al,0
 	jnz @F
-	mov ax, 5		;modify HDPMI, bit 5
-	mov bl, 0		;reset HDPMI=32
+	mov ax, 5		;modify HDPMI (bit 5 only)
+	mov bl, 0		;0=reset HDPMI=32
 	push es
  if ?32BIT
 	push edi
@@ -3838,7 +3838,7 @@ preparecmdline proc stdcall public
 if 0
 	@stroutc "cmdline:"
 	mov ebx,esi
-	@strout ebx
+	invoke __stroutebx		; modifies ebx, eax
 	invoke _crout
 endif
 	mov edi,[pNearHeap]
@@ -5041,7 +5041,7 @@ if 0
 	@dwordout pb.dwOffs1
 	invoke _crout
 	mov ebx,pb.dwOffs2
-	@strout ebx
+	invoke __stroutebx		; modifies ebx, eax
 	invoke _crout
 	pop eax
 endif
@@ -7213,10 +7213,10 @@ islf:
 if 0
 	@stroutc "macro added: "
 	mov ebx, key
-	@strout ebx
+	invoke __stroutebx		; modifies ebx, eax
 	@stroutc "  "
 	mov ebx, tvalue
-	@strout ebx
+	invoke __stroutebx		; modifies ebx, eax
 	invoke _crout
 endif
 	jmp addmacro_00
@@ -8000,7 +8000,7 @@ endif
 	mov ecx, segtype
 	call prefixOut
 	lea ebx, xbuffer
-	@strout ebx
+	invoke __stroutebx		; modifies ebx, eax
 	popad
 if ?VMMINT20
 	test byte ptr segtype, 3
@@ -10076,7 +10076,7 @@ excout proc
 @@:
 	movzx eax,al
 	add ebx,eax
-	@strout ebx
+	invoke __stroutebx		; modifies ebx, eax
 	ret
 excout endp
 
@@ -10136,6 +10136,8 @@ ExcNo   dw ?
 endif
 		DPMIEXC <>
 EXCSTR ends
+
+?CHECKSEGREGS equ 0
 
 excproc proc far
 
@@ -10318,8 +10320,22 @@ endif
 	retf
 doexcexit:
 if ?32BIT
-	mov [ebp].rIP, eax
-	mov [ebp].rCS, cs
+ if 0
+	mov tregs.rEdi, edi
+	mov tregs.rEsi, esi
+	mov tregs.rEcx, ecx
+	mov ecx, [ebp].rDS
+	mov edx, [ebp].rES
+	mov tregs.rDS, ecx
+	mov tregs.rES, edx
+ endif
+	xchg eax, [ebp].rIP
+	mov tregs.rEip, eax
+	mov eax, cs
+	xchg eax, [ebp].rCS
+	mov tregs.rCS, eax
+	mov eax, [ebp].ExcNo
+	mov tregs.rEax, eax
 else
   if ?CS16ALIAS        
 	mov eax, offset excexit_16
@@ -10327,8 +10343,12 @@ else
   else
 	mov ecx, cs
   endif
-	mov [ebp].rIP, ax
-	mov [ebp].rCS, cx
+	xchg ax, [ebp].rIP
+	mov word ptr tregs.rEip, ax
+	xchg cx, [ebp].rCS
+	mov word ptr tregs.rCS, cx
+	mov ax, [ebp].ExcNo
+	mov word ptr tregs.rEax, ax
 endif
 	and byte ptr [ebp].rFL+1, not FL_TRACE
 	jmp done
@@ -10494,8 +10514,8 @@ checkregs_1:
 	invoke printf, CStr("severe error: segment register invalid.",lf,"ds=%X es=%X fs=%X, gs=%X",lf),\
 		dword ptr [ebp].rDS, dword ptr [ebp].rES, dword ptr [ebp].rFS, dword ptr [ebp].rGS
 	ret
-	assume ebp:nothing
 endif
+	assume ebp:nothing
 
 ;--------------------------------------------------
 
@@ -12097,7 +12117,10 @@ ExitRMDbgHlp proc stdcall
 local	_Wep:PF32
 
 	@tprintf <"ExitRMDbgHlp enter",lf>
+	cmp [__RmDS], 0
+	jz @F
 	call resetrmvecs
+@@:
 if ?RMCALLBACK
 else
 	mov 	ecx,[__RmCS]
@@ -12857,6 +12880,8 @@ if ?READINIPARMS
 endif
 ife ?WINDOWS
 	call LoadGraphHlp
+	and eax, eax
+	jz fentryex
 endif        
 
 	dec bRC
@@ -13016,7 +13041,7 @@ if _IDTVECS_ gt 8
 	@idtentry 0F
 endif
 setidtentry:
-	@cli
+;	@cli
 	push ds
 	mov ds, cs:[__csalias]
 	pop [dstemp]
@@ -13632,73 +13657,75 @@ parsecmdline_0:
 	dec ebx
 	jmp nextchar
 
+processed_option:
+	inc ebx
+	jmp nextchar
+
 ;--- option, '-' or '/' in cmdline
 
 parsecmdline1:
-	inc ebx
+	push processed_option
 	mov al, es:[ebx]
-	cmp al, cr
-	jz noparm
 	or al, 20h
-	cmp al, 'e'		   ;/E"command"
-	jnz @F
-	or [fStat], FSTAT_BUFNOTEMPTY
-	jmp nextchar
-@@:
-	cmp al, 'd'		   ;/D=Output using Int 41
-	jnz @F
-	mov ax, _DBGOUT + _DBGINP*100h
-	call _SetIOMode
-	jmp nextchar
-@@:
+	cmp al, 'e'			;/E"command"
+	jz option_e
+	cmp al, 'd'			;/D=Output using Int 41
+	jz option_d
 	cmp al, 'q'
-	jnz @F
-	or [fMode], FMODE_QUIET	 ;/Q=quiet
-	jmp nextchar
-@@:
+	jz option_q
 	cmp al, 'c'
-	jnz @F					 ;/C=output COMx
-	mov al, es:[ebx+1]
-	cmp al, '1'
-	jb usageout
-	cmp al, '4'
-	ja usageout
-	sub al, '0'
-	movzx eax, al
-	mov _comno, eax
-	mov ax, _SEROUT + _SERINP*100h
-	call _SetIOMode
-	inc ebx
-	jmp nextchar
-@@:
+	jz option_c			;/C=output COMx
 	cmp al, '2'
-	jnz @F
-	mov ax, _ALTOUT + _ALTINP*100h
-	call _SetIOMode
-	jmp nextchar
-@@:
-	cmp al,'n'
-	jnz @F
-	mov [__outmode], 0
-	jmp nextchar
-@@:
-	cmp al,'?'
-	jnz @F
+	jz option_2
+	cmp al, 'n'
+	jz option_n
+	cmp al, 's'
+	jz option_s
+	cmp al, 'f'
+	jz option_f
+usageout1:
+	pop eax
 usageout:
 	mov [__outmode], _DOSOUT
 	@stroutc "Usage: ",?MYNAME," [/2 | /Cn (1",3Ch,"=n",3Ch,"=4) | /D] [/Ecommand][/Q] [/S] [/F]",lf
 	xor eax, eax
 	jmp exit
-@@:
-	cmp al, 's'
-	jnz @F
+option_e:
+	or [fStat], FSTAT_BUFNOTEMPTY
+	retn
+option_d:
+	mov ax, _DBGOUT + _DBGINP*100h
+	call _SetIOMode
+	retn
+option_q:
+	or [fMode], FMODE_QUIET	 ;/Q=quiet
+	retn
+option_c:
+	mov al, es:[ebx+1]
+	cmp al, '1'
+	jb usageout1
+	cmp al, '4'
+	ja usageout1
+	inc ebx
+	sub al, '0'
+	movzx eax, al
+	mov _comno, eax
+	mov ax, _SEROUT + _SERINP*100h
+	call _SetIOMode
+	retn
+option_2:
+	mov ax, _ALTOUT + _ALTINP*100h
+	call _SetIOMode
+	retn
+option_n:
+	mov [__outmode], 0
+	retn
+option_s:
 	or [fMode], FMODE_STRICT
-@@:
-	cmp al, 'f'
-	jnz @F
+	retn
+option_f:
 	or [f80x87], F80X87_IGNORE
-@@:
-	jmp nextchar
+	retn
 noparm:
 	@mov eax, 1
 exit:
@@ -13790,6 +13817,9 @@ endif
 	call setmyenvironment
 	@tprintf <"_Enable: call firstentry",lf>
 	call firstentry
+	and eax, eax
+	jz load16error
+
 if ?WINDOWS
 	jmp @F
 else        

@@ -55,7 +55,6 @@ externdef fMode:byte
 externdef fVideo:byte
 externdef fSkipLF:byte
 externdef fStat:byte
-externdef fVGA:byte
 externdef fEntry:byte
 externdef cLines:byte
 externdef fUnass:byte
@@ -93,7 +92,7 @@ externdef meminfstr:byte
 ife ?WINDOWS
 externdef clVPage:byte
 endif
-externdef dcc:word
+externdef wDCC:word
 externdef szNull:byte
 if ?32BIT
 externdef _FatalExit:PF32
@@ -250,7 +249,7 @@ kbd_exit            proto near
 kbd_checkpmints     proto near
 kbd_setdebuggervecs proto near
 kbd_setdebuggeevecs proto near
-myint09             proto far
+;myint09             proto far
 myint2F             proto near stdcall
 kl2gr               proto near stdcall
 listhwbreaks        proto near stdcall

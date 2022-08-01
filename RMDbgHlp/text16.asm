@@ -76,7 +76,7 @@ if ?TRAPRM2F
 endif
 	mov ax, offset vars
 	pop ds
-	db 66h	;do a far ret
+	db 66h	;do a far retd
 	ret
 Init endp
 

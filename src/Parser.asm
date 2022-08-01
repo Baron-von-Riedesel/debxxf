@@ -206,12 +206,12 @@ getnumber endp
 if ?PARMPROT
 protnewvar:
 	pushad
-	push	eax
+	push eax
 	@stroutc "new var:"
 	@dwordout esi
 	@stroutc " text="
-	mov 	ebx,[esi.SYMBOL.pText]
-	@strout ebx
+	mov ebx,[esi.SYMBOL.pText]
+	invoke __stroutebx
 	@stroutc " next: "
 	@dwordout [esi-4]
 	@stroutc  " addrvalue: "
@@ -971,157 +971,157 @@ checkptr:
 ;*** out: eax=value
 
 handlesym:
-	mov 	cl,[eax.SYMBOL.bType]
-	test	cl,_FNCALL_
+	mov cl,[eax.SYMBOL.bType]
+	test cl,_FNCALL_
 if ?PARMPROT
-	jz		handlesym_0
+	jz handlesym_0
 else
-	jz		handlesym_0
+	jz handlesym_0
 endif
-	mov 	espvar,esp
-	mov 	tempvar,eax
-	mov 	bl,[eax.SYMBOL.bType2]					;anzahl argumente
-	test	bl,_PARMOK_
-	jz		@F
-	mov 	eax,[eax.SYMBOL.dwAddr] 				;diesen parameter immer
-	and		eax, eax
-	jz		@F
-	mov 	eax,[eax]
-	push	eax
+	mov espvar,esp
+	mov tempvar,eax
+	mov bl,[eax.SYMBOL.bType2]					;anzahl argumente
+	test bl,_PARMOK_
+	jz @F
+	mov eax,[eax.SYMBOL.dwAddr] 				;diesen parameter immer
+	and eax, eax
+	jz @F
+	mov eax,[eax]
+	push eax
 @@:
-	xor 	eax,eax
-	and 	bl,0Fh
-	cmp 	bl,0
-	jz		symproc_3
-	mov 	al,'('
+	xor eax,eax
+	and bl,0Fh
+	cmp bl,0
+	jz symproc_3
+	mov al,'('
 handlesym_2:
-	cmp 	[esi],al
-	jnz 	gettokenx_err
-	inc 	esi
-	push	ebx
-	invoke	GetExpression,__STRING__
-	pop 	ebx
-	call	checkptr
-	jnz 	@F
-	push	edx
+	cmp [esi],al
+	jnz gettokenx_err
+	inc esi
+	push ebx
+	invoke GetExpression,__STRING__
+	pop ebx
+	call checkptr
+	jnz @F
+	push edx
 @@:
-	push	eax 							  ;wert des ausdrucks
-	cmp 	cl,-1
-	jz		handlesym_er1
-	mov 	al,','
-	dec 	bl
-	jnz 	handlesym_2
-	cmp 	byte ptr [esi],')'
-	jnz 	handlesym_er1
-	inc 	esi
+	push eax 							;wert des ausdrucks
+	cmp cl,-1
+	jz handlesym_er1
+	mov al,','
+	dec bl
+	jnz handlesym_2
+	cmp byte ptr [esi],')'
+	jnz handlesym_er1
+	inc esi
 symproc_3:
-	xchg	esi,tempvar
-	mov 	ch,cl							  ;ch=typ des letzten parameters
-	mov 	cl,[esi.SYMBOL.bType]
-	mov 	al,0
-	call	[esi.SYMBOL.dwProc]
-	mov 	esp,espvar
-	mov 	varptr,esi
+	xchg esi,tempvar
+	mov ch,cl							;ch=typ des letzten parameters
+	mov cl,[esi.SYMBOL.bType]
+	mov al,0
+	call [esi.SYMBOL.dwProc]
+	mov esp,espvar
+	mov varptr,esi
 
-	mov 	esi,tempvar
-	jc		handlesym_er
-	and 	cl,0AFh 						  ;reset _FNCALL_ _PARMOK_
-	jmp 	handlesym_1
+	mov esi,tempvar
+	jc handlesym_er
+	and cl,0AFh 						;reset _FNCALL_ _PARMOK_
+	jmp handlesym_1
 handlesym_er1:
-	mov 	esp,espvar
+	mov esp,espvar
 handlesym_er:
 if ?PARMPROT
 	@stroutc "error getting symbol value, ecx="
 	@dwordout ecx
 	@cr_out
 endif
-	mov 	cl,-1
-	mov 	byte ptr vartype,cl
+	mov cl,-1
+	mov byte ptr vartype,cl
 	ret
 handlesym_0:
-	cmp 	byte ptr vartype,__STRING__
-	jnz 	@F
-	mov 	byte ptr vartype,cl 			  ;typ des operanden
-@@: 										  ;esi -> auf symbolelement
-	mov 	varptr,eax						  ;^ auf elem in symboltabelle
-	mov 	eax,[eax.SYMBOL.dwProc] 		  ;adresse holen
-	mov 	edx,[eax+4]
-	cmp 	cl,__DWORD__
-	ja		@F
-	invoke	getdefseg,varptr
-	mov 	defseg,edx
+	cmp byte ptr vartype,__STRING__
+	jnz @F
+	mov byte ptr vartype,cl 		;typ des operanden
+@@: 								;esi -> auf symbolelement
+	mov varptr,eax					;^ auf elem in symboltabelle
+	mov eax, [eax.SYMBOL.dwProc] 	;adresse holen
+	mov edx, [eax+4]
+	cmp cl, __DWORD__
+	ja @F
+	invoke getdefseg,varptr
+	mov defseg,edx
 @@:
-	mov 	bx,[eax+8]						  ;falls __TBYTE__
-	mov 	eax,[eax]						  ;wert des symbols holen
+	mov bx,[eax+8]						  ;falls __TBYTE__
+	mov eax,[eax]						  ;wert des symbols holen
 handlesym_1:
-	and 	cl,0DFh 						  ;reset _RDONLY_
-	mov 	byte ptr vartype,cl 			  ;typ des operanden
+	and cl,0DFh 						  ;reset _RDONLY_
+	mov byte ptr vartype,cl 			  ;typ des operanden
 if ?PARMPROT
 	pushad
 	invoke printf, CStr("sym value=%x:%x type=%x pSym=%x",lf), edx, eax, ecx, varptr
 	popad
 endif
-	cmp 	cl,__LPTR__
-	jnz 	@F
+	cmp cl,__LPTR__
+	jnz @F
 if 1
-	mov	 edx,eax			 ;2 zeilen deaktiviert 24.11.99
-	shr	 edx,16
+	mov edx,eax			 ;2 zeilen deaktiviert 24.11.99
+	shr edx,16
 endif
-	movzx	eax,ax
-	mov 	word ptr varseg,dx
+	movzx eax,ax
+	mov word ptr varseg,dx
 	retn
 @@:
-	cmp 	cl,__RMLPTR__
-	jnz 	@F
+	cmp cl,__RMLPTR__
+	jnz @F
 if 1
-	mov	 edx,eax			 ;2 zeilen deaktiviert 24.11.99
-	shr	 edx,16
+	mov edx,eax			 ;2 zeilen deaktiviert 24.11.99
+	shr edx,16
 endif
-	movzx	eax,ax
-	mov 	word ptr varseg,dx
+	movzx eax,ax
+	mov word ptr varseg,dx
 	retn
 @@:
-	cmp 	cl,__FPTR__
-	jnz 	@F
-	mov 	word ptr varseg,dx
+	cmp cl,__FPTR__
+	jnz @F
+	mov word ptr varseg,dx
 	retn
 @@:
-	cmp 	cl,__TBYTE__
-	jnz 	@F
-	mov 	varseg,edx
-	mov 	word ptr vartype+2,bx
+	cmp cl,__TBYTE__
+	jnz @F
+	mov varseg,edx
+	mov word ptr vartype+2,bx
 	retn
 @@:
-	cmp 	cl,__QWORD__
-	jnz 	@F
-	mov 	varseg,edx
+	cmp cl,__QWORD__
+	jnz @F
+	mov varseg,edx
 	retn
 @@:
-	cmp 	cl,__WORD__
-	ja		handlesym_ex
-	movzx	eax,ax
-	cmp 	cl,__BYTE__
-	jnz 	handlesym_ex
-	mov 	ah,00
+	cmp cl,__WORD__
+	ja handlesym_ex
+	movzx eax,ax
+	cmp cl,__BYTE__
+	jnz handlesym_ex
+	mov ah,00
 handlesym_ex:
 	retn
 
 
 checktypes:
-	cmp 	cl,__STRING__			;rechter operand string?
-	jnz 	@F
-	cmp 	cl,ch					;string nur an stringvariable
-	jnz 	checktypes_er	  ;zuweisbar
-	and 	esi,esi
-	jz		checktypes_er
-	push	ecx
-	invoke	PutStringInHeap,eax 	;string in far heap kopieren
-	pop 	ecx
+	cmp cl,__STRING__			;rechter operand string?
+	jnz @F
+	cmp cl,ch					;string nur an stringvariable
+	jnz checktypes_er			;zuweisbar
+	and esi,esi
+	jz checktypes_er
+	push ecx
+	invoke PutStringInHeap,eax 	;string in far heap kopieren
+	pop ecx
 	clc
 	retn
 @@:
-	cmp 	ch,__STRING__
-	jz		checktypes_er
+	cmp ch,__STRING__
+	jz checktypes_er
 	clc
 	retn
 checktypes_er:
@@ -1162,17 +1162,17 @@ varcheck_2:
 	xchg	edx,varseg
 if ?TRACE
 	pushad
-	mov 	cl,vartype
+	mov cl,vartype
 	@stroutc "call wrinp for "
-	push	eax
-	and 	esi,esi
-	jz		@F
-	mov 	ebx,[esi.SYMBOL.pText]
-	@strout ebx
+	push eax
+	and esi,esi
+	jz @F
+	mov ebx,[esi.SYMBOL.pText]
+	invoke __stroutebx
 @@:
 	@stroutc ", new value="
 	@dwordout varseg
-	pop 	eax
+	pop eax
 	@dwordout eax
 	@stroutc ", type="
 	@dwordout ecx
