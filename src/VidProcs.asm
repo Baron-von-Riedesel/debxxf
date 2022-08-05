@@ -712,8 +712,15 @@ endif
 SetDebuggeeScreen proc stdcall
 
 if ?WINDOWS
+		test [__outmode], _ALTOUT
+		jz @F
+		call _SetWindowsKbd
+		ret
+@@:
         call _SwitchToWindowsScreen
 else
+		test [__outmode], _VIOOUT
+		jz done
         test fSwap, 1
         jz noswap
         invoke AllocDbgeeScreenBuffer   ;memory fuer textscreen allocate
@@ -725,9 +732,9 @@ else
         ret
 @@:
         invoke RestoreTextScreen, 0, pDbgeeSaveMem
-if ?SETDACDIR
+ if ?SETDACDIR
         invoke setattrdac, addr dbeattr, 0
-endif
+ endif
         jmp exit
 noswap:
         mov al, [clVPage]                       ; debuggee in text mode, so
@@ -747,6 +754,7 @@ exit:
         @CallInt oldint10
   endif
 endif
+done:
         ret
 SetDebuggeeScreen endp
 
@@ -936,18 +944,26 @@ endif
 
 SwitchToDebuggerScreen proc stdcall public
 
+        test [fVideo], FVIDEO_ISDBGER   ;screen owned by debugger?
+        jnz exit
 if ?WINDOWS
         cmp [pWriteDbgConsole], 0
         jnz exit
 endif
-        test [fVideo], FVIDEO_ISDBGER   ;screen owned by debugger?
-        jnz exit
+        test [__outmode], _ALTOUT
+        jz @F
+if ?WINDOWS
+        call _SetDebuggerKbd
+endif
+        or [fVideo], FVIDEO_ISDBGER
+        jmp exit
+@@:
         pushad
         push fs
         @loadflat
 ife ?WINDOWS
         test fSwap,1
-        jz @F
+        jz nobuffer
 endif
         invoke AllocDbgerScreenBuffer
         test [fVideo],FVIDEO_NOSWITCH
@@ -956,10 +972,11 @@ if ?WINDOWS
         call _SwitchToDebuggerScreen
         invoke RestoreTextScreen, addr stdcrt, pDbgerSaveMem
 else
-@@:
+nobuffer:
         call SaveDebuggeeScreen
         call SetDebuggerScreen
 endif
+switch_done:
         or [fVideo], FVIDEO_ISDBGER
 nodisp:
         pop fs
@@ -986,6 +1003,8 @@ SwitchToDebuggeeScreen proc stdcall public
         cld
         @loadflat
         test fSwap, 1
+        jz @F
+        test [__outmode], _VIOOUT
         jz @F
         call AllocDbgerScreenBuffer                     ; alloc memory for textscreen
         jc @F
@@ -1056,6 +1075,7 @@ myvioout endp
 
 myaltout proc stdcall zeichen:dword
 
+        call SwitchToDebuggerScreen
         invoke VioPutCharDir, addr altcrt, eax
         ret
 myaltout endp

@@ -67,10 +67,10 @@ HORZRES		equ 8
 VERTRES		equ 10
 SRCCOPY		equ 0CC0020h
 
-VideoInit				proto far pascal
-VideoDone				proto far pascal
-SwitchToDebuggerScreen	proto far pascal
-SwitchToWindowsScreen	proto far pascal
+VideoInit				proto far
+VideoDone				proto far
+SwitchToDebuggerScreen	proto far
+SwitchToWindowsScreen	proto far
 
 @dprintf macro text:req, args:vararg
 local sym
@@ -259,9 +259,14 @@ endif
 
 if ?USEDEATH 
 
-setdebuggerkbdint proc
+;--- SetDebuggerKbd/SetWindowKbd are
+;--- called directly by deb16fw if cmdline option /2 is set.
+
+SetDebuggerKbd proc far public uses ds
 
 	pusha
+	mov ax, DGROUP
+	mov ds, ax
 	mov bl, 9
 	mov ax, 204h
 	int 31h
@@ -274,11 +279,13 @@ setdebuggerkbdint proc
 	int 31h
 	popa
 	ret
-setdebuggerkbdint endp
+SetDebuggerKbd endp
 
-setdebuggeekbdint proc
+SetWindowsKbd proc far public uses ds
 
 	pusha
+	mov ax, DGROUP
+	mov ds, ax
 	xor cx, cx
 	mov dx, word ptr [winint09+0]
 	xchg cx, word ptr [winint09+2]
@@ -289,8 +296,15 @@ setdebuggeekbdint proc
 @@:
 	popa
 	ret
-setdebuggeekbdint endp
+SetWindowsKbd endp
 
+else
+SetDebuggerKbd proc far public
+	ret
+SetDebuggerKbd endp
+SetWindowsKbd proc far public
+	ret
+SetWindowsKbd endp
 endif
 
 resethiwords proc
@@ -312,7 +326,7 @@ resethiwords endp
 ;--- void SwitchToDebuggerScreen()
 ;---------------------------------
 
-SwitchToDebuggerScreen proc far pascal uses ds es fs gs
+SwitchToDebuggerScreen proc far uses ds es fs gs
 
 	mov ax, DGROUP
 	mov ds, ax
@@ -339,7 +353,7 @@ else
 	@SaveDC
 	invoke Death, hDesktopDC
 	@RestoreDC
-	call setdebuggerkbdint
+	call SetDebuggerKbd
 endif
 	@SwitchStackBack
 	@SetTextMode
@@ -351,7 +365,7 @@ SwitchToDebuggerScreen endp
 ;--- void SwitchToWindowsScreen()
 ;---------------------------------
 
-SwitchToWindowsScreen proc far pascal uses ds es fs gs
+SwitchToWindowsScreen proc far uses ds es fs gs
 
 	mov ax, DGROUP
 	mov ds, ax
@@ -362,7 +376,7 @@ SwitchToWindowsScreen proc far pascal uses ds es fs gs
 ife ?USEDEATH
 	invoke EnableOEMLayer
 else
-	call setdebuggeekbdint
+	call SetWindowsKbd
 	@SaveDC
 	invoke Resurrection, hDesktopDC, 0, 0, 0, 0, 0, 0
 	@RestoreDC
@@ -382,7 +396,7 @@ SwitchToWindowsScreen endp
 ;--- returns 0 on error, else 1
 ;---------------------------------
 
-VideoInit proc far pascal uses ds es gs
+VideoInit proc far uses ds es gs
 
 	mov ax, DGROUP
 	mov ds, ax
@@ -467,7 +481,7 @@ DestroyGDIObjects endp
 ;--- void VideoDone()
 ;---------------------------------
 
-VideoDone proc far pascal uses ds es gs
+VideoDone proc far uses ds es gs
 
 	mov ax, DGROUP
 	mov ds, ax

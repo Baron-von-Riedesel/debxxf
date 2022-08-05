@@ -122,11 +122,11 @@ $(OUTDIR)\$(SRC11).obj: src/$(SRC11).asm $(DEBSX)
 
 # mark for windows 3.1! - else int 01 and int 03 won't be called as exceptions.
 
-$(OUTDIR)\$(APP).exe: $*.obj src/$(APP).def $(NAME).mak src/$(APP).rc res/$(APP).ico
+$(OUTDIR)\$(APP).exe: $*.obj src/$(APP).def src/$(APP).lbc $(NAME).mak src/$(APP).rc res/$(APP).ico
 !if $(MSLINK)
 	@link16.exe $* /FAR/MAP:FULL/NOE/NON/A:16/NOD, $*.exe, $*a.map, LibOmf\libw.lib, src/$(APP).def
 !else
-	@jwlink.exe format win f $*.obj name $*.exe lib LibOmf\libw.lib op q, m=$*a.map, protmode, heap=512, stack=5120
+	@jwlink.exe format win f $*.obj name $*.exe lib LibOmf\libw.lib op q, m=$*a.map @src/$(APP).lbc
 !endif
 	@wrc.exe -q -bt=windows -31 -fo$*.res -i$(WINH) src/$(APP).rc $*.exe
 

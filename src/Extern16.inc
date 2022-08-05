@@ -54,6 +54,8 @@ externdef _SwitchToDebuggerScreen	:PF16
 externdef _SwitchToWindowsScreen	:PF16
 externdef _VideoInit				:PF16
 externdef _VideoDone				:PF16
+externdef _SetDebuggerKbd			:PF16
+externdef _SetWindowsKbd			:PF16
 
 endif
 

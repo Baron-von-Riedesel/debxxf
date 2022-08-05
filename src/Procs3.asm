@@ -278,6 +278,10 @@ _SwitchToWindowsScreen	PF16 0
 _VideoInit				PF16 0
 	db 4
 _VideoDone				PF16 0
+	db 5
+_SetDebuggerKbd			PF16 0
+	db 6
+_SetWindowsKbd			PF16 0
 	db 0
 
 _LoadLibrary       PF16 0

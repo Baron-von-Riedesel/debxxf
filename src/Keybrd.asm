@@ -650,11 +650,6 @@ endif
 GetKbdChar endp
 
 
-GetAltChar proc
-	call GetKbdChar
-	ret
-GetAltChar endp
-
 GetDosChar proc
 	mov ebx,[__inpstream]
 	mov ax,4406h
@@ -764,7 +759,7 @@ getchar_1:
 	and ax,ax
 	jnz exit
 @@:
-	test [__inpmode], _KBDINP
+	test [__inpmode], _KBDINP or _ALTINP
 	jz @F
 	call GetKbdChar
 	and ax,ax
@@ -773,12 +768,6 @@ getchar_1:
 	test [__inpmode], _DOSINP
 	jz @F
 	call GetDosChar
-	and ax,ax
-	jnz exit
-@@:
-	test [__inpmode], _ALTINP
-	jz @F
-	call GetAltChar
 	and ax,ax
 	jnz exit
 @@:

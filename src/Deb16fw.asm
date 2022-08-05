@@ -4,6 +4,7 @@
 	.286
 	.model small
 	.386
+	.dosseg
 	option casemap:none
 
 ?WINDOWS equ 1
@@ -37,13 +38,13 @@ endif
 	exitm <sym>
 endm
 
-NULL_ segment word public 'BEGDATA'
-	dw 0,0,5,0,0,0,0,0
-NULL_ ends
-
-DGROUP group NULL_
+;NULL_ segment word public 'BEGDATA'
+;NULL_ ends
+;DGROUP group NULL_
 
 	.data
+
+	dw 0,0,5,0,0,0,0,0
 
 hWndMain	HWND 0     ; handle main window
 hMenu		HMENU 0

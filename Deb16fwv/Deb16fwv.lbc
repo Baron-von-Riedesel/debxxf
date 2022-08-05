@@ -1,12 +1,18 @@
 
 OP MODNAME=DEB16FWV
 OP DESCRIPTION "deb16fw video helper dll"
+OP PROTMODE
+OP ALIGN=16
+OP VERSION=3.10
+
 SEGMENT _TEXT FIXED
 SEGMENT _DATA FIXED
 EXPORT {
- SWITCHTODEBUGGERSCREEN.1
- SWITCHTOWINDOWSSCREEN .2
- VIDEOINIT             .3
- VIDEODONE             .4
- WEP                   .5 RESIDENT
+ SwitchToDebuggerScreen.1
+ SwitchToWindowsScreen .2
+ VideoInit             .3
+ VideoDone             .4
+ SetDebuggerKbd        .5
+ SetWindowsKbd         .6
+ WEP                   .7 RESIDENT
 }

@@ -11,7 +11,9 @@ EXPORTS
  SwitchToWindowsScreen      @2
  VideoInit                  @3
  VideoDone                  @4
- Wep                        @5  RESIDENTNAME
+ SetDebuggerKbd             @5
+ SetWindowsKbd              @6
+ Wep                        @7  RESIDENTNAME
 
 ;IMPORTS
 ; Death=GDI.121

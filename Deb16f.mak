@@ -119,12 +119,12 @@ $(OUTDIR)\$(SRC10).obj: src/$(SRC10).asm $(DEBSX)
 $(OUTDIR)\$(SRC11).obj: src/$(SRC11).asm $(DEBSX)
 #	@$(ASM) src/$(SRC11).asm
 
-$(OUTDIR)\$(APP).exe: $(OUTDIR)\$(SRCA).obj src/$(APP).def $(NAME).mak
+$(OUTDIR)\$(APP).exe: $(OUTDIR)\$(SRCA).obj src/$(APP).def src/$(APP).lbc $(NAME).mak
 !if $(MSLINK)
-	@link16.exe $(OUTDIR)\$(SRCA).obj $(LOPTS2), $*.exe, $*a.map, , src/deb16f.def
+	@link16.exe $(OUTDIR)\$(SRCA).obj $(LOPTS2), $*.exe, $*a.map, , src/$(APP).def
 	@$(HXDIR)\bin\patchNE $*.exe
 !else
-	@jwlink.exe format win dpmi f $(OUTDIR)\$(SRCA).obj name $*.exe op m=$*a.map op q, stub=$(HXDIR)\bin\dpmist16.bin, stack=2048
+	@jwlink.exe format win dpmi f $(OUTDIR)\$(SRCA).obj name $*.exe op m=$*a.map op q @src/$(APP).lbc
 !endif
 
 $(OUTDIR)\$(SRCA).obj: src/$(SRCA).asm src/debxxf.inc $(NAME).mak
