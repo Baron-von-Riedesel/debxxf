@@ -614,8 +614,8 @@ endif
 	mov eax,1
 vcd_1:
 	pushad
-	@ring0call getcomx
-	jc	 @F
+	invoke _ring0, getcomx
+	jc @F
 	mov  ecx,eax
 ;	invoke sprintf,ebx,ecx,addr xfstr2,addr szStr
 	invoke sprintf,addr szStr, addr xfstr2, ecx, ebx

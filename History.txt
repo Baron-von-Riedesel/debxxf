@@ -19,9 +19,11 @@
    option for the debugger.
  þ fixed: exec STI in IRQ 1 routine (required if iopl==0).
  þ fixed: no crash if debfvesa/debfvga cannot be loaded.
+ þ fixed: mov to/from CR4 was executed without testing if register exists.
  þ deb16f/deb32f: fixed cmdline option /2.
  þ deb16f: missing deb16f.lbc added.
  þ deb16fw: fixed cmdline option /2.
+ þ cmd cpu: moved cpuid fields to new cmd cpuid.
  
  2022/06/15: version 2.10
 

@@ -382,9 +382,11 @@ eStops		dd ?ESTOPS	; on what exceptions the debugger will stop
 eFirst		dd ?EFIRST	; what exceptions are handled first chance?
 
 fCPUID		db 0		; is CPUID supported?
-idcpu		db -1
-idstep		db -1
-idflags 	dd 0
+idcpu		db -1		; CPUID ah
+idstep		db -1		; CPUID al
+idflags 	dd 0		; CPUID edx flags
+idflags2	dd 0		; CPUID ecx flags
+
 dpmiversion dw 0		; DPMI ax=400h, ax (version)
 dpmicpu 	db 0		; DPMI ax=400h, cl (cpu)
 dpmiflags	dw 0		; DPMI ax=400h, bx (flags)
@@ -908,8 +910,8 @@ if ?SUPPBRL
 endif        
 	@symbol 'CANcel',	 _FUNCTN_,0,_cancel
 	@symbol 'CLS',		 _FUNCTN_,0,_cls
-	@symbol 'CPStat',	 _FUNCTN_,0,_getfpustatus
 	@symbol 'CPU',		 _FUNCTN_,0,_xregsout
+	@symbol 'CPUID',	 _FUNCTN_,0,_cpuidout
 	@symbol 'DA',		 _FUNCTN_,0,_dumpdt
 	@symbol 'DB',		 _FUNCTN_,0,_dumpdb
 	@symbol 'DD',		 _FUNCTN_,0,_dumpdd
@@ -933,6 +935,7 @@ endif
 	@symbol 'EPM',		 _FUNCTN_,0,_excpm
 	@symbol 'FCall',	 _FUNCTN_,1,_farcall
 	@symbol 'FCRM', 	 _FUNCTN_,1,_farcallrm
+	@symbol 'FPUStat',	 _FUNCTN_,0,_getfpustatus
 	@symbol 'FREEDOS',	 _FUNCTN_,1,_freedos
 	@symbol 'FREESel',	 _FUNCTN_,1,_freesel
 	@symbol 'FREEMem',	 _FUNCTN_,1,_freemem
@@ -1185,6 +1188,17 @@ if ?LDTSEL
 endif
 dpmivartabend label byte
 
+cpuidvars label byte
+	@symbol 'CPUID_Family', 	_RDONLY_+__BYTE__, ,idcpu,,symcpuidfam
+	@symbol 'CPUID_Model_Step', _RDONLY_+__BYTE__, ,idstep,,symcpuidmodel
+	@symbol 'CPUID_EDX_FLags',	_RDONLY_+__DWORD__, ,idflags,,symcpuidedx
+	@symbol 'CPUID_ECX_FLags',	_RDONLY_+__DWORD__, ,idflags2,,symcpuidecx
+	@symbol 'CPUID_MAnuf'  ,	_FNCALL_+_RDONLY_+__STRING__, ,getmanu,,symcpuidmanu
+cpuidvarsend label byte
+
+
+;--- ??? where are these values displayed ???
+
 	@symbol 'SEG'		   ,_FNCALL_+_RDONLY_+__WORD__,1,getseg
 	@symbol 'OFF'		   ,_FNCALL_+_RDONLY_+__DWORD__,1,getoff
 	@symbol 'NOT'		   ,_FNCALL_+_RDONLY_+__DWORD__,1,getcompl
@@ -1329,13 +1343,6 @@ endif
 
 intvartabend label byte
 
-cpuvars label byte
-	@symbol 'CPUID_Family', 	_RDONLY_+__BYTE__, ,idcpu,,symcpufam
-	@symbol 'CPUID_Model_Step', _RDONLY_+__BYTE__, ,idstep,,symcpumodel
-	@symbol 'CPUID_FLags'  ,	_RDONLY_+__DWORD__, ,idflags,,symcpuflags
-	@symbol 'CPUID_MAnuf'  ,	_FNCALL_+_RDONLY_+__STRING__, ,getmanu,,symcpumanu
-cpuvarsend label byte
-
 tregister label byte
 	@symbol 'TEAX', 	__DWORD__, ,tregs.rEax
 	@symbol 'TEBX', 	__DWORD__, ,tregs.rEbx
@@ -1430,7 +1437,7 @@ ldtitem label byte
 	dd -1
 
 ptstab label byte
-	@outitem  <cr,lf,"cr0=">,symCR0
+	@outitem  <"cr0=">,symCR0
 	@outitem  " cr2=",symCR2
 	@outitem  " cr3=",symCR3
 	@outitem  " cr4=",symCR4
@@ -1455,10 +1462,10 @@ else
 	@outitem  <cr,lf,"tr6=">,symTR6
 endif
 	@outitem  " tr7=",symTR7
-	@outitem  <cr,lf,"Family=">,symcpufam
-	@outitem  " Model=",symcpumodel
-	@outitem  " Flags=",symcpuflags
-	@outitem  " Manufacturer=",symcpumanu
+;	@outitem  <cr,lf,"Family=">,symcpufam
+;	@outitem  " Model=",symcpumodel
+;	@outitem  " Flags=",symcpuflags
+;	@outitem  " Manufacturer=",symcpumanu
 	dd -1
 
 rtstab label byte
@@ -2478,7 +2485,7 @@ checkcpuid_ex:
 	ret
 checkcpuid endp
 
-;*** folgende procedur wird am start aufgerufen ***
+;*** folgende procedur wird am start aufgerufen
 
 getdpmiparms proc stdcall
 
@@ -2490,6 +2497,7 @@ local	myrmcs:RMCS
 	mov [idcpu],ah			 ;cpu
 	mov [idstep],al 		 ;maske/stepping
 	mov [idflags],edx
+	mov [idflags2],ecx
 @@:
 	@DpmiCall 400h
 	mov dpmiversion,ax
@@ -2586,22 +2594,24 @@ endif
 	ret
 getdpmiparms endp
 
-;--- erweiterte register retten
-;--- muss im ring0 aufgerufen werden
+;--- read privileged registers
+;--- must be executed in ring 0
 
-savexregs proc stdcall public
+savexregs proc stdcall
+if 0 ; CRx registers are read/write individually
 	mov eax,cr0
 	mov [rCR0],eax
 	mov eax,cr2
 	mov [rCR2],eax
 	mov eax,cr3
 	mov [rCR3],eax
-	test byte ptr idflags,ID_V86EXT 	  ;v86 extensions da?
+	test byte ptr idflags,ID_V86EXT 	;v86 extensions da?
 	jz @F
 ;	mov eax,cr4
 	@moveaxcr4
 	mov [rCR4],eax
 @@:
+endif
 	mov eax,dr0
 	mov [rDR0],eax
 	mov eax,dr1
@@ -2612,7 +2622,7 @@ savexregs proc stdcall public
 	mov [rDR3],eax
 if ?DR4DR5
 	cmp byte ptr dpmicpu,4
-	jb	@F
+	jb @F
 ;	mov eax,dr4
 	@moveaxdr4
 	mov [rDR4],eax
@@ -5467,11 +5477,11 @@ getcr0 proc c value:dword
 	popad
 	cmp al,1
 	jz @F
-	@ring0call getmycr0
+	invoke _ring0, getmycr0
 	jmp getcr0_ex
 @@:
 	mov ebx,value
-	@ring0call setmycr0
+	invoke _ring0, setmycr0
 getcr0_ex:
 	pushad
 	call setdebuggerfpustate 
@@ -5498,11 +5508,11 @@ getcr2 proc c value:dword
 
 	cmp al, 1
 	jz @F
-	@ring0call getmycr2
+	invoke _ring0, getmycr2
 	jmp getcr2_ex
 @@:
 	mov eax, value
-	@ring0call setmycr2
+	invoke _ring0, setmycr2
 getcr2_ex:
 	ret
 getmycr2:
@@ -5515,15 +5525,15 @@ getcr2 endp
 
 ;--- function CR3()
 
-getcr3 proc c value:dword
+getcr3 proc c public value:dword
 
 	cmp al, 1
 	jz @F
-	@ring0call getmycr3
+	invoke _ring0, getmycr3
 	jmp getcr3_ex
 @@:
 	mov eax, value
-	@ring0call setmycr3
+	invoke _ring0, setmycr3
 getcr3_ex:
 	ret
 getmycr3:
@@ -5539,13 +5549,15 @@ getcr3 endp
 
 getcr4 proc c value:dword
 
+	test byte ptr idflags,ID_V86EXT 	;no CR4 if no CPUID
+	jz getcr4_ex
 	cmp al, 1
 	jz	@F
-	@ring0call getmycr4
+	invoke _ring0, getmycr4
 	jmp getcr4_ex
 @@:
 	mov eax,value
-	@ring0call setmycr4
+	invoke _ring0, setmycr4
 getcr4_ex:
 	ret
 getmycr4:
@@ -5659,7 +5671,7 @@ _getmsr proc c pb:PARMBLK
 	mov ebx, pb.dwOffs2
 @@:        
 getmsr_1:
-	@ring0call r0getmsr
+	invoke _ring0, r0getmsr
 	jc next
 	@dwordout ecx
 	@putchr '='
@@ -5679,7 +5691,7 @@ exit:
 setmsr:        
 	mov eax, pb.p2.dwOffs
 	mov edx, pb.p3.dwOffs
-	@ring0call r0setmsr
+	invoke _ring0, r0setmsr
 	jnc exit
 	@errorout 4Ch	;cannot write
 	jmp exit
@@ -5882,30 +5894,6 @@ getfEMU proc c value:dword
 	popad
 	ret
 getfEMU endp
-
-ife ?WINDOWS
-
-;--- function SCREENSwap()
-;--- get/set variable fSwap
-
-getswap proc c value:dword
-	cmp al, 1
-	jz @F
-	mov al, fSwap
-	clc
-	ret
-@@:
-	mov al, byte ptr value
-	and al, al
-	setne al
-	pushad
-	invoke SetScreenSwap, eax
-	popad
-	clc
-	ret
-getswap endp
-
-endif
 
 ;--- function STRICTMode()
 
@@ -7388,7 +7376,7 @@ _skip endp
 _testring0 proc stdcall
 
 	push es
-	@ring0call int20test
+	invoke _ring0, int20test
 	pop es
 	ret
 
@@ -7411,7 +7399,7 @@ _testring0 endp
 ;*** das frÅher ebenfalls zusammengebastelte 32-Bit Stacksegment
 ;*** ist nicht mehr notwendig.
 
-ring0 proc stdcall public routine:dword
+_ring0 proc stdcall public routine:dword
 
 	push eax
 	mov eax,routine
@@ -7441,7 +7429,7 @@ ring02:
 	pop eax
 	@errorout ERR_NORING0CALL_POSSIBLE
 	jmp mains
-ring0 endp
+_ring0 endp
 
 ;*** entry routine in ring0 ***
 ;*** SS:ESP ist veraendert! ***
@@ -7574,20 +7562,28 @@ calcopsize proc uses esi
 	ret
 calcopsize endp
 
-;*** CPU: symbole in registertabelle ausgeben ***
+_cpuidout proc
+	mov ebx,offset cpuidvars
+	mov eax,offset cpuidvarsend
+	mov ch,0
+	call symtout
+	ret
+_cpuidout endp
+
+;*** cmd CPU: display CRx, DRx, TRx registers
 
 _xregsout proc c
 
-;	mov esi,offset xtstab		  ;gdtr,idtr,ldtr,tr ausgeben
+;	mov esi,offset xtstab		;display gdtr,idtr,ldtr,tr
 ;	call regsout_2
 ;	invoke _crout
 
-	@ring0call savexregs			 ;protected register ausgeben
+	invoke _ring0, savexregs	;read protected register
 	mov esi, offset ptstab
 	jmp regsout_2
 _xregsout endp
 
-regsout_tss proc c public				;aktuelles tss ausgeben
+regsout_tss proc c public		;aktuelles tss ausgeben
 	mov esi, offset tsstab
 	mov edi, [pNearHeap]
 	jmp regsout_3
@@ -7595,7 +7591,7 @@ regsout_tss endp
 
 if ?MMXREGS
 _mmxregsout:
-	test idflags,800000h			;MMX implemented?
+	test idflags,800000h		;MMX implemented?
 	jnz @F
 	ret
 @@:
@@ -10576,7 +10572,7 @@ _vpicd proc c public pb:PARMBLK
 local sysvm:dword
 
 	call checkifenhmode
-	@ring0call getsysvm
+	invoke _ring0, getsysvm
 	mov  sysvm,ebx
 	invoke printf, CStr("IRQ V CurVM    SysVM  ",lf)
 	invoke printchars, '-', eax, 1
@@ -10587,7 +10583,7 @@ vpicd_1:
 	push ecx
 	push eax
 	mov  esi,sysvm
-	@ring0call getirqs
+	invoke _ring0, getirqs
 	pushfd
 	invoke _hexout
 	@stroutc ": "

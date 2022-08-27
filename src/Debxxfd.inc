@@ -437,13 +437,10 @@ yy	db xx,0
 endif
 endm
 
-;zur zeit verwendete ring0calls:
-;1. erweiterte register holen/speichern (savexregs, loadxregs)
-
-@ring0call macro x
-	push offset x
-	call ring0
-endm
+;@ring0call macro x
+;	push offset x
+;	call _ring0
+;endm
 
 @DosCallx macro x
 	call MarkDOSused

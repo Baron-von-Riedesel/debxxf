@@ -21,8 +21,8 @@ externdef a6:ARGDESC
 externdef dwCurPsp:dword
 externdef bpCount:byte
 externdef cLoad:byte
-externdef rCR0:dword
-externdef rCR3:dword
+;externdef rCR0:dword
+;externdef rCR3:dword
 externdef dosvartab:byte
 externdef dosvartabend:byte
 externdef dpmivartab:byte
@@ -226,6 +226,7 @@ getalternateadapter proto near stdcall
 getbaser            proto near stdcall :dword
 _getchar            proto near stdcall
 getcharex           proto near stdcall
+getcr3              proto near c :dword
 getcurdir           proto near stdcall
 getdefseg           proto near stdcall :dword
 GetInpStatus        proto near stdcall
@@ -265,11 +266,13 @@ print_descriptor    proto near stdcall sel:dword
 regsout_tss         proto near c               ;aktuelles tss ausgeben
 ;;resetkbd            proto near stdcall
 restoremyscreenbuffer proto near stdcall pBuffer:ptr byte
-ring0               proto near stdcall routine:dword
+_ring0              proto near stdcall routine:dword
 savedebughandle     proto near stdcall
 SaveState           proto near stdcall
 saveviostate        proto near stdcall
-savexregs           proto near stdcall         ;erweiterte register retten
+ife ?WINDOWS
+getswap             proto near c :dword
+endif
 searchkap           proto near stdcall bereich:dword,searchstr:near ptr byte
 SearchUserSymbol    proto near stdcall :dword,:ptr byte
 set_reset_idtvec    proto near stdcall index:dword,value:dword

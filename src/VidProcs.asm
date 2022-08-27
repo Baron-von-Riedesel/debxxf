@@ -501,7 +501,7 @@ endif
 ;--- alloc screen buffer for debugger text screen if not there
 ;--- returns C if error
 
-AllocDbgerScreenBuffer proc stdcall
+AllocDbgerScreenBuffer proc
 
         mov eax, pDbgerSaveMem
         and eax, eax
@@ -859,13 +859,33 @@ _viostate endp
 
         @cmdprocend
 
+ife ?WINDOWS
+
+;--- function SCREENSwap()
+;--- get/set variable fSwap
+
+getswap proc c public value:dword
+	cmp al, 1
+	jz @F
+	mov al, fSwap
+	clc
+	ret
+@@:
+	mov al, byte ptr value
+	and al, al
+	setne al
+	pushad
+	invoke SetScreenSwap, eax
+	popad
+	clc
+	ret
+getswap endp
+
 ;--- save debuggee screen in non-windows environments in swap mode.
 ;--- please note: debuggee may have just switched to text mode.
 ;--- but left it inconsistent (fonts not loaded in plane 2, for example)
 ;--- so if debuggee IS in text mode, check if it was in grafics the last
 ;--- time we left!
-
-ife ?WINDOWS
 
 SaveDebuggeeScreen proc
         test fSwap, 1
@@ -1006,7 +1026,7 @@ SwitchToDebuggeeScreen proc stdcall public
         jz @F
         test [__outmode], _VIOOUT
         jz @F
-        call AllocDbgerScreenBuffer                     ; alloc memory for textscreen
+        call AllocDbgerScreenBuffer             ; alloc memory for textscreen
         jc @F
         invoke SaveTextScreen, addr stdcrt, pDbgerSaveMem
 @@:

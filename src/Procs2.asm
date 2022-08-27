@@ -1415,15 +1415,15 @@ pdaddr	dd 0
 
 getpagediraddr proc stdcall uses esi edi
 
-	@ring0call savexregs
-	mov al, byte ptr [rCR0+3]
-	test al, 80h					;paging aktiv?
-	jnz @F
-	@errorout ERR_READING_CR3
+	smsw ax				;in 32-bit code, the full cr0 is copied to eax!
+	and eax, eax		;if paging is active, bit 31 is 1
+	js @F
+	@errorout ERR_PAGING_NOT_ACTIVE
 	stc
 	jmp exit
 @@:
-	mov eax, [rCR3]
+	xor al, al
+	invoke getcr3, 0
 	cmp eax, lastcr3
 	jnz @F
 	mov eax, [pdaddr]
@@ -1455,7 +1455,7 @@ exit:
         
 getpagediraddr endp
 
-;*** pagedir ausgeben ***
+;*** PD cmd/DPD cmd: display page directory
 
 _pagedir proc c pb:PARMBLK
 
@@ -1593,7 +1593,7 @@ exit:
 	ret
 _getptentry endp
 
-;*** PT cmd: display page table
+;*** PT cmd/DP cmd: display page table
 
 _pagetab proc c uses edi pb:PARMBLK
 

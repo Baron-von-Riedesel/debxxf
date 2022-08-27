@@ -492,8 +492,8 @@ BPWrite [address, ...]        set a debug register write watchpoint
 BPReadwrite [address, ...]    set a debug register read/write watchpoint
 CANcel [hTask]                terminate debuggee (<hTask> for Windows only)
 CLS                           clear screen
-CPStat value                  DPMI 0E0x: get/set coprocessor status
 CPU                           display protected register
+CPUID                         display CPUID values
 DA [address]                  display memory in ascii text format
 DB [address, ...]             display memory in byte format
 DD [address, ...]             display memory in dword format
@@ -512,6 +512,7 @@ ENDIF                         close IF or ELSE block
 EPM [exc#]                    DPMI 0202: get DPMI exception vector(s)
 FCall address                 call procedure with a FAR Frame
 FCRM address                  DPMI 0301: call real mode proc with RETF frame
+FPUStat value                 DPMI 0E0x: get/set coprocessor status
 FREEDOS selector              DPMI 0101: free DOS memory
 FREESel selector,[count]      DPMI 0001: free <count=1> LDT selectors
 FREEMem handle                DPMI 0502: free memory block
@@ -1850,7 +1851,7 @@ Comment:  Writes <count> sectors onto <drive> starting with <sector>.
 0005 invalid parameter for 16-Bit-DPMI client
 0006 parameter error
 0007 no module handle available
-0008 can't read CR3 or paging not active
+0008 paging not active
 0009 linear address of pagedir not available
 000A no valid page directory entry for %X
 000B linear address of page dir entry not available
@@ -1958,7 +1959,7 @@ Comment:  Writes <count> sectors onto <drive> starting with <sector>.
 2012 page error exception (rep. from toolhelp)
 2013 ctrl-sysreq pressed (rep. from toolhelp)
 2014 item found at offset %X
-2015 out of segment limits
+2015 beyond segment limits
 2016 function not supported
 2017 no dynamically defined variables
 2019 physical address %X mapped at %X
