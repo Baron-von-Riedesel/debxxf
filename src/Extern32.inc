@@ -21,8 +21,6 @@ externdef a6:ARGDESC
 externdef dwCurPsp:dword
 externdef bpCount:byte
 externdef cLoad:byte
-;externdef rCR0:dword
-;externdef rCR3:dword
 externdef dosvartab:byte
 externdef dosvartabend:byte
 externdef dpmivartab:byte
@@ -226,6 +224,7 @@ getalternateadapter proto near stdcall
 getbaser            proto near stdcall :dword
 _getchar            proto near stdcall
 getcharex           proto near stdcall
+getcr0              proto near c :dword
 getcr3              proto near c :dword
 getcurdir           proto near stdcall
 getdefseg           proto near stdcall :dword

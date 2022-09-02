@@ -1,7 +1,0 @@
-
-OP MODNAME=DEBXXVDD
-OP FUZZYEXPORT
-EXPORT {
-Init
-Dispatch
-}

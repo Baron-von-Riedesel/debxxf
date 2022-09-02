@@ -11,8 +11,4 @@
  DEBXXVDD.DLL must be copied to a directory included in the PATH
  environment variable. AFAIK, for Vista, it has to be copied to the
  Windows system directory.
- 
- License
- 
- DEBXXVDD is Public Domain, written by Japheth.
- 
+

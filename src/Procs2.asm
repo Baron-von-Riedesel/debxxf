@@ -1415,7 +1415,8 @@ pdaddr	dd 0
 
 getpagediraddr proc stdcall uses esi edi
 
-	smsw ax				;in 32-bit code, the full cr0 is copied to eax!
+	xor al,al
+	invoke getcr0, 0
 	and eax, eax		;if paging is active, bit 31 is 1
 	js @F
 	@errorout ERR_PAGING_NOT_ACTIVE

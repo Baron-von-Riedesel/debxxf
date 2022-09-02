@@ -641,27 +641,34 @@ linebuffer db ?KBDBUFSIZ dup (?) ; line buffer
 
 tregs MYREGSTR <>
 
-;--- erweiterte register
+;--- registers to get with SGDT, SIDT, SLDR, STR
 
-rTR		dw 0
+rGDTR	df 0
 rLDT	dw 0
 rIDTR	df 0
-rGDTR	df 0
-rCR0	dd 0
-rCR2	dd 0
-rCR3	dd 0
-rCR4	dd 0
+rTR		dw 0
+
+;--- registers accessible in ring 0 only
+
+;rCR0	dd 0
+;rCR2	dd 0
+;rCR3	dd 0
+;rCR4	dd 0
 rDR0	dd 0
 rDR1	dd 0
 rDR2	dd 0
 rDR3	dd 0
+if ?DR4DR5
 rDR4	dd 0
 rDR5	dd 0
+endif
 rDR6	dd 0
 rDR7	dd 0
+if ?TR3TR5
 rTR3	dd 0
 rTR4	dd 0
 rTR5	dd 0
+endif
 rTR6	dd 0
 rTR7	dd 0
 
@@ -1094,7 +1101,7 @@ symtab label byte
 	@symbol 'GDTLIM',  _RDONLY_+__WORD__, ,rGDTR,,symGDTLIM
 	@symbol 'IDTR',    _RDONLY_+__DWORD__, ,rIDTR+2,,symIDTR
 	@symbol 'IDTLIM',  _RDONLY_+__WORD__, ,rIDTR,,symIDTLIM
-	@symbol 'MSW',     _FNCALL_+_RDONLY_+__WORD__, ,getmsw,,symMSW
+	@symbol 'MSW',     _FNCALL_+_RDONLY_+__DWORD__, ,getmsw,,symMSW
         
 	@symbol 'CR0',	   _FNCALL_+__DWORD__, ,getcr0,,symCR0
 	@symbol 'CR2',	   _FNCALL_+__DWORD__, ,getcr2,,symCR2
@@ -5470,7 +5477,7 @@ getmsw endp
 
 ;--- function CR0()
 
-getcr0 proc c value:dword
+getcr0 proc c public value:dword
 
 	pushad
 	call restoredebuggeefpustate 
@@ -12782,9 +12789,9 @@ if ?SETERRORMODE
 endif
 
 	dec bRC
+	sldt [rLDT]
 	sgdt [rGDTR]
 	sidt [rIDTR]
-	sldt [rLDT]
 
 	dec bRC
 	@tprintf <"get sda parms",lf>

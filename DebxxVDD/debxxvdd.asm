@@ -9,6 +9,13 @@
 	include winbase.inc
 	include vddsvc.inc
 
+ifdef @pe_file_flags
+;--- if jwasm's -pe option is used:
+;--- tell the assembler to create a dll and not to remove reloc info.
+@pe_file_flags = @pe_file_flags and not IMAGE_FILE_RELOCS_STRIPPED
+@pe_file_flags = @pe_file_flags or      IMAGE_FILE_DLL
+endif
+
 ;--- CStr() define a string in .CONST
 
 CStr macro string:req
@@ -25,14 +32,10 @@ ifdef _DEBUG
 endif
 	endm
 
-ifdef _DEBUG
-wsprintfA proto c :ptr BYTE, :ptr BYTE, :VARARG
-endif
-
 @DbgOut macro xx:REQ, parms:VARARG
 ifdef _DEBUG
 	pushad
-	invoke wsprintfA, addr szText, CStr(<xx>), parms
+	invoke sprintf, addr szText, CStr(<xx>), parms
 	invoke OutputDebugStringA, addr szText
 	popad
 endif
@@ -61,6 +64,10 @@ endif
 
 	.code
 
+ifdef _DEBUG
+	include sprintf.inc
+endif
+
 if 0
 except_handler proc c uses ebx esi edi pReport:ptr EXCEPTION_RECORD,\
 						pFrame:ptr FRAME,\
@@ -84,7 +91,7 @@ endif
 
 ;--- Init
 
-Init proc stdcall
+Init proc stdcall export
 
 	@DbgOutC <"DEBXXVDD.Init enter",13,10>
 
@@ -229,7 +236,7 @@ accessdrive endp
 ;--- cx=06: direct disk access, 32bit pointers
 ;--- cx=07: write string in ds:esi to debug terminal
 
-Dispatch proc stdcall uses ebx edi
+Dispatch proc stdcall export uses ebx edi
 
 local	mbi:MEMORY_BASIC_INFORMATION
 

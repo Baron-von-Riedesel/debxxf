@@ -33,269 +33,380 @@ MEMORY_BASIC_INFORMATION STRUCT
   Type_             DWORD      ?
 MEMORY_BASIC_INFORMATION ENDS
 
-		.DATA
+FILE_ATTRIBUTE_READONLY             EQU 00000001h
+FILE_ATTRIBUTE_HIDDEN               EQU 00000002h
+FILE_ATTRIBUTE_SYSTEM               EQU 00000004h
+FILE_ATTRIBUTE_DIRECTORY            EQU 00000010h
+FILE_ATTRIBUTE_ARCHIVE              EQU 00000020h
+FILE_ATTRIBUTE_ENCRYPTED            EQU 00000040h
+FILE_ATTRIBUTE_NORMAL               EQU 00000080h
+FILE_ATTRIBUTE_TEMPORARY            EQU 00000100h
 
-func@0  typedef proto stdcall
-func@4  typedef proto stdcall a1:dword
-func@8  typedef proto stdcall a1:dword,a2:dword
-func@12 typedef proto stdcall a1:dword,a2:dword,a3:dword
-func@16 typedef proto stdcall a1:dword,a2:dword,a3:dword,a4:dword
-func@20 typedef proto stdcall a1:dword,a2:dword,a3:dword,a4:dword,a5:dword
-func@24 typedef proto stdcall a1:dword,a2:dword,a3:dword,a4:dword,a5:dword,a6:dword
-func@28 typedef proto stdcall a1:dword,a2:dword,a3:dword,a4:dword,a5:dword,a6:dword,a7:dword
-func@32 typedef proto stdcall a1:dword,a2:dword,a3:dword,a4:dword,a5:dword,a6:dword,a7:dword,a8:dword
-func@36 typedef proto stdcall a1:dword,a2:dword,a3:dword,a4:dword,a5:dword,a6:dword,a7:dword,a8:dword,a9:dword
-func@40 typedef proto stdcall a1:dword,a2:dword,a3:dword,a4:dword,a5:dword,a6:dword,a7:dword,a8:dword,a9:dword,a10:dword
-func@44 typedef proto stdcall a1:dword,a2:dword,a3:dword,a4:dword,a5:dword,a6:dword,a7:dword,a8:dword,a9:dword,a10:dword,a11:dword
-func@48 typedef proto stdcall a1:dword,a2:dword,a3:dword,a4:dword,a5:dword,a6:dword,a7:dword,a8:dword,a9:dword,a10:dword,a11:dword,a12:dword
-cfunc@8v typedef proto c a1:dword,a2:dword,a3:vararg
+GENERIC_READ      equ 80000000h
+GENERIC_WRITE     equ 40000000h
 
-pfunc@0  typedef ptr func@0
-pfunc@4  typedef ptr func@4
-pfunc@8  typedef ptr func@8
-pfunc@12 typedef ptr func@12
-pfunc@16 typedef ptr func@16
-pfunc@20 typedef ptr func@20
-pfunc@24 typedef ptr func@24
-pfunc@28 typedef ptr func@28
-pfunc@32 typedef ptr func@32
-pfunc@36 typedef ptr func@36
-pfunc@40 typedef ptr func@40
-pfunc@44 typedef ptr func@44
-pfunc@48 typedef ptr func@48
-cpfunc@8v typedef ptr cfunc@8v
-
-ifdef __POASM__
- @Kernel macro name_, parms
- externdef stdcall _imp__ # name_ # @ # parms :pfunc@ # parms
- name_ textequ _imp__ # name_ # @ # parms
- endm
-else
- @Kernel macro name_, parms
- externdef stdcall _imp__&name_&@&parms :pfunc@&parms
- name_ equ <_imp__&name_&@&parms>
- endm
-endif 
-
-
-@Kernel AddAtomA, 4
-@Kernel Beep, 8
-@Kernel CancelWaitableTimer, 4
-@Kernel CloseHandle, 4
-@Kernel CopyFileA, 12
-@Kernel CompareStringA, 24
-@Kernel CompareStringW, 24
-@Kernel CreateDirectoryA, 8
-@Kernel CreateEventA, 16
-@Kernel CreateFileA, 28
-@Kernel CreateFileMappingA, 24		
-@Kernel CreateMutexA, 12				
-@Kernel CreateMutexW, 12				
-@Kernel CreateProcessA, 40			
-@Kernel CreateSemaphoreA, 16			
-@Kernel CreateThread, 24				
-@Kernel CreateWaitableTimerA, 12		
-@Kernel DebugBreak, 0				
-@Kernel DeleteAtom, 4				
-@Kernel DeleteCriticalSection, 4    
-@Kernel DeleteFileA, 4				
-@Kernel DeviceIoControl, 32 			
-@Kernel DisableThreadLibraryCalls, 4
-@Kernel DosDateTimeToFileTime, 12 	
-@Kernel DuplicateHandle, 28 			
-@Kernel EnterCriticalSection, 4     
-@Kernel EnumResourceLanguagesA, 20	
-@Kernel EnumResourceNamesA, 16		
-@Kernel EnumResourceTypesA, 12		
-@Kernel ExitProcess, 4				
-@Kernel ExitThread, 4				
-@Kernel ExpandEnvironmentStringsA, 12
-@Kernel FatalAppExitA, 8			
-@Kernel FileTimeToDosDateTime, 12 	
-@Kernel FileTimeToSystemTime, 8     
-@Kernel FindAtomA, 4				
-@Kernel FindClose, 4				
-@Kernel FindFirstFileA, 8			
-@Kernel FindNextFileA, 8			
-@Kernel FindResourceA, 12			
-@Kernel FindResourceExA, 16			
-@Kernel FindResourceW, 12			
-@Kernel FlushFileBuffers, 4 		
-@Kernel FlushViewOfFile, 8			
-@Kernel FreeEnvironmentStringsA, 4	
-@Kernel FreeEnvironmentStringsW, 4  
-@Kernel FreeLibrary, 4              
-@Kernel GetACP, 0					
-@Kernel GetAtomNameA, 12		   		
-@Kernel GetCommandLineA, 0			
-@Kernel GetComputerNameA, 8			
-@Kernel GetCurrentDirectoryA, 8 	
-@Kernel GetCurrentProcess, 0 		
-@Kernel GetCurrentProcessId, 0 		
-@Kernel GetCurrentThread, 0 			
-@Kernel GetCurrentThreadId, 0 		
-@Kernel GetDateFormatA, 20			
-@Kernel GetDiskFreeSpaceA, 20		
-@Kernel GetDriveTypeA, 4			
-@Kernel GetEnvironmentStrings, 0		
-@Kernel GetEnvironmentStringsA, 0	
-@Kernel GetEnvironmentStringsW, 0   	
-@Kernel GetEnvironmentVariableA, 12 	
-@Kernel GetExitCodeThread, 8		
-@Kernel GetFileAttributesA, 4       
-@Kernel GetFileAttributesExA, 12    	
-@Kernel GetFileSize, 8				
-@Kernel GetFileTime, 16				
-@Kernel GetFileType, 4				
-@Kernel GetFullPathNameA, 16			
-@Kernel GetLastError, 0 				
-@Kernel GetLocalTime, 4 			
-@Kernel GetLongPathNameA, 12			
-@Kernel GetModuleFileNameA, 12		
-@Kernel GetModuleHandleA, 4 		
-@Kernel GetNumberOfConsoleMouseButtons, 4
-@Kernel GetOEMCP, 0					
-@Kernel GetPrivateProfileStringA, 24	
-@Kernel GetProcAddress, 8			
-@Kernel GetProcessHeap, 0			
-@Kernel GetShortPathNameA, 12		
-@Kernel GetStdHandle, 4 			
-@Kernel GetSystemTime, 4			
-@Kernel GetSystemTimeAsFileTime, 4	
-@Kernel GetTempFileNameA, 16			
-@Kernel GetTempPathA, 8             
-@Kernel GetThreadPriority, 4		
-@Kernel GetTickCount, 0 				
-@Kernel GetUserDefaultLCID, 0		
-@Kernel GetVersion, 0				
-@Kernel GetVersionExA, 4			
-@Kernel GlobalAlloc, 8				
-@Kernel GlobalFree, 4				
-@Kernel GlobalMemoryStatus, 4		
-@Kernel GlobalReAlloc, 12			
-@Kernel HeapAlloc, 12				
-@Kernel HeapCreate, 12				
-@Kernel HeapDestroy, 4				
-@Kernel HeapFree, 12					
-@Kernel HeapReAlloc, 16				
-@Kernel HeapSize, 12             	
-@Kernel HeapValidate, 12				
-@Kernel HeapWalk, 8				 	
-@Kernel InitializeCriticalSection, 4
-@Kernel InterlockedDecrement, 4 	
-@Kernel InterlockedIncrement, 4 	
-@Kernel IsDebuggerPresent, 0	 		
-@Kernel LeaveCriticalSection, 4     
-@Kernel LoadLibraryA, 4				
-@Kernel LoadResource, 8				
-@Kernel LocalAlloc, 8				
-@Kernel LocalFileTimeToFileTime, 8  
-@Kernel LocalFree, 4				
-@Kernel LocalHandle, 4				
-@Kernel LocalReAlloc, 12				
-@Kernel LocalSize, 4				
-@Kernel MapViewOfFile, 20			
-@Kernel MapViewOfFileEx, 24			
-@Kernel MoveFileA, 8				
-@Kernel MultiByteToWideChar, 24		
-@Kernel OpenFile, 12					
-@Kernel OpenFileMappingA, 12			
-@Kernel OpenMutexA, 12  				
-@Kernel OpenProcess, 12 				
-@Kernel OpenSemaphoreA, 12  			
-@Kernel OutputDebugStringA, 4
-@Kernel PulseEvent, 4 			   	
-@Kernel QueryPerformanceCounter, 4 	
-@Kernel QueryPerformanceFrequency, 4
-@Kernel QueueUserAPC, 12		   		
-@Kernel RaiseException, 16			
-@Kernel ReadFile, 20					
-@Kernel ReleaseMutex, 4				
-@Kernel ReleaseSemaphore, 12			
-@Kernel RemoveDirectoryA, 4 		
-@Kernel ResetEvent, 4   			
-@Kernel ResumeThread, 4 			
-@Kernel RtlFillMemory, 12			
-@Kernel RtlMoveMemory, 12			
-@Kernel RtlUnwind, 16				
-@Kernel RtlZeroMemory, 8			
-@Kernel SearchPathA, 24				
-@Kernel SetCurrentDirectoryA, 4 	
-@Kernel SetEnvironmentVariableA, 8  
-@Kernel SetErrorMode, 4 			
-@Kernel SetEvent, 4 			   	
-@Kernel SetFilePointer, 16			
-@Kernel SetFileTime, 16				
-@Kernel SetHandleCount, 4 			
-@Kernel SetLastError, 4 			
-@Kernel SetPriorityClass, 8 		
-@Kernel SetStdHandle, 8				
-@Kernel SetThreadPriority, 8		
-@Kernel SetUnhandledExceptionFilter, 4
-@Kernel SetWaitableTimer, 24			
-@Kernel SizeofResource, 8    		
-@Kernel Sleep, 4					
-@Kernel SuspendThread, 4			
-@Kernel SwitchToThread, 0            
-@Kernel SystemTimeToFileTime, 8     
-@Kernel TerminateProcess, 8 		
-@Kernel TerminateThread, 8			
-@Kernel TlsAlloc, 0                  
-@Kernel TlsFree, 4                  
-@Kernel TlsGetValue, 4              
-@Kernel TlsSetValue, 8				
-@Kernel UnmapViewOfFile, 4			
-@Kernel VirtualAlloc, 16				
-@Kernel VirtualFree, 12 				
-@Kernel VirtualLock, 8	 			
-@Kernel VirtualProtect, 16			
-@Kernel VirtualQuery, 12				
-@Kernel WaitForSingleObject, 8		
-@Kernel WaitForMultipleObjects, 16	
-@Kernel WideCharToMultiByte, 32		
-@Kernel WinExec, 8            		
-@Kernel WriteFile, 20				
-@Kernel WritePrivateProfileStringA, 16
-@Kernel _lcreat, 8					
-@Kernel _llseek, 12 					
-@Kernel _lopen, 8					
-@Kernel _lclose, 4					
-@Kernel _lread, 12					
-@Kernel _lwrite, 12 					
-@Kernel lstrcat, 8					
-@Kernel lstrcatA, 8 				
-@Kernel lstrcmp, 8					
-@Kernel lstrcmpA, 8 				
-@Kernel lstrcmpi, 8					
-@Kernel lstrcmpiA, 8 				
-@Kernel lstrcpy, 8					
-@Kernel lstrcpyA, 8 				
-@Kernel lstrcpyn, 12					
-@Kernel lstrcpynA, 12 				
-@Kernel lstrcpynW, 12 				
-@Kernel lstrlen, 4					
-@Kernel lstrlenA, 4 				
-@Kernel lstrlenW, 4
-
-
-FILE_ATTRIBUTE_READONLY				EQU	00000001h
-FILE_ATTRIBUTE_HIDDEN				EQU	00000002h
-FILE_ATTRIBUTE_SYSTEM				EQU	00000004h
-FILE_ATTRIBUTE_DIRECTORY			EQU	00000010h
-FILE_ATTRIBUTE_ARCHIVE				EQU	00000020h
-FILE_ATTRIBUTE_ENCRYPTED			EQU	00000040h
-FILE_ATTRIBUTE_NORMAL				EQU	00000080h
-FILE_ATTRIBUTE_TEMPORARY			EQU	00000100h
-
-GENERIC_READ	  equ 80000000h
-GENERIC_WRITE	  equ 40000000h
-
-CREATE_NEW		  equ 1  ; fails if file already exists
-CREATE_ALWAYS	  equ 2  ; if file exists, it will be overwritten
-OPEN_EXISTING	  equ 3  ; fails if file doesn't exist
-OPEN_ALWAYS 	  equ 4  ; creates file if it doesn't exist
+CREATE_NEW        equ 1  ; fails if file already exists
+CREATE_ALWAYS     equ 2  ; if file exists, it will be overwritten
+OPEN_EXISTING     equ 3  ; fails if file doesn't exist
+OPEN_ALWAYS       equ 4  ; creates file if it doesn't exist
 TRUNCATE_EXISTING equ 5  ; fails if file doesn't exist. will be truncated
 
-FILE_SHARE_READ		EQU	00000001h
-FILE_SHARE_WRITE	EQU	00000002h
-FILE_SHARE_DELETE	EQU	00000004h
+FILE_SHARE_READ     EQU 00000001h
+FILE_SHARE_WRITE    EQU 00000002h
+FILE_SHARE_DELETE   EQU 00000004h
+
+IMAGE_FILE_RELOCS_STRIPPED  EQU 0001h
+IMAGE_FILE_DLL              EQU 2000h
+
+INVALID_HANDLE_VALUE equ -1
+
+STD_INPUT_HANDLE  equ -10
+STD_OUTPUT_HANDLE equ -11
+STD_ERROR_HANDLE  equ -12
+
+INVALID_SET_FILE_POINTER equ -1
+
+DRIVE_CDROM equ 5
+
+NO_ERROR equ 0
+
+CTL_CODE macro DeviceType,Function,Method,Access
+    exitm <( DeviceType  shl  16 )  or  ( Access  shl  14 )  or  ( Function  shl  2 )  or  Method>
+    endm
+
+FILE_DEVICE_CD_ROM EQU 00000002h
+FILE_DEVICE_DISK   EQU 00000007h
+
+METHOD_BUFFERED   EQU 0
+METHOD_OUT_DIRECT EQU 2
+
+FILE_ANY_ACCESS EQU 0
+FILE_READ_ACCESS EQU 1
+
+;--- CD Track Mode
+YELLOWMODE2 EQU 0
+XAFORM2     EQU 1
+CDDA        EQU 2
+
+IOCTL_DISK_BASE EQU FILE_DEVICE_DISK
+IOCTL_CDROM_BASE EQU FILE_DEVICE_CD_ROM
+
+IOCTL_DISK_GET_DRIVE_GEOMETRY EQU <CTL_CODE ( IOCTL_DISK_BASE , 0000h , METHOD_BUFFERED , FILE_ANY_ACCESS )>
+IOCTL_DISK_GET_DRIVE_GEOMETRY_EX EQU <CTL_CODE ( IOCTL_DISK_BASE , 0028h , METHOD_BUFFERED , FILE_ANY_ACCESS )>
+IOCTL_CDROM_RAW_READ EQU <CTL_CODE ( IOCTL_CDROM_BASE, 000Fh, METHOD_OUT_DIRECT, FILE_READ_ACCESS )>
+
+DISK_GEOMETRY struct
+Cylinders   dq ?
+MediaType   dd ?
+TracksPerCylinder   DWORD ?
+SectorsPerTrack DWORD ?
+BytesPerSector  DWORD ?
+DISK_GEOMETRY ends
+
+DISK_PARTITION_INFO struct
+SizeOfPartitionInfo DWORD ?
+PartitionStyle      DWORD ?
+union 
+struct Mbr
+Signature           DWORD ?
+CheckSum            DWORD ?
+ends
+struct Gpt
+DiskId              db 16 dup (?)
+ends
+ends
+DISK_PARTITION_INFO ends
+
+DISK_INT13_INFO struct 4
+DriveSelect     WORD ?
+MaxCylinders    DWORD ?
+SectorsPerTrack WORD ?
+MaxHeads        WORD ?
+NumberDrives    WORD ?
+DISK_INT13_INFO ends
+
+DISK_EX_INT13_INFO struct 8
+ExBufferSize    WORD ?      ;+0
+ExFlags         WORD ?      ;+2
+ExCylinders     DWORD ?     ;+4
+ExHeads         DWORD ?
+ExSectorsPerTrack DWORD ?   ;+12
+ExSectorsPerDrive QWORD ?   ;+16
+ExSectorSize    WORD ?      ;+24
+ExReserved      WORD ?
+DISK_EX_INT13_INFO ends
+
+DISK_DETECTION_INFO struct
+SizeOfDetectInfo    DWORD ?         ;+0 
+DetectionType       DWORD ?         ;+4
+union
+struct
+Int13       DISK_INT13_INFO <>      ;+8, size 16
+ExInt13     DISK_EX_INT13_INFO <>   ;+24, size 32
+ends
+ends
+DISK_DETECTION_INFO ends
+
+DISK_GEOMETRY_EX struct 8
+Geometry    DISK_GEOMETRY <>
+DiskSize    dq ?
+            DISK_PARTITION_INFO <>
+            DISK_DETECTION_INFO <>
+DISK_GEOMETRY_EX ends
+
+LMEM_FIXED		equ 00h
+LMEM_MOVEABLE	equ 02h
+LMEM_ZEROINIT	equ 40h
+LMEM_MODIFY		equ 80h
+
+GMEM_FIXED		equ 00h
+GMEM_MOVEABLE	equ 02h
+GMEM_ZEROINIT	equ 40h
+GMEM_MODIFY		equ 80h
+
+
+MEMORYSTATUS struct
+dwLength		 DWORD ?
+dwMemoryLoad	 DWORD ?
+dwTotalPhys 	 DWORD ?
+dwAvailPhys 	 DWORD ?
+dwTotalPageFile  DWORD ?
+dwAvailPageFile  DWORD ?
+dwTotalVirtual	 DWORD ?
+dwAvailVirtual	 DWORD ?
+MEMORYSTATUS ends
+
+
+ifdef __JWASM__
+    option dllimport:<kernel32.dll>
+endif
+
+AddAtomA                    proto stdcall :ptr byte
+Beep                        proto stdcall :dword, :dword
+CancelWaitableTimer         proto stdcall :dword
+CloseHandle                 proto stdcall :dword
+CompareStringA              proto stdcall :DWORD, :DWORD, :ptr BYTE, :DWORD, :ptr BYTE, :DWORD
+CompareStringW              proto stdcall :DWORD, :DWORD, :ptr WORD, :DWORD, :ptr WORD, :DWORD
+CopyFileA                   proto stdcall :ptr BYTE, :ptr BYTE, :DWORD
+CreateDirectoryA            proto stdcall :ptr BYTE, :dword
+CreateDirectoryExA          proto stdcall :ptr BYTE, :ptr BYTE, :ptr
+CreateDirectoryW            proto stdcall :ptr WORD, :dword
+CreateEventA                proto stdcall :dword, :dword, :dword, :ptr BYTE
+CreateFileA                 proto stdcall :dword, :dword, :dword, :dword, :dword, :dword, :dword
+CreateFileMappingA          proto stdcall :dword, :dword, :dword, :dword, :dword, :ptr BYTE
+CreateMutexA                proto stdcall :dword, :dword, :ptr BYTE
+CreateMutexW                proto stdcall :dword, :dword, :ptr WORD
+CreateProcessA              proto stdcall :ptr BYTE, :ptr BYTE, :dword, :dword, :dword, :dword, :ptr , :ptr BYTE, :ptr STARTUPINFOA, :ptr PROCESS_INFORMATION
+CreateSemaphoreA            proto stdcall :dword, :dword, :dword, :dword
+CreateThread                proto stdcall :dword, :dword, :dword, :dword, :dword, :dword
+CreateWaitableTimerA        proto stdcall :dword, :dword, :ptr BYTE
+DebugBreak                  proto stdcall
+DeleteAtom                  proto stdcall :dword
+DeleteCriticalSection       proto stdcall :ptr CRITICAL_SECTION
+DeleteFileA                 proto stdcall :dword
+DeviceIoControl             proto stdcall :dword, :dword, :ptr, :dword, :ptr, :dword, :ptr dword, :dword
+DisableThreadLibraryCalls   proto stdcall :dword
+DosDateTimeToFileTime       proto stdcall :DWORD, :DWORD, :ptr FILETIME
+DuplicateHandle             proto stdcall :dword, :dword, :dword, :dword, :dword, :dword, :dword
+EnterCriticalSection        proto stdcall :ptr CRITICAL_SECTION
+EnumResourceLanguagesA      proto stdcall :dword, :ptr BYTE, :ptr BYTE, :dword, :dword
+EnumResourceNamesA          proto stdcall :dword, :ptr BYTE, :dword, :dword
+EnumResourceTypesA          proto stdcall :dword, :dword, :dword
+ExitProcess                 proto stdcall :dword
+ExitThread                  proto stdcall :dword
+ExpandEnvironmentStringsA   proto stdcall :ptr BYTE, :ptr BYTE, :dword
+FatalAppExitA               proto stdcall :dword, :ptr BYTE
+FileTimeToDosDateTime       proto stdcall :ptr FILETIME, :ptr WORD, :ptr WORD
+FileTimeToSystemTime        proto stdcall :ptr FILETIME, :ptr SYSTEMTIME
+FindAtomA                   proto stdcall :ptr byte
+FindClose                   proto stdcall :dword
+FindFirstFileA              proto stdcall :ptr BYTE, :ptr WIN32_FIND_DATAA
+FindFirstFileW              proto stdcall :ptr WORD, :ptr WIN32_FIND_DATAW
+FindNextFileA               proto stdcall :dword, :ptr WIN32_FIND_DATAA
+FindNextFileW               proto stdcall :dword, :ptr WIN32_FIND_DATAW
+FindResourceA               proto stdcall :dword, :dword, :dword
+FindResourceExA             proto stdcall :dword, :dword, :dword, :dword
+FindResourceW               proto stdcall :dword, :ptr WORD, :ptr word
+FlushFileBuffers            proto stdcall :dword
+FlushViewOfFile             proto stdcall :ptr, :dword
+FormatMessageA              proto stdcall :dword, :ptr, :DWORD, :DWORD, :ptr BYTE, :DWORD, :ptr
+FreeEnvironmentStringsA     proto stdcall :dword
+FreeEnvironmentStringsW     proto stdcall :dword
+FreeLibrary                 proto stdcall :dword
+GetACP                      proto stdcall
+GetAtomNameA                proto stdcall :dword, :ptr byte, :dword
+GetCommandLineA             proto stdcall
+GetComputerNameA            proto stdcall :ptr BYTE, :ptr DWORD
+GetCurrentDirectoryA        proto stdcall :dword, :ptr byte
+GetCurrentProcess           proto stdcall
+GetCurrentProcessId         proto stdcall
+GetCurrentThread            proto stdcall
+GetCurrentThreadId          proto stdcall
+GetDateFormatA              proto stdcall lcid:DWORD, dwFlags:DWORD, pDate:ptr SYSTEMTIME,lpFormat:ptr BYTE, lpDateStr:ptr BYTE, cchDate:DWORD
+GetDiskFreeSpaceA           proto stdcall :ptr BYTE, :ptr dword, :ptr dword, :ptr dword, :ptr dword
+GetDiskFreeSpaceW           proto stdcall :ptr WORD, :ptr dword, :ptr dword, :ptr dword, :ptr dword
+GetDriveTypeA               proto stdcall :ptr BYTE
+GetDriveTypeW               proto stdcall :ptr WORD
+GetEnvironmentStrings       proto stdcall
+GetEnvironmentStringsA      proto stdcall
+GetEnvironmentStringsW      proto stdcall
+GetEnvironmentVariableA     proto stdcall :ptr BYTE, :ptr BYTE, :dword
+GetExitCodeThread           proto stdcall :dword, :ptr dword
+GetFileAttributesA          proto stdcall :ptr byte
+GetFileAttributesExA        proto stdcall :ptr BYTE, :DWORD, :ptr WIN32_FILE_ATTRIBUTE_DATA
+GetFileSize                 proto stdcall :dword, :ptr dword
+GetFileTime                 proto stdcall :dword, :ptr FILETIME, :ptr FILETIME, :ptr FILETIME
+GetFileType                 proto stdcall :dword
+GetFullPathNameA            proto stdcall :ptr BYTE, :DWORD, :ptr BYTE, :ptr ptr BYTE
+GetFullPathNameW            proto stdcall :ptr WORD, :DWORD, :ptr WORD, :ptr ptr WORD
+GetLastError                proto stdcall
+GetLocaleInfoA              proto stdcall :dword, :dword, :ptr BYTE, :dword
+GetLocalTime                proto stdcall :ptr SYSTEMTIME
+GetLongPathNameA            proto stdcall :ptr byte, :ptr byte, :DWORD
+GetModuleFileNameA          proto stdcall :dword, :ptr byte, :dword
+GetModuleHandleA            proto stdcall :ptr BYTE
+GetOEMCP                    proto stdcall
+GetPrivateProfileStringA    proto stdcall :ptr BYTE, :ptr BYTE, :ptr BYTE, :ptr BYTE, :DWORD, :ptr BYTE
+GetProcAddress              proto stdcall :DWORD, :DWORD
+GetProcessHeap              proto stdcall
+GetShortPathNameA           proto stdcall :ptr byte, :ptr byte, :DWORD
+GetStartupInfoA             proto stdcall :ptr STARTUPINFOA
+GetStdHandle                proto stdcall :dword
+GetSystemDirectoryA         proto stdcall :ptr byte, :DWORD
+GetSystemTime               proto stdcall :ptr SYSTEMTIME
+GetSystemTimeAsFileTime     proto stdcall :ptr FILETIME
+GetTempFileNameA            proto stdcall :ptr BYTE, :ptr BYTE, :DWORD, :ptr BYTE
+GetTempPathA                proto stdcall :DWORD, :ptr BYTE
+GetTickCount                proto stdcall
+GetUserDefaultLCID          proto stdcall
+GetVersion                  proto stdcall
+GetVersionExA               proto stdcall :ptr OSVERSIONINFO
+GlobalAddAtomA              proto stdcall :ptr BYTE
+GlobalAlloc                 proto stdcall :dword, :dword
+GlobalFree                  proto stdcall :dword
+GlobalGetAtomNameA          proto stdcall :dword, :ptr BYTE, :dword
+GlobalMemoryStatus          proto stdcall :ptr MEMORYSTATUS
+GlobalSize                  proto stdcall :dword
+HeapAlloc                   proto stdcall :dword, :dword, :dword
+HeapCreate                  proto stdcall :dword, :dword, :dword
+HeapDestroy                 proto stdcall :dword
+HeapFree                    proto stdcall :dword, :dword, :dword
+HeapReAlloc                 proto stdcall :dword, :dword, :dword, :dword
+HeapSize                    proto stdcall :dword, :dword, :dword
+HeapValidate                proto stdcall :dword, :dword, :dword
+HeapWalk                    proto stdcall :dword, :ptr PROCESS_HEAP_ENTRY
+InitializeCriticalSection   proto stdcall :ptr CRITICAL_SECTION
+InterlockedDecrement        proto stdcall :dword
+InterlockedExchange         proto stdcall :ptr DWORD, :DWORD
+InterlockedIncrement        proto stdcall :dword
+IsBadCodePtr                proto stdcall :DWORD
+IsBadReadPtr                proto stdcall :DWORD, :DWORD
+IsBadWritePtr               proto stdcall :DWORD, :DWORD
+IsDebuggerPresent           proto stdcall
+IsProcessorFeaturePresent   proto stdcall :dword
+LeaveCriticalSection        proto stdcall :ptr CRITICAL_SECTION
+LoadLibraryA                proto stdcall :ptr BYTE
+LoadLibraryExA              proto stdcall :ptr BYTE, :DWORD, :DWORD
+LoadResource                proto stdcall :dword, :dword
+LocalAlloc                  proto stdcall :dword, :dword
+LocalFileTimeToFileTime     proto stdcall :ptr FILETIME, :ptr FILETIME
+LocalFree                   proto stdcall :dword
+MapViewOfFile               proto stdcall :dword, :dword, :dword, :dword, :dword
+MapViewOfFileEx             proto stdcall :dword, :dword, :dword, :dword, :dword, :ptr
+MoveFileA                   proto stdcall :ptr BYTE, :ptr BYTE
+MoveFileExA                 proto stdcall :ptr BYTE, :ptr BYTE, :dword
+MultiByteToWideChar         proto stdcall :DWORD, :DWORD, :ptr BYTE, :DWORD, :ptr WORD, :DWORD
+OpenEventA                  proto stdcall :dword, :dword, :ptr BYTE
+OpenFile                    proto stdcall :ptr byte, :ptr OFSTRUCT, :dword
+OpenFileMappingA            proto stdcall :dword, :dword, :ptr BYTE
+OpenMutexA                  proto stdcall :dword, :dword, :dword
+OpenProcess                 proto stdcall :dword, :dword, :dword
+OpenSemaphoreA              proto stdcall :dword, :dword, :dword
+OutputDebugStringA          proto stdcall :ptr BYTE
+PulseEvent                  proto stdcall :dword
+QueueUserAPC                proto stdcall :dword, :dword, :dword
+RaiseException              proto stdcall :DWORD, :DWORD, :DWORD, :ptr
+ReadFile                    proto stdcall :dword, :dword, :dword, :ptr dword, :ptr OVERLAPPED
+ReleaseMutex                proto stdcall :dword
+ReleaseSemaphore            proto stdcall :dword, :dword, :dword
+RemoveDirectoryA            proto stdcall :ptr BYTE
+RemoveDirectoryW            proto stdcall :ptr WORD
+ResetEvent                  proto stdcall :dword
+ResumeThread                proto stdcall :dword
+RtlFillMemory               proto stdcall :ptr BYTE, :DWORD, :dword
+RtlMoveMemory               proto stdcall :ptr BYTE, :ptr BYTE, :dword
+RtlUnwind                   proto stdcall :ptr EXCEPTION_REGISTRATION, :dword, :ptr EXCEPTION_RECORD, :dword
+RtlZeroMemory               proto stdcall :ptr BYTE, :dword
+SearchPathA                 proto stdcall :ptr BYTE, :ptr BYTE, :ptr BYTE, :DWORD, :ptr BYTE, :ptr ptr BYTE
+SetCurrentDirectoryA        proto stdcall :ptr BYTE
+SetCurrentDirectoryW        proto stdcall :ptr WORD
+SetEndOfFile                proto stdcall :dword
+SetEnvironmentVariableA     proto stdcall :ptr BYTE, :ptr BYTE
+SetErrorMode                proto stdcall :dword
+SetEvent                    proto stdcall :dword
+SetFileAttributesA          proto stdcall :ptr byte, :dword
+SetFilePointer              proto stdcall :dword, :dword, :dword, :dword
+SetFilePointerEx            proto stdcall :dword, :qword, :ptr QWORD, :dword
+SetFileTime                 proto stdcall :dword, :ptr FILETIME, :ptr FILETIME, :ptr FILETIME
+SetHandleCount              proto stdcall :dword
+SetLastError                proto stdcall :dword
+SetPriorityClass            proto stdcall :dword, :dword
+SetStdHandle                proto stdcall :dword, :dword
+SetThreadPriority           proto stdcall :dword, :dword
+SetUnhandledExceptionFilter proto stdcall :ptr
+SetWaitableTimer            proto stdcall :dword, :ptr QWORD, :dword, :dword, :dword, :dword
+SizeofResource              proto stdcall :dword, :dword
+Sleep                       proto stdcall :dword
+SuspendThread               proto stdcall :dword
+SwitchToThread              proto stdcall
+SystemTimeToFileTime        proto stdcall :ptr SYSTEMTIME, :ptr FILETIME
+TerminateProcess            proto stdcall :dword, :dword
+TerminateThread             proto stdcall :dword, :dword
+TlsAlloc                    proto stdcall
+TlsFree                     proto stdcall :dword
+TlsGetValue                 proto stdcall :dword
+TlsSetValue                 proto stdcall :dword, :dword
+UnmapViewOfFile             proto stdcall :ptr
+VirtualAlloc                proto stdcall :dword, :dword, :dword, :dword
+VirtualFree                 proto stdcall :dword, :dword, :dword
+VirtualLock                 proto stdcall :dword, :dword
+VirtualProtect              proto stdcall :dword, :dword, :dword, :dword
+VirtualQuery                proto stdcall :dword, :ptr MEMORY_BASIC_INFORMATION, :dword
+WaitForMultipleObjects      proto stdcall :dword, :ptr dword, :dword, :dword
+WaitForSingleObject         proto stdcall :dword, :dword
+WideCharToMultiByte         proto stdcall :DWORD, :DWORD, :ptr WORD, :DWORD, :ptr BYTE, :DWORD, :DWORD, :DWORD
+WinExec                     proto stdcall :ptr BYTE, :DWORD
+WriteFile                   proto stdcall :dword, :dword, :dword, :ptr dword, :ptr OVERLAPPED
+WritePrivateProfileStringA  proto stdcall lpAppName:ptr BYTE, lpKeyName:ptr BYTE, lpString:ptr BYTE, lpFileName:ptr BYTE
+_lclose                     proto stdcall :dword
+_lcreat                     proto stdcall :dword, :dword
+_llseek                     proto stdcall :dword, :dword, :dword
+_lopen                      proto stdcall :dword, :dword
+_lread                      proto stdcall :dword, :dword, :dword
+_lwrite                     proto stdcall :dword, :dword, :dword
+lstrcat                     proto stdcall :ptr BYTE, :ptr BYTE
+lstrcatA                    proto stdcall :ptr BYTE, :ptr BYTE
+lstrcatW                    proto stdcall :ptr WORD, :ptr WORD
+lstrcmp                     proto stdcall :ptr BYTE, :ptr BYTE
+lstrcmpA                    proto stdcall :ptr BYTE, :ptr BYTE
+lstrcmpi                    proto stdcall :ptr BYTE, :ptr BYTE
+lstrcmpiA                   proto stdcall :ptr BYTE, :ptr BYTE
+lstrcpy                     proto stdcall :ptr BYTE, :ptr BYTE
+lstrcpyA                    proto stdcall :ptr BYTE, :ptr BYTE
+lstrcpyn                    proto stdcall :ptr BYTE, :ptr BYTE, :DWORD
+lstrcpynA                   proto stdcall :ptr BYTE, :ptr BYTE, :DWORD
+lstrcpynW                   proto stdcall :ptr WORD, :ptr WORD, :DWORD
+lstrlen                     proto stdcall :ptr BYTE
+lstrlenA                    proto stdcall :ptr BYTE
+lstrlenW                    proto stdcall :ptr WORD
+
+GetNumberOfConsoleMouseButtons proto stdcall :ptr DWORD
+
+ifdef __JWASM__
+    option dllimport:none
+endif
+
+ZeroMemory  textequ <RtlZeroMemory>
+FillMemory  textequ <RtlFillMemory>
+CopyMemory  textequ <RtlMoveMemory>
+

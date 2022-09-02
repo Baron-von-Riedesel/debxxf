@@ -24,6 +24,7 @@
  þ deb16f: missing deb16f.lbc added.
  þ deb16fw: fixed cmdline option /2.
  þ cmd cpu: moved cpuid fields to new cmd cpuid.
+ þ debxxvdd: link step and import libs removed.
  
  2022/06/15: version 2.10
 
