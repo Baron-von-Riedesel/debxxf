@@ -1,7 +1,7 @@
 
  History
 
- 2022/__/__: version 2.11
+ 2025/10/05: version 2.11
  
  þ fixed symbhdlw.dll: was linked incorrectly ( flags in the binary
    indicated a "dgroup" segment, but it actually has none ).
@@ -25,6 +25,12 @@
  þ deb16fw: fixed cmdline option /2.
  þ cmd cpu: moved cpuid fields to new cmd cpuid.
  þ debxxvdd: link step and import libs removed.
+ þ cmd BPIO added.
+ þ fixed: if a hw breakpoint couldn't be deleted, wrong error msg
+   "cannot clear debug watchpoint state" was emitted.
+ þ .sft: improved check for size of SFT entry.
+ þ deb16fwv: use int 2Fh, ax=4005h/4006h instead of 4001h/4002h.
+ þ fixed: if CS was a (PL3) GDT selector, a GPF may have occured.
  
  2022/06/15: version 2.10
 

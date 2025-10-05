@@ -32,6 +32,14 @@
 
 WF_STANDARD		equ 0010h	;flag returned by GetWinFlags
 
+if 0 ;7.5.2025: 4001h/4002h is documented for OS/2, 4005h/4006h is for Windows.
+SWITCHTOBG equ 4001h	;int 2fh: switch DOS to background (OS2)
+SWITCHTOFG equ 4002h	;int 2fh: switch DOS to foreground (OS2)
+else
+SWITCHTOBG equ 4005h	;int 2fh: switch DOS to background (Win3)
+SWITCHTOFG equ 4006h	;int 2fh: switch DOS to foreground (Win3)
+endif
+
 ;--- windows prototypes, equates, structures
 
 GetModuleHandle		proto far pascal :far ptr
@@ -145,15 +153,15 @@ endm
 
 @CallInt2fIn macro        
 if ?CALLINT2F
-	mov ax, 4000h	;disable VDD video register trapping
+	mov ax,4000h	;disable VDD video register trapping
 	int 2Fh
-	mov ax, 4001h	;switch into background
+	mov ax,SWITCHTOBG;switch DOS to background
 	int 2Fh
 endif
 endm  
 @CallInt2fOut macro
 if ?CALLINT2F
-	mov ax,4002h	;switch into foreground
+	mov ax,SWITCHTOFG;switch DOS to foreground
 	int 2Fh
 	mov ax,4007h	;(re)enable VDD video register trapping
 	int 2Fh

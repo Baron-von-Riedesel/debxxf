@@ -266,7 +266,7 @@ regsout_tss         proto near c               ;aktuelles tss ausgeben
 ;;resetkbd            proto near stdcall
 restoremyscreenbuffer proto near stdcall pBuffer:ptr byte
 _ring0              proto near stdcall routine:dword
-savedebughandle     proto near stdcall
+;savedebughandle     proto near stdcall
 SaveState           proto near stdcall
 saveviostate        proto near stdcall
 ife ?WINDOWS
@@ -452,6 +452,7 @@ _setbreakpnt        proto near c pb:PARMBLK
 _sethwbreak0        proto near c pb:PARMBLK
 _sethwbreak1        proto near c pb:PARMBLK
 _sethwbreak2        proto near c pb:PARMBLK
+_sethwbreak3        proto near c pb:PARMBLK
 _setintpm           proto near c pb:PARMBLK
 _setintrm           proto near c pb:PARMBLK
 _setpageattr        proto near c pb:PARMBLK

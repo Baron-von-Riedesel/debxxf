@@ -197,10 +197,12 @@ exit:
 	ret
 writebyte endp
 
-;*** breakpoint aus bp-Tabelle physikalisch schreiben
-;*** sonderfall beachten: breakpoint an aktuellem CS:EIP
-;*** dann kein breakpoint, sondern single step ausfhren
-;*** aufgerufen bei: _loadpgm, _reset , intr41
+;*** activate software breakpoints that are in bp table.
+;*** checks
+;--- 1) if bp is at current cs:eip; in this case no
+;***    (soft) breakpoint is written, but single step is activated.
+;--- 2) if bp could be written; if no, try to use a hardware bp.
+;*** called by: _loadpgm, _reset , intr41
 
 SetTheBreaks proc stdcall public uses esi
 
@@ -212,11 +214,11 @@ local aktcseip:dword
 
 	mov bErrors, 0
 if ?WINDOWS
-	invoke getpsp					; ist debugger aktuelle Task?
+	invoke getpsp					; debugger is current task?
 endif
 	call getlinearcseip				; linear cs:eip -> eax
 	mov aktcseip, eax
-	or byte ptr [r1.rEfl+2], 1		; resume flag immer setzen
+	or byte ptr [r1.rEfl+2], 1		; always set resume flag
 	mov esi, breakpointtab
 	@loadflat
 nextitem:
@@ -230,11 +232,11 @@ endif
 	test al, FBRP_ENABLED			; breakpoint enabled?
 	jz doneitem
 	@tprintf <"SetBreaks: bp %X",lf>, esi
-	test [esi].BREAK.bFlags2, FBRP2_SET	; bereits gesetzt?
+	test [esi].BREAK.bFlags2, FBRP2_SET	; already set?
 	jnz doneitem
 	test al, FBRP_NOADDR			; watchpoint?
 	jnz ssb_51
-	call getlinearbp 				; lineare adresse holen
+	call getlinearbp 				; get lineare address
 	jc doneitem
 	@tprintf <"SetBreaks: bp with addr %X",lf>,eax
 	mov ebx, eax
@@ -244,8 +246,8 @@ if ?WINDOWS
 	lar ecx, r1.rSS
 	test ecx,400000h				; currently in 32-bit mode?
 	jz @F
-	invoke setptentry, ebx, 2, 2	; R/W bit ist 2
-	jc doneitem						; page ist r/o
+	invoke setptentry, ebx, 2, 2	; R/W bit is 2
+	jc doneitem						; page is r/o
 	test al, 2						; attribute changed?
 	jnz @F
 	mov dwOldAttr, eax
@@ -254,8 +256,8 @@ if ?WINDOWS
 endif
 	cmp ebx, aktcseip				; break an cs:eip?
 	jz ssb_5
-	test [esi].BREAK.bFlags1, FBRP_USEHW; die hw-breaks erst spaeter
-	jnz ssb_4						; schreiben
+	test [esi].BREAK.bFlags1, FBRP_USEHW; hw-break?
+	jnz ssb_4						; those are written later
 	invoke readbyte					; read byte into CH
 	jc doneitem1					; cannot read
 	mov cl, 0CCh
@@ -274,11 +276,11 @@ endif
 	mov ch, dl
 	jz setthebreaks_4
 @@:        
-;	cmp ch, 63h						; ist es ein VM-Breakpoint?
-;	jz doneitem						; dann kein HW-Breakpoint
+;	cmp ch, 63h						; is it a (Windows) VM breakpoint (ARPL)?
+;	jz doneitem						; then no HW break
 	@tprintf <"a hw break will be used for %X",lf>, ebx
-	mov dx, 0001h					; laenge 1, typ execute, auto reset
-	call savedebughandle 			; in hw-break tabelle eintragen
+	mov dx, 0001h					; size 1, type execute, auto reset
+	call savedebughandle 			; try to add a hw-break (temporarily activated)
 	jnc @F
 	test [esi].BREAK.bFlags1, FBRP_AUTO
 	jz doneitem
@@ -534,6 +536,12 @@ ClearAllAutoBreaks endp
 
 	@cmdproc	; no prologue ( ok as long as no locals are defined )
 
+_sethwbreak3 proc c public pb:PARMBLK 		;io watchpoint (v2.11)
+	mov al, FBRP_USEHW
+	mov ah, 03
+	jmp setbreakpnt
+_sethwbreak3 endp
+
 _sethwbreak2 proc c public pb:PARMBLK 		;read or write watchpoint
 	mov al, FBRP_USEHW
 	mov ah, 02
@@ -640,13 +648,15 @@ error1:
 	ret
 setbreakpnt endp
 
-disphwbreak proc stdcall uses esi
+;--- display type of hw break
 
-	mov esi, eax
-	movzx ebx, byte ptr [esi.HWBP.hwbpLen]
-	movzx edx, byte ptr [esi.HWBP.hwbpState]
+disphwbreak proc
+
+	movzx ebx, byte ptr [esi].HWBP.hwbpLen
+	movzx edx, byte ptr [esi].HWBP.hwbpState
 	invoke printf, CStr("hw: %02X %02X "), ebx, edx
-	mov al, [esi.HWBP.hwbpTyp]
+disphwtype::
+	mov al, [esi].HWBP.hwbpTyp
 	cmp al, 0
 	jnz @F
 	@stroutc "execute"
@@ -657,7 +667,12 @@ disphwbreak proc stdcall uses esi
 	@stroutc "write"
 	ret
 @@:
+	cmp al, 2
+	jnz @F
 	@stroutc "read & write"
+	ret
+@@:
+	@stroutc "io"
 	ret
 
 disphwbreak endp
@@ -737,8 +752,10 @@ breaksout_3:
 breaksout_2:
 	test [esi].BREAK.bFlags1, FBRP_USEHW
 	jz @F
-	mov eax, [esi.BREAK.brpHW]
+	push esi
+	mov esi, [esi.BREAK.brpHW]
 	call disphwbreak
+	pop esi
 @@:
 	invoke _crout
 	popad
@@ -784,12 +801,12 @@ skipitem:
 	ret
 checkifbpexists endp
 
-;*** breakpoint (AX:EBX) in Liste einfuegen
-;*** typ in DL:0=AX ist Selektor/1=AX ist Segment
+;*** add breakpoint (AX:EBX) into bp list
+;*** type in DL:0=AX is selector/1=AX is segment
 ;*** Flags in CL (FBRP_AUTO, FBRP_CMDSET, FBRP_USEHW)
-;*** Typ in CH (nur hw-breaks): exec, write, read/write
-;*** falls FBRP_CMDSET: ^string in edi
-;*** out: eax-> breakpointstruktur
+;*** Type in CH (if hw break): exec, write, read/write, io
+;*** if FBRP_CMDSET: ^string in edi
+;*** out: eax = breakpoint object
 
 insertbrkpnt proc stdcall public uses esi
 
@@ -834,10 +851,10 @@ unuseditem:
 	jz ib_1
 	push ecx
 	call getbaseof			; get linear address of eax
-	pop edx 				; dh=typ 0,1,2
+	pop edx 				; dh=type 0,1,2,3
 	jc hwb_err
 	add ebx, eax
-	mov dl, 01h				; dl=breite 1,2,4
+	mov dl, 01h				; dl=size 1,2,4
 	call savedebughandle
 	jnc hwb_ok
 	@errorout WRN_NOMORE_HWBREAKS
@@ -865,7 +882,7 @@ getbaseof:
 
 insertbrkpnt endp
 
-;*** breakpnt ^esi loeschen ***
+;*** delete breakpnt ^esi
 
 clearbreakpnt1 proc stdcall
 	xor eax,eax
@@ -885,7 +902,7 @@ error:
 	ret
 clearbreakpnt1 endp
 
-;*** find breakpoint EAX ***
+;*** find breakpoint EAX
 
 findbreakpnt proc stdcall uses esi
 
@@ -968,11 +985,12 @@ exit:
 	ret
 deletedebughandle endp
 
-;*** hw breakpoint in liste eintragen ***
-;*** ebx=lineare Adresse ***
-;*** dl=breite (1,2 oder 4) ***
-;*** dh=typ (0=E,1 oder 2) ***
-;*** out: handle in eax (= adresse) ***
+;*** add hw breakpoint to list
+;--- called by insertbrkpnt() & SetTheBreaks() [if a soft break can't be written]
+;*** ebx=linear address
+;*** dl=size (1,2 or 4)
+;*** dh=type ( 0=execute, 1=read, 2=read/write, 3=io )
+;*** out: handle in eax (= address)
 
 savedebughandle proc stdcall uses ecx esi edi
 
@@ -996,12 +1014,12 @@ savedebughandle_1:
 	mov ax,0B00h				;alloc a watchpoint
 	@DpmiCall
 	jc error
-	mov ax,0B01h				;clear watchpoint
+	mov ax,0B01h				;delete watchpoint
 	@DpmiCall
 	jnc @F
 	movzx ebx,bx
 	push ebx
-	@errorout ERR_CANNOT_CLEAR_HWBREAK
+	@errorout ERR_CANNOT_DELETE_HWBREAK
 	add esp,4
 @@:        
 	mov [esi.HWBP.hwbpTyp], dh
@@ -1074,26 +1092,14 @@ listhwbreaks proc stdcall
 	mov esi,offset debughandles
 	mov ecx,ANZDEBUGHANDLES
 listhwbreaks_1:
-	cmp [esi.HWBP.hwbpTyp],-1
+	cmp [esi].HWBP.hwbpTyp,-1
 	jz listhwbreaks_3
 	mov eax,ANZDEBUGHANDLES
 	sub eax,ecx
-	movzx ebx,byte ptr [esi.HWBP.hwbpLen]
-	movzx edx,byte ptr [esi.HWBP.hwbpState]
-	invoke printf, CStr("%4X %08X %8X[%02X] %02X "), eax, esi, [esi.HWBP.hwbpAddr], ebx, edx
-	mov al,[esi.HWBP.hwbpTyp]
-	cmp al,0
-	jnz @F
-	@stroutc "execute"
-	jmp listhwbreaks_2
-@@:
-	cmp al,1
-	jnz @F
-	@stroutc "write"
-	jmp listhwbreaks_2
-@@:
-	@stroutc "read & write"
-listhwbreaks_2:
+	movzx ebx,byte ptr [esi].HWBP.hwbpLen
+	movzx edx,byte ptr [esi].HWBP.hwbpState
+	invoke printf, CStr("%4X %08X %8X[%02X] %02X "), eax, esi, [esi].HWBP.hwbpAddr, ebx, edx
+	call disphwtype
 	@putchr lf
 listhwbreaks_3:
 	add esi, sizeof HWBP
@@ -1108,77 +1114,75 @@ _listhwbreaks proc c public pb:PARMBLK
 _listhwbreaks endp
 endif
 
-;*** debug watchpoints setzen ***
-;*** if execution watchpoint on current cs:eip, dont activate
+;*** set debug watchpoints
 
 ActAllHWBreaks proc stdcall public
 
 	mov ecx,ANZDEBUGHANDLES
 	mov esi,offset debughandles
 nextitem:
-	mov dh,[esi.HWBP.hwbpTyp]
-	cmp dh,-1							;unbenutzt?
-	jz skipitem						;dann naechster
-	test [esi.HWBP.hwbpState],FHWBP_SET	;bereits gesetzt?
+	mov dh,[esi].HWBP.hwbpTyp
+	cmp dh,-1					;used?
+	jz skipitem
+	test [esi].HWBP.hwbpState,FHWBP_SET	;set already?
 	jnz skipitem
-	mov [esi.HWBP.hwbpState],FHWBP_SET
+	mov [esi].HWBP.hwbpState,FHWBP_SET
 	test bHWBrk,1
 	jz nohwbreak
 	push ecx
-	mov bx,word ptr [esi.HWBP.hwbpAddr+2]
-	mov cx,word ptr [esi.HWBP.hwbpAddr+0]
-	mov dl,[esi.HWBP.hwbpLen]
-	mov ax,0B00h					;watchpoint set
+	mov bx,word ptr [esi].HWBP.hwbpAddr+2
+	mov cx,word ptr [esi].HWBP.hwbpAddr+0
+	mov dl,[esi].HWBP.hwbpLen
+	mov ax,0B00h				;set watchpoint
 	@DpmiCall
 	pop ecx
 	jnc @F
 nohwbreak:        
-	and [esi.HWBP.hwbpState],not FHWBP_SET
+	and [esi].HWBP.hwbpState,not FHWBP_SET
 	push [esi].HWBP.hwbpAddr
 	@errorout ERR_CANNOT_SET_HWBREAKS
 	add esp,4
 	jmp skipitem
 @@:
-	mov [esi.HWBP.hwbpHandle],bx
+	mov [esi].HWBP.hwbpHandle,bx
 skipitem:
 	add esi, sizeof HWBP
 	loop nextitem
 	ret
 ActAllHWBreaks endp
 
-;*** DEACTALLHWBREAKS wird als erstes beim entry aufgerufen! ***
-;*** Register sind noch nicht gesichert ***
-;*** Stack ist bereits umgeschaltet ***
+;*** DeactAllHWBreaks is the first thing to be called on debugger entry
+;*** registers aren't saved yet, but stack has been changed.
+;--- if debuggee has terminated, all hw bps may have become invalid (hdpmi)!
 
 DeactAllHWBreaks proc stdcall public
 	pushad
 	mov ecx,ANZDEBUGHANDLES
 	mov esi,offset debughandles
 nextitem:
-	cmp [esi.HWBP.hwbpTyp],-1	  ;frei
+	cmp [esi].HWBP.hwbpTyp,-1	;free?
 	jz skipitem
-	test [esi.HWBP.hwbpState],FHWBP_SET	;bp gesetzt?
+	test [esi].HWBP.hwbpState,FHWBP_SET	;bp set?
 	jz skipitem
-	movzx ebx,[esi.HWBP.hwbpHandle]
-	mov ax,0B02h						;get watchpoint state
+	movzx ebx,[esi].HWBP.hwbpHandle
+	mov ax,0B02h				;get watchpoint state
 	@DpmiCall
 	jnc @F
 	push ebx
 	@errorout ERR_CANNOT_GET_HWBREAK_STATE
 	add esp,4
-	mov al,[esi.HWBP.hwbpState]
+	mov al,[esi].HWBP.hwbpState
 @@:
 	test al,1
 	jz @F
 	or [fEntry], FENTRY_HWBREAK
 @@:
-	and al,7Eh							;watchpoint nicht gesetzt
-	mov [esi.HWBP.hwbpState],al
-	mov ax,0B01h						;clear debug watchpoint
+	and [esi].HWBP.hwbpState,not (FHWBP_TRIGGERED or FHWBP_SET)
+	mov ax,0B01h				;delete debug watchpoint
 	@DpmiCall
 	jnc @F
 	push ebx
-	@errorout ERR_CANNOT_CLEAR_HWBREAK
+	@errorout ERR_CANNOT_DELETE_HWBREAK
 	add esp,4
 @@:        
 skipitem:
@@ -1193,12 +1197,12 @@ HWBreakHit proc stdcall public
 	mov ecx,ANZDEBUGHANDLES
 	mov esi,offset debughandles
 nextitem:
-	cmp [esi.HWBP.hwbpTyp],-1	  ;frei
+	cmp [esi.HWBP.hwbpTyp],-1	;free
 	jz skipitem
-	test [esi.HWBP.hwbpState],FHWBP_SET	;bp gesetzt?
+	test [esi.HWBP.hwbpState],FHWBP_SET	;bp set?
 	jz skipitem
 	movzx ebx,[esi.HWBP.hwbpHandle]
-	mov ax,0B02h						;get watchpoint state
+	mov ax,0B02h				;get watchpoint state
 	@DpmiCall
 	jc skipitem
 	test al,1

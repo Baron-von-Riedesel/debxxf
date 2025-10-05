@@ -412,7 +412,7 @@ tprintf proc stdcall public
 ife ?32BIT
 	movzx ebp,bp
 endif
-	sub esp, 80
+	sub esp, 100
 	@loadesp edx
 	invoke vsprintf, edx, dword ptr [ebp-4], ebp
 	mov ecx, [ebp-8]        ; get caller's return address
@@ -470,7 +470,7 @@ else
 	@restorewinsegregs
 endif
 done:
-	add esp, 80
+	add esp, 100
 	pop es
 	pop ds
 	popad

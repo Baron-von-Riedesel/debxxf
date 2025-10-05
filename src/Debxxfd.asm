@@ -145,7 +145,7 @@ fMode db 0	; mode flags
 			; 6=free
 			; 7=FMODE_EXEACTIVE: an exit proc is active
 fExit db 0	; will be cleared in debugger loop
-			; 0=FEXIT_TRACE: Exit mit Trace
+			; 0=FEXIT_TRACE: Exit with Trace
 			; 1=FEXIT_NOSWITCH: dont switch to debuggee screen
 			; 2=FEXIT_CANCEL: cancel,quit exit
 fException db 0
@@ -367,7 +367,7 @@ hdlNRes label NRNT
 
 bTraceFlags db FTRAC_LOG; last flags for 'Trace'
 
-unaslines	dd 10h		; anzahl zeilen fuer 'Unassemble'
+unaslines	dd 10h		; no of lines for 'Unassemble'
 
 if ?USETOOLHELP
 fUseTH		db 1
@@ -375,7 +375,7 @@ fUseTH		db 1
 fToolHelp	db 0		; bit 0: FTH_REGISTERED
 endif
 
-pNearHeap	dd startofheap  ;heap im unteren 64k bereich von DS
+pNearHeap	dd startofheap  ;heap in first 64k of DS
 
 eTraps		dd ?ETRAPS	; what exceptions (0-1F) are trapped?
 eStops		dd ?ESTOPS	; on what exceptions the debugger will stop
@@ -719,12 +719,12 @@ fLoadMode db 0	; Lademodus:
 pSymtab dd 0	; zeiger auf registersatz
 embits db 0		; client coprocessor bits (saved with int 31h, ax=0E00)
 
-dumparg   dq 0	; letzte mit 'Display' ausgegebene adresse
+dumparg   dq 0	; last address handled by 'Display'
 fDump     db 0	; dump flags
-				; B0=1 -> real mode selektor
+				; B0=1 -> real mode selector
 				; B1=display words
 				; B2=display dwords
-unasarg dq 0	; letzte mit 'Unassemble' ausgegebene adresse
+unasarg dq 0	; last address handled by 'Unassemble'
 fUnastype db 0	; flags. B0=1 -> real mode
 
 	align 4
@@ -908,6 +908,7 @@ endif
 	@symbol 'BDisable',	 _FUNCTN_,0,_disablebreakpnt
 	@symbol 'BEnable',	 _FUNCTN_,0,_enablebreakpnt
 	@symbol 'BPoint',	 _FUNCTN_,0,_setbreakpnt
+	@symbol 'BPIO',      _FUNCTN_,0,_sethwbreak3
 	@symbol 'BPReadwrite',_FUNCTN_,0,_sethwbreak2
 	@symbol 'BPWrite',	 _FUNCTN_,0,_sethwbreak1
 	@symbol 'BPX',		 _FUNCTN_,0,_sethwbreak0
@@ -1535,10 +1536,10 @@ tstab label byte
 	@outitem " edi=",symEDI
 	@outitem <cr,lf,"cpiaVR NioODITSZ A P C esp=">,symESPp
 	@outitem " ebp=",symEBP
-	@outitem " [esp]=",,GetEspInhalt
-	@outitem <cr,lf>,,GetEflInhalt
+	@outitem " [esp]=",,GetEspValue
+	@outitem <cr,lf>,,GetEflValue
 	@outitem " eip=",symEIPp
-	@outitem " [eip]=",,GetEipInhalt
+	@outitem " [eip]=",,GetEipValue
 	@outitem <cr,lf,"cs=">,symCSp
 	@outitem " base=",,getbasex,r1.rCS
 	@outitem ",lim=",,getlimx,r1.rCS
@@ -2670,7 +2671,7 @@ savexregsex:
 	ret
 savexregs endp
 
-GetEflInhalt proc stdcall
+GetEflValue proc stdcall
 
 	push edi
 	push ecx
@@ -2692,11 +2693,10 @@ GetEflInhalt proc stdcall
 	pop edi
 	mov cl,__STRING__
 	ret
-GetEflInhalt endp
+GetEflValue endp
 
-;*** memory von ax:esi nach es:edi kopieren (max 4 bytes)
-;*** out: bl = anzahl tats„chlich kopierte bytes
-;*** BL=0 if error
+;*** copy memory src=AX:ESI dst=ES:EDI (max 4 bytes)
+;*** out: BL = bytes copied, BL=0 if error
 
 getmemory proc stdcall
 
@@ -2741,9 +2741,9 @@ getmemexit:
 	ret
 getmemory endp
 
-;*** [EIP] (nur pm) holen ***
+;*** get [EIP] (pm only)
 
-GetEipInhalt proc stdcall uses edi esi
+GetEipValue proc stdcall uses edi esi
 
 	mov edi, offset espinh
 	mov dword ptr [edi], 0
@@ -2761,9 +2761,9 @@ GetEipInhalt proc stdcall uses edi esi
 	mov cl, __VOID__
 @@:
 	ret
-GetEipInhalt endp
+GetEipValue endp
 
-GetEspInhalt proc stdcall uses edi esi
+GetEspValue proc stdcall uses edi esi
 
 	mov edi, offset espinh
 	mov dword ptr [edi], 0
@@ -2783,7 +2783,7 @@ GetEspInhalt proc stdcall uses edi esi
 	mov cl, __DWORD__
 @@:
 	ret
-GetEspInhalt endp
+GetEspValue endp
 
 savedebuggeefpustate proc        
 	test fEMU, 0FFh
@@ -2814,7 +2814,7 @@ restoredebuggeefpustate proc
 	ret
 restoredebuggeefpustate endp
 
-;*** registerzustand retten
+;*** save register state
 ;--- IN: ds=csalias
 
 savereg proc
@@ -4052,10 +4052,10 @@ if ?USELOADMODULE
 	call _LoadModule
 	@restorewinsegregs
 else
-	or [fExit], FEXIT_TRACE		; kein protokoll bei rm entry
+	or [fExit], FEXIT_TRACE		; no protocol for rm entry
 	mov ax,4B00h
 ;	 @DosCall
-	int 21h 					; hier int 21h verwenden!
+	int 21h 					; use int 21h here!
 
 endif
 ;----------------------------------------------------------
@@ -5954,6 +5954,7 @@ getdirectmode endp
 ;--- out: Z if interrupts disabled
 
 GetVIF proc stdcall public
+if 0	;03/2023: don't check IF, it's not the VIF if IOPL=0
 	test cs:[fMode], FMODE_STRICT
 	jnz @F
 	pushfd
@@ -5963,6 +5964,7 @@ GetVIF proc stdcall public
 	and al, 1
 	ret
 @@:
+endif
 	mov ax, 902h
 	@DpmiCall
 	test al, 1
@@ -5972,6 +5974,7 @@ GetVIF endp
 ;--- set the state of the virtual interrupt flag
 
 SetVIF proc stdcall public
+if 0
 	test cs:[fMode], FMODE_STRICT
 	jnz sv1
 	and al,al
@@ -5982,6 +5985,7 @@ SetVIF proc stdcall public
 	sti
 	ret
 sv1:
+endif
 	mov ah,09h
 	@DpmiCall
 	ret
@@ -6156,10 +6160,16 @@ restartproc:
 getbaser_1:
 	test [fMode], FMODE_STRICT
 	jnz error
+	push [excexit]
 	mov [excexit], offset forcestrict
+	stc
 	mov al, @flat:[ebx+7]
-	shl eax, 24
 	mov edx, @flat:[ebx+2]
+	shl eax, 24
+	clc
+forcestrict:
+	pop [excexit]
+	jc error
 	and edx, 00FFFFFFh
 	or eax, edx
 	jmp exit
@@ -6180,9 +6190,6 @@ error:
 	stc
 exit:
 	ret
-forcestrict:
-	or [fMode], FMODE_STRICT
-	jmp restartproc
 getbaser endp
 
 getbase proc c sel:dword
@@ -6761,9 +6768,9 @@ readfile1:
 	add eax, esi
 	mov esi, @flat
 @@:
-	cmp pb.p2.bType, __VOID__		; adresse angegeben?
+	cmp pb.p2.bType, __VOID__		; address set?
 	jnz @F
-	mov eax, ebx					; kB allokieren
+	mov eax, ebx					; alloc kB
 	call allocdpmimem				; returns flat address in EBX
 	jc	exit
 	mov esi, @flat
@@ -6780,7 +6787,7 @@ readfile1:
 	pop esi
 	jmp exit
 @@:
-	invoke	_fileread, xhandle, esi::eax, ebx, ecx
+	invoke _fileread, xhandle, esi::eax, ebx, ecx
 
 	push eax
 	@close xhandle
@@ -7496,7 +7503,7 @@ exit:
 	ret
 symtout endp
 
-;*** 1 disassemblierte zeile ausgeben
+;*** display 1 disassembled line
 ;*** will use CS:EIP (=unassarg)
 ;--- called by setcmddefaults (which is called by debug_entry)
 
@@ -8867,7 +8874,7 @@ settracevars endp
 
 _traceproc proc c pb:PARMBLK
 	call checkifappactive
-trace1::							 ;<--- entry von perform und jump
+trace1::							 ;<--- entry if p(erform) or j(ump)
 	mov tracesteps,0
 	mov al,1
 	cmp pb.p2.bType, __CONST__
@@ -9163,6 +9170,7 @@ endif
 	call SetTheBreaks
 	call ActAllHWBreaks
 @@:
+
 ;	call CheckIrqSetting
 	call SwitchToDebuggeeScreen
 	call restoreenvironment
@@ -9180,7 +9188,9 @@ endif
 	push dword ptr [r1.rEfl]
 	push dword ptr [r1.rCS]
 	push dword ptr [r1.rEip]
+
 	test byte ptr [r1.rEfl+1], FL_INT ; interrupts disabled?
+
 	mov ds,[r1.rDS]
 	jz @F
 	sti
@@ -10918,7 +10928,7 @@ endif
 	and [fMode], not FMODE_REGSOUT
 	invoke myregsout,[dwFormStr],[pNearHeap]
 @@:
-	@tprintf <"mains first milestone reached",lf>
+	;@tprintf <"mains first milestone reached",lf>
 
 	and [fException], not (FEXC_USEXREGS or FEXC_SAVESTACK)
 	mov [fExit], 0
@@ -10952,7 +10962,7 @@ if 1
 	mov ds:[2Ch],ax
 	pop ds
 endif
-	@tprintf <"mains getline reached",lf>
+	;@tprintf <"mains getline reached",lf>
 	call getline 		; get a line
 
 	and [fMode], not FMODE_NODISP

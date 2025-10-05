@@ -126,10 +126,10 @@ local msg:MSGSTRUCT
 	ret
 PeekMsg endp
 
-
 ;--- called by disassembler (32-bit code)
-;--- address to read in fs:esi
-;--- length to get in dwtype (1,2,4)
+;--- in: address to read in ds:esi
+;---     length to get in dwtype (1,2,4)
+;--- out: value in AL/AX/EAX
 ;--- no registers except esi must be modified, flags must be preserved.
 
 ReadAccess proc far stdcall dwtype:dword
@@ -137,7 +137,7 @@ ReadAccess proc far stdcall dwtype:dword
 if ?CHECKLIMITS
 	push eax
 	push edx
-	mov eax, fs
+	mov eax, ds
 	mov edx, dwtype
 	dec edx
 	add edx, esi
@@ -153,17 +153,17 @@ endif
 	jz lb
 	cmp dwtype, 2
 	jz lw
-	lodsd fs:[esi]
+	lodsd [esi]
 	popf
 	pop bp            ; return "manually" to avoid LEAVE (just in case)
 	retf 4
 lw:
-	lodsw fs:[esi]
+	lodsw [esi]
 	popf
 	pop bp
 	retf 4
 lb:
-	lodsb fs:[esi]
+	lodsb [esi]
 	popf
 	pop bp
 	retf 4

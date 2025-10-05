@@ -1477,7 +1477,7 @@ parseargs1x:						;done string token
 getastring_exx:
 	mov 	dword ptr [string],0	;
 getastring_ex:
-	@tprintf <"GetStringToken: %s, eax=%X, edx=%X",10>, [ebx].ARGDESC.dwPx, rc, string
+	;@tprintf <"GetStringToken: %s, eax=%X, edx=%X",10>, [ebx].ARGDESC.dwPx, rc, string
 	popad
 	mov 	eax,rc
 	mov 	edx,string

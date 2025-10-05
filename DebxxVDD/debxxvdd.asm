@@ -18,28 +18,26 @@ endif
 
 ;--- CStr() define a string in .CONST
 
-CStr macro string:req
-local sym,xxx
+CStr macro string:vararg
+local sym
 	.const
 sym db string,0
 	 .code
 	exitm <offset sym>
-	endm
+endm
 
-@DbgOutC macro xx
-ifdef _DEBUG
-	invoke OutputDebugStringA, CStr(<xx>)
-endif
-	endm
-
-@DbgOut macro xx:REQ, parms:VARARG
+@DbgOut macro xx:req, parms:vararg
 ifdef _DEBUG
 	pushad
-	invoke sprintf, addr szText, CStr(<xx>), parms
+ ifnb <parms>
+	invoke sprintf, addr szText, CStr(xx), parms
 	invoke OutputDebugStringA, addr szText
+ else
+	invoke OutputDebugStringA, CStr(xx)
+ endif
 	popad
 endif
-	endm
+endm
 
 if 0
 EXCEPTION_REGISTRATION struct
@@ -74,14 +72,14 @@ except_handler proc c uses ebx esi edi pReport:ptr EXCEPTION_RECORD,\
 						pContext:ptr CONTEXT,\
 						pContDisp:ptr CONTEXT
 
-	@DbgOutC <"except_handler called",13,10>
+	@DbgOut <"except_handler called",13,10>
 	mov eax,_XCPT_CONTINUE_SEARCH
 	ret
 	align 4
 except_handler endp
 
 MyExcFilter proc stdcall pExceptionInfo:ptr EXCEPTION_POINTERS
-	@DbgOutC <"Unhandled Exception Filter called",13,10>
+	@DbgOut <"Unhandled Exception Filter called",13,10>
 	mov eax, EXCEPTION_CONTINUE_SEARCH
 	ret
 	align 4
@@ -93,7 +91,7 @@ endif
 
 Init proc stdcall export
 
-	@DbgOutC <"DEBXXVDD.Init enter",13,10>
+	@DbgOut <"DEBXXVDD.Init enter",13,10>
 
 if 0
 	.if (dwOldExcFilter == -1)
@@ -113,7 +111,7 @@ if 0
 		mov eax,[eax]
 	.endw
 endif
-	@DbgOutC <"DEBXXVDD.Init exit",13,10>
+	@DbgOut <"DEBXXVDD.Init exit",13,10>
 	ret
 	align 4
 Init endp
@@ -240,7 +238,7 @@ Dispatch proc stdcall export uses ebx edi
 
 local	mbi:MEMORY_BASIC_INFORMATION
 
-	@DbgOutC <"DEBXXVDD.Dispatch enter",13,10>
+	@DbgOut <"DEBXXVDD.Dispatch enter",13,10>
 	invoke getECX
 	movzx eax, ax
 	.if eax == 1 || eax == 2
@@ -262,7 +260,7 @@ local	mbi:MEMORY_BASIC_INFORMATION
 			@DbgOut <"address %X is writeable",13,10>, ebx
 		.endif
 	.elseif eax == 3
-		@DbgOutC <"Sleep called",13,10>
+		@DbgOut <"Sleep called",13,10>
 		invoke Sleep, 0
 	.elseif eax == 5 || eax == 6
 		sub eax, 5
@@ -283,7 +281,7 @@ local	mbi:MEMORY_BASIC_INFORMATION
 error:
 	invoke setCF,1
 exit:
-	@DbgOutC <"DEBXXVDD.Dispatch exit",13,10>
+	@DbgOut <"DEBXXVDD.Dispatch exit",13,10>
 	ret
 	align 4
 Dispatch endp
@@ -296,14 +294,14 @@ DllMain proc stdcall hInstance:dword, reason:dword, lpReserved:dword
 	.if (eax == DLL_PROCESS_ATTACH)
 ;		 mov eax, hInstance
 ;		 mov hVDD, eax
-		@DbgOutC <"debxxvdd process attach",13,10>
+		@DbgOut <"debxxvdd process attach",13,10>
 		mov eax,1
 	.elseif (eax == DLL_PROCESS_DETACH)
-		@DbgOutC <"debxxvdd process detach",13,10>
+		@DbgOut <"debxxvdd process detach",13,10>
 	.elseif (eax == DLL_THREAD_ATTACH)
-		@DbgOutC <"debxxvdd thread attach",13,10>
+		@DbgOut <"debxxvdd thread attach",13,10>
 	.elseif (eax == DLL_THREAD_DETACH)
-		@DbgOutC <"debxxvdd thread detach",13,10>
+		@DbgOut <"debxxvdd thread detach",13,10>
 	.endif
 	ret
 DllMain endp

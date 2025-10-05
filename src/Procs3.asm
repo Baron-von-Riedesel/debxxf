@@ -2350,11 +2350,11 @@ SftNext proc stdcall public uses ebx esi edi pFileEntry:ptr FILEENTRY
 	mov ebx, pFileEntry
 nextitem:
 	movzx esi, word ptr [ebx.FILEENTRY.feAddr+0]
-	movzx eax, word ptr [ebx.FILEENTRY.feAddr+2]	;segment holen
+	movzx eax, word ptr [ebx.FILEENTRY.feAddr+2]	;get segment
 	shl eax, 4
 	add esi, eax
 	mov ax, [ebx.FILEENTRY.feAnzahl] 
-	cmp ax, @flat:[esi+4]			;anzahl files in struktur
+	cmp ax, @flat:[esi+4]			;no of files in structure
 	jb @F
 	mov eax, @flat:[esi+0]
 	mov [ebx.FILEENTRY.feAddr], eax
@@ -2372,14 +2372,14 @@ nextitem:
 	add esi, eax
 	add esi, 6
 	mov ax, @flat:[esi]
-	and ax, ax			;Handles = 0? > dann eintrag frei
+	and ax, ax			;Handles = 0? -> entry is free
 	jz nextitem
 
 	mov eax, esi
 	movzx ecx, word ptr [ebx.FILEENTRY.feAddr+2]
 	shl ecx, 4
 	sub eax, ecx
-	mov es:[ebx.FILEENTRY.feOffset], ax
+	mov [ebx.FILEENTRY.feOffset], ax
 
 	lea edi, [ebx.FILEENTRY.feHandles]
 	movzx ecx, [ebx.FILEENTRY.feLength]
@@ -2398,6 +2398,18 @@ exit:
 
 SftNext endp
 
+SFTSIZE3 equ 35h
+SFTSIZE4 equ 3Bh
+
+SFTENTRY struct
+seHandles     DW ?      ;+0 handles; 0 = free entry
+seOpen_mode   DW ?      ;+2
+seDevinfo     DW ?      ;+4 device info
+seW1          DW 13 dup (?)	;+8
+seName        DB 8 dup (?)	;+34
+seExt         DB 3 dup (?)	;+42
+SFTENTRY ends
+
 SftFirst proc stdcall public uses ebx esi pFileEntry:ptr FILEENTRY
 
 	mov esi, pFileEntry
@@ -2408,27 +2420,49 @@ else
 	push es
 	@DosCall DOS_listoflists
 	movzx ebx, bx
-	mov eax, es:[ebx+4]			;startwert der SFT holen
+	mov eax, @flat:[ebx+4]			;get start of SFT
 	pop es
 endif
-	mov [esi.FILEENTRY.feAddr], eax
+	mov [esi].FILEENTRY.feAddr, eax
 	inc eax						;if FFFF:FFFF then not supported
 	jz sm9
-	mov [esi.FILEENTRY.feAnzahl], 0
-	mov [esi.FILEENTRY.feIndex], -1
+	mov [esi].FILEENTRY.feAnzahl, 0
+	mov [esi].FILEENTRY.feIndex, -1
 	mov bx, wDosVersion
 	xor eax, eax
 	cmp bl, 20
 	jnb sm9
-	mov cx, 3bh					;DOS 4+
-	cmp bl, 4
-	jnb @F
-	mov cx, 35h					;DOS 3
-@@:
-	mov [esi.FILEENTRY.feLength], cx 	;offset zu naechstem file
+	call getsftsize
+	jcxz sm9
+	mov [esi].FILEENTRY.feLength, cx 	;offset zu naechstem file
 	invoke SftNext, esi
 sm9:
 	ret
+
+getsftsize:        
+	mov cl,SFTSIZE3 			;DOS 3
+	movzx ecx,cl
+	cmp bl,4
+	jb done
+	mov cl,SFTSIZE4 			;DOS 4+
+	movzx eax,word ptr [esi].FILEENTRY.feAddr+2
+	shl eax,4
+	movzx ebx,word ptr [esi].FILEENTRY.feAddr+0
+	add ebx,3*2
+	add ebx,eax
+	cmp dword ptr @flat:[ebx].SFTENTRY.seName+0," XUA";AUX?
+	jnz done
+	add ebx,ecx
+nexttry:
+	cmp dword ptr @flat:[ebx].SFTENTRY.seName+0," NOC";CON?
+	jz done
+	inc ebx
+	inc ecx
+	cmp cl,SFTSIZE4+20
+	jnz nexttry
+	xor ecx,ecx
+done:
+	retn
 SftFirst endp
 
 ;--- .SFT command

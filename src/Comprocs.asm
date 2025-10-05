@@ -42,7 +42,7 @@ endif
 comport   dd 0
 _comno    dd 1		; current COM #
 comirq	  db 0		; it's the COM int ( 0Bh or 0Ch )
-oldiereg  db 0		; original inhalt interrupt enable register
+oldiereg  db 0		; original contents interrupt enable register
 
 bEscSeqf  db 0
 bEscChar  db 0

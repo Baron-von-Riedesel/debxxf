@@ -258,23 +258,23 @@ endif
 IRETS ends
 
 ;--- flags for insertbreakpnt()
-FBRP_ACTIVE 	equ 01h	;bp is active (enabled or disabled)
-FBRP_ENABLED	equ 02h	;bp is enabled
-FBRP_AUTO		equ 04h	;bp auto-reset nach "enter debug"
-FBRP_REAL		equ 08h	;bp address is in real mode format
-FBRP_CMDSET 	equ 10h	;Inhalt DefCmd gÅltig
-FBRP_USEHW		equ 20h	;Hardware Breakpoint verwenden (im ROM)
-FBRP_NOADDR 	equ 40h	;"Breakpoint" ohne Adresse (=Watchpoint)
-FBRP_SILENT		equ 80h	;internal bp to help trace command
+FBRP_ACTIVE 	equ 01h	; bp is active (enabled or disabled)
+FBRP_ENABLED	equ 02h	; bp is enabled
+FBRP_AUTO		equ 04h	; bp auto-reset nach "enter debug"
+FBRP_REAL		equ 08h	; bp address is in real mode format
+FBRP_CMDSET 	equ 10h	; content DefCmd is valid
+FBRP_USEHW		equ 20h	; use Hardware Breakpoint (while in ROM)
+FBRP_NOADDR 	equ 40h	; "Breakpoint" without address (=Watchpoint)
+FBRP_SILENT		equ 80h	; internal bp to help trace command
 
-FBRP2_TRAPPED	equ 01h	;Breakpoint hat debug trap verursacht
-FBRP2_SET		equ 02h	;bp is set
+FBRP2_TRAPPED	equ 01h	; Breakpoint has caused a debug trap
+FBRP2_SET		equ 02h	; bp is set
 
 ARGDESC struct
 dwOfs	dd ?			; value   (offset if type is an address)
 dwSeg	dd ?			; segment (addresses only)
-dwPx	dd ?			; pointer auf string
-dwPtr	dd ?			; pointer in symboltabelle bei symbolen
+dwPx	dd ?			; ptr to string
+dwPtr	dd ?			; ptr to symbol table for symbols
 dwType	dd ?			; type of argument
 ARGDESC ends
 

@@ -578,10 +578,8 @@ local	anz:byte
 local	excnr:dword
 
 	cmp cl, __VOID__
-	mov ecx, 1
 	jnz @F
-	@mov ebx, 0
-	mov ecx, 20h
+	xor ebx, ebx
 @@:
 	cmp bl, 20h
 	jnb excpmex
@@ -589,7 +587,6 @@ local	excnr:dword
 	mov excnr, ebx
 	mov anz, 00
 excpm1:
-	push ecx
 	mov ebx, excnr
 	mov ax, 0202h
 	.if pb.dwOffs2
@@ -615,8 +612,12 @@ endif
 @@:
 	inc anz
 	inc excnr
-	pop ecx
-	loop excpm1
+	cmp pb.p1.bType,__VOID__
+	jnz @F
+	cmp excnr,20h
+	jb excpm1
+@@:
+	invoke _crout
 excpmex:
 	ret
 _excpm endp
@@ -1413,6 +1414,8 @@ pdaddr	dd 0
 
 	.CODE
 
+;--- get linear address of page directory
+
 getpagediraddr proc stdcall uses esi edi
 
 	xor al,al
@@ -1505,19 +1508,19 @@ exit:
 	ret
 _pagedir endp
 
-;*** adresse page table ermitteln
-;*** out: C bei Fehler
-;***	  eax=lineare page table adr
+;*** get linear address of a page table
+;*** out: C if error
+;***      eax=linear address page table
 
 getptaddr proc stdcall uses esi edi ebx ecx adresse:dword
 
 	call getpagediraddr
 	jc exit
 	mov ebx, adresse
-	shr ebx, 20			; lineare adresse -> pagedirentry
+	shr ebx, 20			; convert linear address -> offset PDE in pagedir
 	and bl, 0FCh
 	add ebx, eax 		; adresse pagedir addieren
-	mov eax,@flat:[ebx]	; eintrag in pagedir
+	mov eax,@flat:[ebx]	; get PDE
 	test al,1			; pagetable present?
 	jnz @F
 	push adresse
@@ -1531,7 +1534,7 @@ getptaddr proc stdcall uses esi edi ebx ecx adresse:dword
 	pop cx
 	pop bx
 	mov si, 0000h
-	mov di, 1000h		; 4k Bereich (pagetable) mappen
+	mov di, 1000h		; map 4k page table
 	mov ax, 0800h
 	@DpmiCall
 	jnc @F
@@ -1547,8 +1550,8 @@ exit:
 	ret
 getptaddr endp
 
-;*** flags in pagetable setzen
-;*** rc: alte flags in eax
+;*** set flags in page table
+;*** rc: old flags in eax
 
 setptentry proc stdcall uses esi edi adresse:dword,newflags:dword,maske:dword
 
@@ -1562,10 +1565,10 @@ setptentry proc stdcall uses esi edi adresse:dword,newflags:dword,maske:dword
 	mov ecx, maske
 	jecxz exit
 	mov edx, newflags
-	and edx, ecx 			; in newflags relevante bits set
+	and edx, ecx 			; mask out bits in new flags
 	xor ecx, -1
-	and eax, ecx 			; in entry relevante bits reset
-	or eax, edx 			; wert neuer entry
+	and eax, ecx 			; reset bits in current PTE
+	or eax, edx 			; eax = new value of PTE
 	cmp eax,@flat:[edi+esi]
 	jz exit
 	xchg eax,@flat:[edi+esi]

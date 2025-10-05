@@ -1469,17 +1469,17 @@ sm1:
 if ?LOWSETCSR
         jmp sm2
 else
-        mov bl,al                       ; spalte -> bl
-        mov al,ah                       ; zeile -> al
+        mov bl,al                       ; col -> bl
+        mov al,ah                       ; row -> al
         mul bh
         mov bh,00
         add ax,bx                       ; ergibt offset (einfach,ohne attribute)
         shr si,1
         add ax,si
-        mov cl,al                       ; zuerst high byte nach Index 0Eh
+        mov cl,al                       ; first high byte to index 0Eh
         mov al,0eh
         out dx,ax
-        mov ah,cl                       ; dann low byte nach Index 0F
+        mov ah,cl                       ; then low byte to index 0Fh
         mov al,0fh
         out dx,ax
         jmp exit
@@ -1488,17 +1488,17 @@ endif
         mov @flat:[ecx*2+__vio_curpos0],ax
 sm2:
 if ?LOWSETCSR
-        mov bl,al                       ; spalte -> bl
-        mov al,ah                       ; zeile -> al
+        mov bl,al                       ; col -> bl
+        mov al,ah                       ; row -> al
         mul bh
         mov bh,00
         add ax,bx                       ; ergibt offset (einfach,ohne attribute)
         shr si,1
         add ax,si
-        mov cl,al                       ; zuerst high byte nach Index 0Eh
+        mov cl,al                       ; first write high byte to index 0Eh
         mov al,0eh
         out dx,ax
-        mov ah,cl                       ; dann low byte nach Index 0F
+        mov ah,cl                       ; then write low byte to index 0Fh
         mov al,0fh
         out dx,ax
 else

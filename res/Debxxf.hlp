@@ -379,6 +379,7 @@ Syntax:   BPoint [address],[count=0],[cmd],[symbol|expression],[min],[max]
           - BPX break on eXecute,
           - BPW break on Write,
           - BPR break on Readwrite
+          - BPIO break on I/O access
           will set debug register watchpoints.
 Comment:
           If no argument is given, a list of breakpoints currently defined
@@ -386,7 +387,7 @@ Comment:
 
           If <address> is specified, a breakpoint will be set.
 
-          If <address> is omitted, a watchpoint will be set.
+          BP only: if <address> is omitted, a watchpoint will be set.
           Fourth parameter (symbol|expression) is required for this type.
           A watchpoint will force execution to single-step mode. After
           each instruction the condition is tested.
@@ -434,7 +435,7 @@ Type:     <address>: ADDR, Default CS:EIP
           <count>: DWORD, Default 0
           <cmd>: STRING
           <symbol>: REGISTER
-          <ausdruck>: STRING
+          <expression>: STRING
           <min>: DWORD
           <max>: DWORD
 [BClear]
@@ -487,9 +488,10 @@ BClear [bp]                   delete a break-/watchpoint
 BDisable [bp]                 disable a break-/watchpoint
 BEnable [bp]                  enable a break-/watchpoint
 BPoint [address],[mode],[symbol],[min],[max] set/show breakpoints
-BPX [address, ...]            set a debug register execution watchpoint
-BPWrite [address, ...]        set a debug register write watchpoint
+BPIO [port, ...]              set a debug register I/O watchpoint
 BPReadwrite [address, ...]    set a debug register read/write watchpoint
+BPWrite [address, ...]        set a debug register write watchpoint
+BPX [address, ...]            set a debug register execution watchpoint
 CANcel [hTask]                terminate debuggee (<hTask> for Windows only)
 CLS                           clear screen
 CPU                           display protected register
@@ -764,8 +766,8 @@ Comment:  discard a memory area with DPMI function 0703h.
   DISCARD    : 0x0703 (discard page contents)
   PMAP       : 0x0800 (physical address mapping)
   PUNMAP     : 0x0801 (unmap mapped physical address, DPMI 1.0)
-  BPX/BPW/BPR: 0x0BXX (set/clear debug watchpoint)
-  CPS        : 0x0E0X (get/set coprocessor status)
+  BPX/BPW/BPR/BPIO: 0x0Bxx (set/clear debug watchpoint)
+  CPS        : 0x0E0x (get/set coprocessor status)
 
 [DWORD]
 Type with size 4 bytes for values 0-FFFFFFFF.
@@ -1886,7 +1888,7 @@ Comment:  Writes <count> sectors onto <drive> starting with <sector>.
 002B FreeLibrary32W not found
 002C LoadLibrary32W not found
 002D page not writeable
-002E cannot clear debug watchpoint state (handle=%X)
+002E cannot delete debug watchpoint %X
 002F function not available if irq=false
 0030 can't find dll
 0031 can't find procedure in DLL
